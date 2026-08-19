@@ -1,0 +1,65 @@
+modelRoles: 
+  smol: google-antigravity/gemini-3.7-flash:auto
+  slow: openai-codex/gpt-5.6-terra:high
+  vision: anthropic/claude-sonnet-5:auto
+  plan: anthropic/claude-sonnet-5:xhigh
+  designer: anthropic/claude-sonnet-5:auto
+  commit: openai-codex/gpt-5.6-luna:auto
+  task: anthropic/claude-sonnet-5:auto
+  advisor: google-antigravity/gemini-3.7-flash:auto
+  default: anthropic/claude-sonnet-5:xhigh
+retry: 
+  fallbackChains: 
+    smol: 
+      - kimi-code/k3:low
+      - openai-codex/gpt-5.6-luna:auto
+      - google-antigravity/claude-sonnet-4-6
+      - anthropic/claude-sonnet-5:low
+    commit: 
+      - google-antigravity/gemini-3.7-flash:auto
+    task: 
+      - openai-codex/gpt-5.6-terra:auto
+symbolPreset: nerd
+theme: 
+  dark: dark-catppuccin
+setupVersion: 1
+statusLine: 
+  preset: custom
+  separator: none
+  sessionAccent: true
+  transparent: false
+  compactThinkingLevel: false
+  showHookStatus: true
+  leftSegments: 
+    - pi
+    - model
+    - mode
+    - collab
+    - path
+    - git
+    - pr
+    - context_pct
+  rightSegments: 
+    - session_name
+  segmentOptions: 
+    model: 
+      showThinkingLevel: true
+    path: 
+      abbreviate: true
+      maxLength: 40
+      stripWorkPrefix: true
+    git: 
+      showBranch: true
+      showStaged: true
+      showUnstaged: true
+      showUntracked: true
+dev: 
+  autoqaConsent: granted
+display: 
+  cacheMissMarker: true
+task: 
+  showResolvedModelBadge: true
+  agentModelOverrides: {}
+
+disabledExtensions: 
+  []
