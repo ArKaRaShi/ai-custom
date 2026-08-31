@@ -32,7 +32,8 @@ default — see Guardrails).
 - `bun` on `PATH`. If missing, invoking the script fails immediately at the
   shell level — nothing to check in advance.
 - The target engine's client binary on `PATH`: `mysql` + `mysqldump` for
-  `mysql`, `psql` for `postgres`. `sqlite` needs neither (pure `node:fs`).
+  `mysql`; `psql` for `postgres`. Full PostgreSQL TimescaleDB clones also
+  require `pg_dump` and `pg_restore`. `sqlite` needs neither (pure `node:fs`).
   A missing binary surfaces immediately as `command not found: <bin>`.
 - A DB server already running and reachable at the resolved host:port.
   This skill never provisions infrastructure — no `docker compose up`, no
@@ -52,8 +53,10 @@ default — see Guardrails).
 this identifier.**
 
 ```bash
-bun scripts/sandbox.ts <engine> list
-bun scripts/sandbox.ts list   # whole machine, every engine
+SKILL_DIR="${SKILL_DIR:-$HOME/.agents/skills/db-sandbox}"
+
+bun "$SKILL_DIR/scripts/sandbox.ts" <engine> list
+bun "$SKILL_DIR/scripts/sandbox.ts" list   # whole machine, every engine
 ```
 
 State "not registered" if new, or report the existing entry (engine, target,
@@ -85,13 +88,20 @@ Resulting state: myapp_dev_ticket_4821 permanently deleted; registry entry clear
 ```
 
 ```bash
+SKILL_DIR="${SKILL_DIR:-$HOME/.agents/skills/db-sandbox}"
+
 # clone: full data copy (default) or --tier bare (schema/empty only, fast)
-bun scripts/sandbox.ts <postgres|mysql|sqlite> create <identifier> --base <base-db-or-path> [--tier bare]
+bun "$SKILL_DIR/scripts/sandbox.ts" <postgres|mysql|sqlite> create <identifier> --base <base-db-or-path> [--tier bare]
 
 # destructive, requires literal --confirm DROP; --force true only needed to
 # drop a sandbox another repo registered (see Guardrails)
-bun scripts/sandbox.ts <engine> drop <identifier> --base <base-db-or-path> --confirm DROP
+bun "$SKILL_DIR/scripts/sandbox.ts" <engine> drop <identifier> --base <base-db-or-path> --confirm DROP
 ```
+Full PostgreSQL clones auto-detect the `timescaledb` extension. Ordinary
+PostgreSQL uses `CREATE DATABASE ... TEMPLATE ...`, which creates the target
+itself. TimescaleDB creates the target, then uses `pg_dump`/`pg_restore` with
+`timescaledb_pre_restore()` and `timescaledb_post_restore()`. Bare PostgreSQL
+and all MySQL/SQLite creates still create an empty target.
 
 `<identifier>` is normalized before use (lowercased, non-alphanumeric runs
 collapsed to `_`) — `feature-x` becomes `feature_x` in the target db/file
@@ -105,7 +115,8 @@ ambient `process.env` > built-in default. So a project agent can point
 connection info as flags:
 
 ```bash
-bun scripts/sandbox.ts mysql create feature-x --env-file .env.local
+SKILL_DIR="${SKILL_DIR:-$HOME/.agents/skills/db-sandbox}"
+bun "$SKILL_DIR/scripts/sandbox.ts" mysql create feature-x --env-file .env.local
 ```
 
 reads `DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASSWORD` / `DB_NAME` from that
@@ -165,8 +176,9 @@ Verified: 3 rows present in `widgets`
 | Registered target deleted out-of-band (dropped by hand, crashed mid-clone) | `drop`/`create` self-heal (prune) automatically — not an error |
 | Sandbox registered from another project's cwd | `drop` refuses; requires `--force true` |
 | `drop` run without `--confirm DROP` | Refused; target survives |
-| Postgres base has an open connection | `TEMPLATE` clone fails; close notebook/shell connections to the base first |
-| Need to see sandboxes across every repo | `bun scripts/sandbox.ts list` (no engine positional) |
+| Postgres full clone | Ordinary PostgreSQL uses `TEMPLATE`; TimescaleDB uses logical dump/restore with restore hooks |
+| Postgres/TEMPLATE base has an open connection | Clone fails; close user connections. TimescaleDB workers are handled by the logical restore path |
+| Need to see sandboxes across every repo | `bun "$SKILL_DIR/scripts/sandbox.ts" list` (no engine positional) |
 | Need schema-only, no data | `create ... --tier bare`, then run your project's migrations |
 | DB server not reachable | Bring up the project's own stack first — this skill never provisions infrastructure |
 | Base database unclear | `ask` the user with the server's actual database list — never guess from `--env-file` defaults |
@@ -189,7 +201,7 @@ db-sandbox/
   scripts/
     sandbox.ts           # CLI: create / drop / list, --env-file resolution
     base.ts                 # identifier normalization, guardrails, registry I/O
-    test_sandbox.ts          # runnable self-check: bun scripts/test_sandbox.ts
+    test_sandbox.ts          # runnable self-check: bun "$SKILL_DIR/scripts/test_sandbox.ts"
     package.json, tsconfig.json, bun.lock   # @types/bun only, no runtime deps
     engines/
       postgres.ts             # CREATE DATABASE ... TEMPLATE (native clone, no dump/restore)

@@ -2,10 +2,11 @@
 /**
  * Isolated sandbox database per identifier, across postgres/mysql/sqlite.
  *
- *   bun scripts/sandbox.ts postgres create feature-x --base app_dev
- *   bun scripts/sandbox.ts postgres drop feature-x --base app_dev --confirm DROP
- *   bun scripts/sandbox.ts postgres list        # this engine only
- *   bun scripts/sandbox.ts list                 # every engine, whole machine
+ *   SKILL_DIR="${SKILL_DIR:-$HOME/.agents/skills/db-sandbox}"
+ *   bun "$SKILL_DIR/scripts/sandbox.ts" postgres create feature-x --base app_dev
+ *   bun "$SKILL_DIR/scripts/sandbox.ts" postgres drop feature-x --base app_dev --confirm DROP
+ *   bun "$SKILL_DIR/scripts/sandbox.ts" postgres list        # this engine only
+ *   bun "$SKILL_DIR/scripts/sandbox.ts" list                 # every engine, whole machine
  *
  * Connection config resolves per field as:
  *   --flag > --env-file entry > ambient process.env > built-in default
@@ -37,8 +38,19 @@ import {
   writeRegistry,
 } from "./base";
 import { type EngineName, REGISTRY } from "./engines";
+import { type CloneMode } from "./engines/postgres";
+import * as postgres from "./engines/postgres";
 
 type Flags = Record<string, string>;
+
+export function createsTargetBeforeClone(
+  engineName: EngineName,
+  tier: string,
+  postgresCloneMode: CloneMode = "template",
+): boolean {
+  return tier !== "full" || engineName !== "postgres" || postgresCloneMode === "logical";
+}
+
 
 function parseArgs(argv: string[]): { positional: string[]; flags: Flags } {
   const positional: string[] = [];
@@ -97,18 +109,36 @@ async function cmdCreate(engineName: EngineName, identifier: string, flags: Flag
     unlinkSync(registryPath(registryDir, engineName, conn, base, normId));
     console.log(`pruned stale registry entry for '${identifier}' (target no longer exists)`);
   }
-
   const target = deriveTarget(engineName, base, normId);
   if (await engine.exists(conn, target)) {
     throw new Error(`target already exists in the database itself: '${target}'`);
   }
 
-  await engine.create(conn, target);
+
+  const postgresCloneMode =
+    engineName === "postgres" && tier === "full"
+      ? await postgres.resolveCloneMode(conn, base)
+      : "template";
+
+  let targetCreated = false;
   try {
-    if (tier === "full") await engine.clone(conn, base, target);
+    if (createsTargetBeforeClone(engineName, tier, postgresCloneMode)) {
+      await engine.create(conn, target);
+      targetCreated = true;
+    }
+    if (tier === "full") {
+      if (engineName === "postgres") {
+        await postgres.clone(conn, base, target, postgresCloneMode);
+      } else {
+        await engine.clone(conn, base, target);
+      }
+      targetCreated = true;
+    }
     writeRegistry(registryDir, engineName, conn, base, normId, target, project);
   } catch (err) {
-    await engine.drop(conn, target);
+    // Template clones create the target only on success; logical clones use
+    // a target created above.
+    if (targetCreated) await engine.drop(conn, target);
     throw err;
   }
 

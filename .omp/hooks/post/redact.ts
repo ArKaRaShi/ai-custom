@@ -17,11 +17,27 @@ import type { HookAPI } from "@oh-my-pi/pi-coding-agent/extensibility/hooks";
 //      but config/env/output text does. Vendor-format signatures (AWS,
 //      GitHub, PEM, Bearer) stay active everywhere regardless of file type,
 //      since those match by unambiguous structure, not by a nearby keyword.
-const GENERIC_KEY_VALUE = {
-  // Exclude count/metric keys like output_tokens, input_tokens, max_tokens, total_tokens, etc.
-  re: /\b(?!(?:INPUT|OUTPUT|PROMPT|COMPLETION|TOTAL|MAX|WARMUP|ESTIMATED|REASONING|THINKING)[_-])([A-Za-z0-9_]*(?:SECRET|TOKEN|PASSWORD|PASSWD|API[_-]?KEY|ACCESS[_-]?KEY|PRIVATE[_-]?KEY|CLIENT[_-]?SECRET|AUTH)[A-Za-z0-9_]*["']?\s*[:=]\s*["']?)(?![A-Za-z_][A-Za-z0-9_]*\()[^\s"'\n(),]{4,}/gi,
-  keepPrefix: true,
-};
+function redactGenericKeyValue(text: string): string {
+  return text.replace(
+    /\b([A-Za-z0-9_]*["']?\s*[:=]\s*["']?)(?![A-Za-z_][A-Za-z0-9_]*\()[^\s"'\n(),]{4,}/g,
+    (match, prefix: string) => {
+      const k = prefix.replace(/["'\s:=]/g, "").toLowerCase();
+      // Ignore all token count / metric variables and fields
+      if (
+        k === "tokens" ||
+        /(?:total|prompt|input|output|cache|read|write|reasoning|thinking|max|count|warmup|estimated|nonmessage|ctx|context|cumulative|session)[_-]?tokens?/.test(k) ||
+        /tokens?[_-]?(?:count|usage|total|consumed|spent|limit)/.test(k)
+      ) {
+        return match;
+      }
+      // Match true secret keywords
+      if (/(?:secret|token|password|passwd|api[_-]?key|access[_-]?key|private[_-]?key|client[_-]?secret|auth)/.test(k)) {
+        return `${prefix}${REDACTED_LABEL}`;
+      }
+      return match;
+    },
+  );
+}
 
 const PATTERNS: { re: RegExp; keepPrefix: boolean }[] = [
   { re: /\bAKIA[0-9A-Z]{16}\b/g, keepPrefix: false }, // AWS access key ids
@@ -66,8 +82,10 @@ const REDACTED_LABEL = "[REDACTED:hook]";
 export function redact(text: string, filePath?: string): string {
   let out = text;
   const isSourceCode = filePath ? SOURCE_EXTENSIONS[extensionOf(filePath)] === true : false;
-  const patterns = isSourceCode ? PATTERNS : [GENERIC_KEY_VALUE, ...PATTERNS];
-  for (const { re, keepPrefix } of patterns) {
+  if (!isSourceCode) {
+    out = redactGenericKeyValue(out);
+  }
+  for (const { re, keepPrefix } of PATTERNS) {
     out = out.replace(re, (match, prefix: string) =>
       keepPrefix ? `${prefix}${REDACTED_LABEL}` : REDACTED_LABEL,
     );

@@ -38,22 +38,22 @@ describe("given quota-status extension, when rendering usage sparklines and form
     expect(crit.alertIcon).toBe("󰀪 ");
   });
 
-  it("formatReset correctly calculates hours, minutes, and days countdown", () => {
-    const baseNow = 1787140000000;
-    // 4 hours 47 mins in future
-    const reset4h47m = baseNow + (4 * 3600 + 47 * 60) * 1000;
-    expect(formatReset(reset4h47m, baseNow)).toBe("4h47m");
+  it("formatReset correctly calculates hours, minutes, and days countdown with target reset time", () => {
+    const fixedNow = new Date("2026-08-19T12:00:00").getTime();
+    // 4 hours 47 mins in future -> 16:47
+    const reset4h47m = fixedNow + (4 * 3600 + 47 * 60) * 1000;
+    expect(formatReset(reset4h47m, fixedNow)).toBe("4h47m @16:47");
 
-    // 3 days 16 hours
-    const reset3d = baseNow + (3 * 24 + 16) * 3600 * 1000;
-    expect(formatReset(reset3d, baseNow)).toBe("3d16h");
+    // 3 days 16 hours -> Sun 04:00
+    const reset3d = fixedNow + (3 * 24 + 16) * 3600 * 1000;
+    expect(formatReset(reset3d, fixedNow)).toBe("3d16h @Sun 04:00");
 
-    // 42 minutes in future
-    const reset42m = baseNow + 42 * 60 * 1000;
-    expect(formatReset(reset42m, baseNow)).toBe("42m");
+    // 42 minutes in future -> 12:42
+    const reset42m = fixedNow + 42 * 60 * 1000;
+    expect(formatReset(reset42m, fixedNow)).toBe("42m @12:42");
 
     // Elapsed / negative
-    expect(formatReset(baseNow - 1000, baseNow)).toBe("0m");
+    expect(formatReset(fixedNow - 1000, fixedNow)).toBe("0m");
   });
 
   it("getProviderPrefix returns correct icon and label", () => {
@@ -222,6 +222,20 @@ describe("given quota-status extension, when rendering usage sparklines and form
     expect(latestModel).toBe("anthropic/claude-opus-5");
   });
 
+  it("getLatestModelFromSession handles non-string or object model in session journal", async () => {
+    const tmpSession = path.join(os.tmpdir(), `test-session-obj-${Date.now()}.jsonl`);
+    const lines = [
+      JSON.stringify({ type: "session", id: "s1" }),
+      JSON.stringify({ type: "model_change", model: { id: "openai-codex/gpt-5.6-terra" } }),
+    ].join("\n");
+
+    fs.writeFileSync(tmpSession, lines);
+    const latestModel = await getLatestModelFromSession(tmpSession);
+    fs.unlinkSync(tmpSession);
+
+    expect(latestModel).toBe("openai-codex/gpt-5.6-terra");
+  });
+
   it("render12Bar handles boundary fractions (negative, zero, 100%, and >100% overflow)", () => {
     // Negative fraction clamped to 0%
     const neg = render12Bar(-0.5);
@@ -297,5 +311,32 @@ describe("given quota-status extension, when rendering usage sparklines and form
 
     const output = buildProviderSparklineString("anthropic", mockUsage, fixedNow, fetchedAt);
     expect(output).toContain("󰑐 19:40 (2m ago)");
+  });
+
+  it("buildProviderSparklineString collapses 100% exhausted quota into a compact alert pill tag", () => {
+    const fixedNow = new Date("2026-08-19T12:00:00").getTime();
+    const mockUsage: UsagePayload = {
+      reports: [
+        {
+          provider: "google-antigravity",
+          limits: [
+            {
+              label: "Usage (Google)",
+              amount: { used: 100, usedFraction: 1.0 },
+              window: { label: "Daily", resetsAt: fixedNow + 3 * 3600_000 },
+            },
+            {
+              label: "Usage (OpenAI)",
+              amount: { used: 20, usedFraction: 0.2 },
+              window: { label: "Daily", resetsAt: fixedNow + 3 * 3600_000 },
+            },
+          ],
+        },
+      ],
+    };
+
+    const output = buildProviderSparklineString("google-antigravity", mockUsage, fixedNow);
+    expect(output).toContain("󰀪 [gemini 1d: 100% 󰥔 3h0m @15:00]");
+    expect(output).toContain("openai 1d [");
   });
 });

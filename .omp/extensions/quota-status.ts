@@ -6,26 +6,63 @@ import * as readline from "readline";
 
 const execAsync = promisify(exec);
 
+export interface QuotaLimitScope {
+  provider?: string;
+  windowId?: string;
+  shared?: boolean;
+  accountId?: string;
+  projectId?: string;
+}
+
+export interface QuotaLimitWindow {
+  id?: string;
+  label?: string;
+  durationMs?: number;
+  resetsAt?: number;
+}
+
+export interface QuotaLimitAmount {
+  unit?: string;
+  limit?: number;
+  used?: number;
+  remaining?: number;
+  usedFraction: number;
+  remainingFraction?: number;
+}
+
 export interface QuotaLimit {
   id?: string;
-  label: string;
-  window?: {
-    label: string;
-    resetsAt: number;
-  };
-  amount: {
-    usedFraction: number;
-    used: number;
-  };
+  label?: string;
+  scope?: QuotaLimitScope;
+  window?: QuotaLimitWindow;
+  amount: QuotaLimitAmount;
+  status?: string;
+}
+
+export interface ProviderReportMetadata {
+  accountId?: string;
+  email?: string;
+  orgId?: string;
+  orgName?: string;
+  endpoint?: string;
+  projectId?: string;
+  planType?: string;
+  [key: string]: unknown;
 }
 
 export interface ProviderReport {
   provider: string;
+  fetchedAt?: number;
   limits?: QuotaLimit[];
+  metadata?: ProviderReportMetadata;
 }
 
 export interface UsagePayload {
+  generatedAt?: number;
   reports?: ProviderReport[];
+  accountsWithoutUsage?: unknown[];
+  disabledCredentials?: unknown[];
+  capacity?: Record<string, unknown>;
 }
 
 let cachedUsage: UsagePayload | null = null;
@@ -54,6 +91,8 @@ export async function fetchUsage(forceRefresh = false): Promise<UsagePayload | n
   }
 }
 
+const RESET_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 export function formatReset(resetsAtMs?: number, now = Date.now()): string {
   if (!resetsAtMs) return "";
   const diffMs = resetsAtMs - now;
@@ -63,9 +102,17 @@ export function formatReset(resetsAtMs?: number, now = Date.now()): string {
   const hours = Math.floor((totalMins % 1440) / 60);
   const mins = totalMins % 60;
 
-  if (days > 0) return `${days}d${hours}h`;
-  if (hours > 0) return `${hours}h${mins}m`;
-  return `${mins}m`;
+  const target = new Date(resetsAtMs);
+  const hh = String(target.getHours()).padStart(2, "0");
+  const mm = String(target.getMinutes()).padStart(2, "0");
+  const timeStr = `${hh}:${mm}`;
+
+  if (days > 0) {
+    const dayName = RESET_DAYS[target.getDay()];
+    return `${days}d${hours}h @${dayName} ${timeStr}`;
+  }
+  if (hours > 0) return `${hours}h${mins}m @${timeStr}`;
+  return `${mins}m @${timeStr}`;
 }
 export function formatSyncTime(fetchedAtMs?: number, now = Date.now()): string {
   if (!fetchedAtMs) return "";
@@ -118,14 +165,19 @@ export function render12Bar(fraction: number): { bar: string; pctStr: string; al
 }
 
 export function getProviderPrefix(provider: string): string {
-  switch (provider) {
+  switch (provider.toLowerCase()) {
     case "anthropic":
       return "󰛄 claude";
     case "openai-codex":
+    case "openai":
       return "󰚩 codex";
     case "kimi-code":
+    case "kimi":
+    case "moonshot":
       return "󰍛 kimi";
     case "google-antigravity":
+    case "google":
+    case "gemini":
     default:
       return "󰚩 antigravity";
   }
@@ -166,6 +218,13 @@ export function buildProviderSparklineString(
 
     const fraction = l.amount.usedFraction;
     const pct = Math.round(fraction * 100);
+    const resetStr = l.window?.resetsAt ? ` 󰥔 ${formatReset(l.window.resetsAt, now)}` : "";
+
+    // Collapse 100% exhausted quota into a compact alert pill tag
+    if (pct >= 100) {
+      activeBars.push(`󰀪 [${name}: 100%${resetStr}]`);
+      continue;
+    }
 
     // Smart Focus: collapse 0% sub-quotas in Antigravity
     if (provider === "google-antigravity" && pct === 0 && report.limits.length > 1) {
@@ -175,9 +234,7 @@ export function buildProviderSparklineString(
     }
 
     const { bar, pctStr, alertIcon } = render12Bar(fraction);
-    const reset = l.window?.resetsAt ? ` 󰥔 ${formatReset(l.window.resetsAt, now)}` : "";
-
-    activeBars.push(`${alertIcon}${name} ${bar} ${pctStr}${reset}`);
+    activeBars.push(`${alertIcon}${name} ${bar} ${pctStr}${resetStr}`);
   }
 
   const prefix = getProviderPrefix(provider);
@@ -204,9 +261,9 @@ export function isSubagent(ctx?: ExtensionContext): boolean {
 }
 
 export interface ExtensionContext {
-  model?: string;
+  model?: string | { id?: string; name?: string };
   models?: {
-    current?: () => string;
+    current?: () => string | { id?: string; name?: string } | undefined;
   };
   sessionManager?: {
     getSessionFile(): string;
@@ -225,7 +282,8 @@ export async function getLatestModelFromSession(sessionFile?: string): Promise<s
     try {
       const rec = JSON.parse(line);
       if (rec.type === "model_change" && rec.model) {
-        lastModel = rec.model;
+        const m = rec.model;
+        lastModel = typeof m === "string" ? m : (typeof m === "object" && m !== null ? (m.id || m.name || "") : "");
       }
     } catch {}
   }
@@ -243,7 +301,8 @@ export default function (pi: ExtensionAPI) {
     if (!data) return;
     const sessionFile = c?.sessionManager?.getSessionFile();
     const sessionModel = await getLatestModelFromSession(sessionFile);
-    const modelStr = sessionModel || (c?.models?.current ? c.models.current() : (c?.model || "google-antigravity/gemini-3.7-flash"));
+    const rawModel = sessionModel || (c?.models?.current ? c.models.current() : (c?.model || "google-antigravity/gemini-3.7-flash"));
+    const modelStr = (typeof rawModel === "string" ? rawModel : (typeof rawModel === "object" && rawModel !== null ? (rawModel.id || rawModel.name || "") : "")) || "google-antigravity/gemini-3.7-flash";
 
     // Strictly extract the exact provider prefix before the first slash
     const slashIdx = modelStr.indexOf("/");

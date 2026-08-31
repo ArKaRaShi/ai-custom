@@ -2,7 +2,8 @@
 /**
  * Runnable self-check. No framework: plain asserts, run directly.
  *
- *   bun scripts/test_sandbox.ts
+ *   SKILL_DIR="${SKILL_DIR:-$HOME/.agents/skills/db-sandbox}"
+ *   bun "$SKILL_DIR/scripts/test_sandbox.ts"
  *
  * Covers base.ts guardrails, the composite-key registry (self-heal on stale
  * entries, cross-project drop guard), resolveConfig's --env-file precedence,
@@ -17,6 +18,7 @@ import { Database } from "bun:sqlite";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createsTargetBeforeClone } from "./sandbox";
 import { assertDroppable, assertLocalTarget, defaultRegistryRoot, normalizeIdentifier, readRegistry } from "./base";
 
 function testNormalizeIdentifier(): void {
@@ -33,6 +35,21 @@ function testNormalizeIdentifier(): void {
     threw = true;
   }
   if (!threw) throw new Error("expected throw on all-punctuation identifier");
+}
+
+function testPostgresFullCloneSkipsPrecreate(): void {
+  if (createsTargetBeforeClone("postgres", "full")) {
+    throw new Error("PostgreSQL full template clone must not create the target first");
+  }
+  if (!createsTargetBeforeClone("postgres", "full", "logical")) {
+    throw new Error("PostgreSQL full logical clone must create the target first");
+  }
+  if (!createsTargetBeforeClone("postgres", "bare")) {
+    throw new Error("PostgreSQL bare sandbox must create an empty target");
+  }
+  if (!createsTargetBeforeClone("mysql", "full")) {
+    throw new Error("MySQL full clone must create the target before cloning");
+  }
 }
 
 function testAssertLocalTarget(): void {
@@ -307,6 +324,7 @@ async function demo(): Promise<void> {
     ["testAssertLocalTarget", testAssertLocalTarget],
     ["testAssertDroppable", testAssertDroppable],
     ["testDefaultRegistryRoot", testDefaultRegistryRoot],
+    ["testPostgresFullCloneSkipsPrecreate", testPostgresFullCloneSkipsPrecreate],
     ["testSqliteEndToEnd", testSqliteEndToEnd],
     ["testEnvFileInjectsBase", testEnvFileInjectsBase],
     ["testStaleEntryPruning", testStaleEntryPruning],

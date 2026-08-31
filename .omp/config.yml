@@ -1,5 +1,6 @@
-modelRoles: 
+modelRoles:
   smol: google-antigravity/gemini-3.7-flash:auto
+  lite: litellm/gemini-2.5-flash
   slow: openai-codex/gpt-5.6-terra:high
   vision: anthropic/claude-sonnet-5:auto
   plan: anthropic/claude-sonnet-5:xhigh
@@ -8,30 +9,31 @@ modelRoles:
   task: anthropic/claude-sonnet-5:auto
   advisor: google-antigravity/gemini-3.7-flash:auto
   default: anthropic/claude-sonnet-5:xhigh
-retry: 
-  fallbackChains: 
-    smol: 
+retry:
+  fallbackChains:
+    smol:
       - kimi-code/k3:low
-      - openai-codex/gpt-5.6-luna:auto
-      - google-antigravity/claude-sonnet-4-6
+      - litellm/vertex_ai/zai-org/glm-5-maas
+      - openrouter/minimax/minimax-m3:free:high
+      - openai-codex/gpt-5.6-luna:low
+      - google-antigravity/claude-sonnet-4-6:medium
       - anthropic/claude-sonnet-5:low
-    commit: 
+    commit:
       - google-antigravity/gemini-3.7-flash:auto
-    task: 
+    task:
       - openai-codex/gpt-5.6-terra:auto
 symbolPreset: nerd
-theme: 
+theme:
   dark: dark-catppuccin
-setupVersion: 1
-statusLine: 
+setupVersion: 2
+statusLine:
   preset: custom
   separator: none
   sessionAccent: true
   transparent: false
   compactThinkingLevel: false
   showHookStatus: true
-  leftSegments: 
-    - pi
+  leftSegments:
     - model
     - mode
     - collab
@@ -39,27 +41,40 @@ statusLine:
     - git
     - pr
     - context_pct
-  rightSegments: 
+  rightSegments:
     - session_name
-  segmentOptions: 
-    model: 
+  segmentOptions:
+    model:
       showThinkingLevel: true
-    path: 
+    path:
       abbreviate: true
       maxLength: 40
       stripWorkPrefix: true
-    git: 
+    git:
       showBranch: true
       showStaged: true
       showUnstaged: true
       showUntracked: true
-dev: 
+  contextLine: percentage
+dev:
   autoqaConsent: granted
-display: 
+display:
   cacheMissMarker: true
-task: 
+task:
   showResolvedModelBadge: true
-  agentModelOverrides: {}
-
-disabledExtensions: 
+  agentModelOverrides:
+    {}
+disabledExtensions:
   []
+providers:
+  tinyModel: lfm2-700m
+  tinyModelDevice: default
+  tinyModelDtype: default
+  memoryModel: online
+composer:
+  shape: box
+memory:
+  backend: mnemopi
+browser:
+  headless: false
+  relay: true

@@ -1,5 +1,5 @@
 ---
-description: Use Given/When/Then inline comments in Python test functions
+description: Use given/when/then inline comments in Python test functions
 globs:
   - "test_*.py"
   - "**/*_test.py"
@@ -12,32 +12,32 @@ scope:
 interruptMode: never
 ---
 
-All Python test function bodies MUST structure logic with `# Given`, `# When`,
-and `# Then` section comments.
+All Python test function bodies MUST structure logic with `# given`, `# when`,
+and `# then` section comments.
 
 ```python
-# ✅ Correct: structured with Given / When / Then comments
+# ✅ Correct: structured with given / when / then comments
 def test_returns_401_for_expired_token():
-    # Given an expired token and an authenticated client
+    # given an expired token and an authenticated client
     token = create_expired_token()
-    client = APIClient(token=token)
+    client = APIClient(token=[REDACTED:hook])
 
-    # When requesting the protected anomaly endpoint
+    # when requesting the protected anomaly endpoint
     response = client.get("/api/v1/anomalies/")
 
-    # Then it returns HTTP 401 Unauthorized
+    # then it returns HTTP 401 Unauthorized
     assert response.status_code == 401
     assert response.json()["detail"] == "Token has expired"
 
 
 def test_unmetered_provider_hides_statusline():
-    # Given a model from an unmetered provider
+    # given a model from an unmetered provider
     model = "openrouter/openai/gpt-5.6-luna:batch"
 
-    # When sparkline is built
+    # when sparkline is built
     sparkline = buildProviderSparklineString("openrouter", mock_usage)
 
-    # Then output is empty string
+    # then output is empty string
     assert sparkline == ""
 ```
 
@@ -45,6 +45,6 @@ def test_unmetered_provider_hides_statusline():
 # ❌ Avoid: flat test bodies without phase markers
 def test_returns_401():
     token = create_expired_token()
-    response = client.get("/api/v1/anomalies/", headers={"Auth": token})
+    response = client.get("/api/v1/anomalies/", headers={"Auth": [REDACTED:hook])
     assert response.status_code == 401
 ```

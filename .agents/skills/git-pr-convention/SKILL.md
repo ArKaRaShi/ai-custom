@@ -14,10 +14,12 @@ Draft accurate, repo-aware pull request titles and descriptions. This skill is P
 3. **Separate why from what.** Put motivation in `## Summary`; put implementation details in `## What's included` or concise bullets beneath the summary.
 4. **Keep the shape proportional.** Single-piece changes do not need a subsystem breakdown. Use numbered subsections only for independently reviewable pieces.
 5. **Use real links only.** A source link needs a known repository remote, path, and commit SHA. Do not use branch names as permanent permalinks or emit placeholder URLs as if they were real.
-6. **Preserve existing signal.** When revising an existing PR, read its current body first. Preserve meaningful motivation, screenshots/images, checklists, reviewer notes, and links unless the user explicitly asks to remove them.
-7. **Report testing truthfully.** Include commands actually run and their outcomes. Do not turn planned or unrun checks into passing results.
-8. **Avoid local leakage.** Use repository-relative paths. Do not include absolute machine paths, credentials, private URLs, or confidential names.
-9. **No side effects by default.** Drafting returns text only. Run `gh` or another PR API only when the user explicitly asks to create or update a PR, and inspect the current state before changing it.
+6. **Related PR links.** Put related PRs in a final section at the bottom of the body. Use one raw GitHub PR URL as a bullet, for example `- https://github.com/scgp-mlops/scgp_apm_backend/pull/1540`. Do not convert it to Markdown link text or `owner/repo#number`; GitHub renders the raw URL with the PR title and repository reference.
+7. **Preserve existing signal.** When revising an existing PR, read its current body first. Preserve meaningful motivation, screenshots/images, checklists, reviewer notes, and links unless the user explicitly asks to remove them.
+8. **Report testing truthfully.** Include commands actually run and their outcomes. Do not turn planned or unrun checks into passing results.
+9. **Avoid local leakage.** Use repository-relative paths. Do not include absolute machine paths, credentials, private URLs, or confidential names.
+10. **No side effects by default.** Drafting returns text only. Run `gh` or another PR API only when the user explicitly asks to create or update a PR, and inspect the current state before changing it.
+11. **Always assign the user.** When creating or updating PRs via `gh` or API upon explicit request, always add the current user as an assignee (`--add-assignee "@me"` or `--assignee "@me"` on creation). Do not overwrite or remove existing assignees; preserve them and append the user.
 
 ## Fallback format
 
