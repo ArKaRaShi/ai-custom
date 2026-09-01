@@ -1,36 +1,23 @@
 ---
 name: emoji-commit
 description: >
-  Use when generating, drafting, or writing git commit messages with emoji or unicode symbols and bulleted change lists, or when asked for conventional commits with emoji and bullet points.
+  Use when generating, drafting, or writing git commit messages with emoji or unicode symbols and adaptive body formatting (prose or capped bullets), or when asked for emoji commit messages.
 ---
 
-Write commit messages terse and exact in Conventional Commits format with a mandatory emoji or unicode symbol in the subject line and a mandatory bulleted body. No fluff. Why over what.
+Write commit messages terse and exact in Conventional Commits format with a mandatory emoji or unicode symbol in the subject line, and an adaptive, high-signal body. No fluff. Why over what.
 
 ## Format Contract
 
-Every commit message MUST strictly follow this structure:
+Every subject line MUST strictly follow:
 
 ```
 <type>(<scope>): <emoji|unicode> <summary>
-
-- <bullet point 1>
-- <bullet point 2>
-- <bullet point 3>
 ```
 
 - `<scope>` is optional: `<type>: <emoji|unicode> <summary>`
-- Empty blank line between subject and body is REQUIRED.
-- Body is ALWAYS present as a list of bullet points (`- `).
-
-## Rules
-
-### Subject line:
-- `<type>(<scope>): <emoji|unicode> <summary>`
-- Types: `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `chore`, `build`, `ci`, `style`, `revert`
-- Must include an emoji or unicode character directly after the colon (with a space)
+- Space between emoji and summary is recommended.
 - Imperative mood: "add", "fix", "remove" — never "added", "adds", "adding"
-- ≤50 chars when possible, hard cap 72
-- No trailing period
+- ≤50 chars when possible, hard cap 72 chars. No trailing period.
 
 ### Common Type-to-Icon Mapping:
 | Type | Emoji | Unicode Alt | Purpose |
@@ -41,56 +28,70 @@ Every commit message MUST strictly follow this structure:
 | `perf` | ⚡ | ⚡ | Performance optimization |
 | `docs` | 📝 | ✎ | Documentation updates |
 | `test` | 🧪 | ✓ | Adding or modifying tests |
-| `chore` | 🔧 | ⚙ | Tooling, dependencies, routine tasks |
+| `chore` | 🔧 | ⚙ | Tooling, dependencies, routine maintenance |
 | `ci` | 🤖 | ⚑ | CI/CD pipelines and automation |
-| `build` | 📦 | ▤ | Build system, packaging |
+| `build` | 📦 | ▤ | Build system, packaging, external deps |
 | `style` | 🎨 | ❖ | Code style, formatting, whitespace |
 | `revert` | ⏪ | ↶ | Reverting previous changes |
 
-### Body (ALWAYS REQUIRED):
-- NEVER omit the body. Even for trivial changes, provide at least 1-3 bullets.
-- ALWAYS use hyphen bullets (`- `), never asterisks (`*`) or prose paragraphs.
-- Keep bullets concise and high-signal: explain *why* and key architectural/behavioral points.
-- Wrap lines at 72 chars.
-- Reference issues or PRs at the end as bullets or trailers:
-  - `- Closes #42`
+---
 
-### What NEVER goes in:
-- Prose paragraphs in the body (body must be strictly bullet points)
-- Subject line without an emoji or unicode symbol
-- "This commit does X", "I", "we", "now", "currently" — the diff already shows the code
-- AI attribution trailers ("Generated with Claude Code", etc.) unless explicitly required by user
-- Redundant restatements of file names already in the scope
+## Adaptive Body Rules
 
-## Examples
+Choose ONE of these three modes based on diff complexity:
 
-### Feature with scope:
+### Mode 0: Zero Body (Subject-Only)
+- **When to use:** Atomic, trivial, or self-explanatory changes (e.g. routine version bumps, typo fixes, small formatting tweaks).
+- **Rule:** Do NOT write a redundant body or bullet that merely repeats the subject line.
+
 ```
-feat(auth): ✨ add JWT refresh token rotation
-
-- Store refresh token hash with family ID in session store
-- Invalidate entire token family on detected replay attack
-- Expose /api/auth/refresh endpoint for client silent renew
-- Closes #45
+chore(deps): 📦 bump next from 15.5.9 to 15.5.25
 ```
 
-### Bug fix without scope:
-```
-fix: 🐛 handle null pointer in tenant header resolution
+### Mode 1: Description / Prose (1–2 Sentences)
+- **When to use:** The commit has a single non-obvious *why*, architectural tradeoff, or bug root-cause that needs context.
+- **Rule:** Terse prose (Caveman-style). Wrap at 72 chars. No bullets needed.
 
-- Fallback to default tenant when x-tenant-id header is omitted
-- Return 400 Bad Request when tenant identifier is malformed
-- Add regression test for missing header on healthcheck route
+```
+fix(auth): 🐛 sanitize null bytes in session cookies
+
+Node 22 HTTP parser throws ERR_HTTP_INVALID_HEADER_VALUE on raw null
+bytes from legacy clients during handshake.
+
+Closes #182
 ```
 
-### Refactoring:
-```
-refactor(database): ♻️ migrate query builder to kysely
+### Mode 2: Bulleted List (2 to 4 Bullets Max)
+- **When to use:** The commit encompasses 2–4 discrete, cohesive changes or observable side-effects.
+- **Rule:** Use `- `, keep each bullet concise and imperative, and **cap strictly at 4 bullets**.
+- If a commit requires 5+ bullets, the change is too broad; recommend splitting into smaller commits.
 
-- Replace raw SQL concatenation with type-safe query builders
-- Consolidate connection pooling settings in database config
-- Reduce boilerplate across repository layers
 ```
+feat(meeting): ✨ add representative attendance selection
+
+- allow meeting organizer to flag attendee as acting representative
+- disable direct attendance checkbox for represented accounts
+- sync representative status to attendance audit trail
+```
+
+---
+
+## Auto-Clarity
+
+Always include a body (Mode 1 or Mode 2) for:
+- Breaking changes (`BREAKING CHANGE: ...` or `!` in type)
+- Security patches
+- Database migrations
+- Reverts of previous commits
+
+Never compress these into subject-only.
+
+## What NEVER goes in:
+- 5 or more bullets (indicates commit is doing too much; split instead)
+- Redundant bullets that just restate the subject line
+- "This commit does X", "I", "we", "now", "currently"
+- AI attribution trailers ("Generated with Claude Code", etc.) unless explicitly requested
+- Asterisks (`*`) for bullets (always use `- `)
 
 ## Boundaries
 
