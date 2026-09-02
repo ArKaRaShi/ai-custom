@@ -1,23 +1,23 @@
 #!/usr/bin/env bun
 import { describe, it, expect } from "bun:test";
-import { redact } from "../../hooks/post/redact";
+import { redact, getRedactedLabel } from "../../hooks/post/redact";
 
-type Case = [text: string, path: string | undefined, shouldRedact: boolean];
+type Case = [text: string, path: string | undefined, shouldRedact: boolean, expectedSub?: string];
 
 const CASES: Case[] = [
-  // Real secrets in config/env context - must redact.
-  ["DB_" + "PASSWORD=" + "mySuperSecretPassword123!", ".env", true],
-  ['"API_' + 'KEY": "AbCdEfGh12345678"', "config.json", true],
-  ["API_" + "TOKEN=" + "xy1234567890abcdef", ".env", true],
-  ["pass" + "word: hunter2xyz123", "values.yaml", true],
+  // Real secrets in config/env context - must redact with explicit category
+  ["DB_" + "PASSWORD=" + "mySuperSecretPassword123!", ".env", true, getRedactedLabel("password")],
+  ['"API_' + 'KEY": "AbCdEfGh12345678"', "config.json", true, getRedactedLabel("api_key")],
+  ["API_" + "TOKEN=" + "xy1234567890abcdef", ".env", true, getRedactedLabel("api_key")],
+  ["pass" + "word: hunter2xyz123", "values.yaml", true, getRedactedLabel("password")],
 
   // Vendor-format signatures - must redact regardless of file type (source included).
-  ["aws_key = " + "AKIA" + "IOSFODNN7EXAMPLE", "deploy.ts", true],
-  ["Authorization: Bearer " + "mySecretBearerToken123456", "server.py", true],
-  ["-----BEGIN RSA PRIVATE " + "KEY-----\nMIIEowIBAAKCAQEA0\n-----END RSA PRIVATE " + "KEY-----", "id_rsa.pem", true],
-  ["OPENAI_KEY=" + "sk-proj-" + "abc123def456ghi789jkl012", "app.py", true],
-  ["ghp_" + "abcdefghijklmnopqrstuvwxyz0123456789", "readme.txt", true],
-  ["postgres://myuser:" + "supersecretpass" + "@db.internal:5432/app", "config.yml", true],
+  ["aws_key = " + "AKIA" + "IOSFODNN7EXAMPLE", "deploy.ts", true, getRedactedLabel("aws_access_key")],
+  ["Authorization: Bearer " + "mySecretBearerToken123456", "server.py", true, getRedactedLabel("bearer_token")],
+  ["-----BEGIN RSA PRIVATE " + "KEY-----\nMIIEowIBAAKCAQEA0\n-----END RSA PRIVATE " + "KEY-----", "id_rsa.pem", true, getRedactedLabel("private_key_block")],
+  ["OPENAI_KEY=" + "sk-proj-" + "abc123def456ghi789jkl012", "app.py", true, getRedactedLabel("api_key")],
+  ["ghp_" + "abcdefghijklmnopqrstuvwxyz0123456789", "readme.txt", true, getRedactedLabel("git_token")],
+  ["postgres://myuser:" + "supersecretpass" + "@db.internal:5432/app", "config.yml", true, getRedactedLabel("database_password")],
 
   // Function calls assigned to secret-sounding keys must never be redacted
   ['password: resolveField(flags.password, envFileValues, "DB_PASSWORD"),', "sandbox.ts", false],
@@ -51,15 +51,18 @@ const CASES: Case[] = [
   ["total_tokens = 50000", undefined, false],
 
   // Config files with secret keys
-  ["SECRET_" + "KEY: myProductionSecretKey987", "values.yaml", true],
+  ["SECRET_" + "KEY: myProductionSecretKey987", "values.yaml", true, getRedactedLabel("secret")],
 ];
 
 describe("given redact post-hook, when scanning text across file contexts, then redact sensitive values and preserve safe content", () => {
-  for (const [text, filePath, shouldRedact] of CASES) {
+  for (const [text, filePath, shouldRedact, expectedSub] of CASES) {
     it(`redact("${text.slice(0, 30)}...", path=${filePath ?? "none"}) -> ${shouldRedact}`, () => {
       const out = redact(text, filePath);
       const changed = out !== text;
       expect(changed).toBe(shouldRedact);
+      if (expectedSub) {
+        expect(out).toContain(expectedSub);
+      }
     });
   }
 });

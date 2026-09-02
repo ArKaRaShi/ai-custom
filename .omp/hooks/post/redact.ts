@@ -1,16 +1,13 @@
 import type { HookAPI } from "@oh-my-pi/pi-coding-agent/extensibility/hooks";
 
 // Redact obvious secrets from tool output before they hit context/transcript.
-// Applies Gitleaks/TruffleHog best practices:
-// 1. Unambiguous provider patterns (AWS, GitHub, Bearer, PEM, OpenAI/Anthropic keys)
-// 2. Tightly scoped generic key=value patterns that avoid:
-//    - Language type definitions (string, boolean, number, any, unknown)
-//    - Common boolean / null primitives (true, false, null, undefined, none)
-//    - Protocol identifiers (oauth2, basic, bearer, session)
-//    - Metric & token count variables (prompt_tokens, total_tokens)
-//    - Metadata keys (token_type, auth_method, auth_required, public_key)
+// Uses an explicit, self-documenting marker so subagents and models understand:
+// 1. The value was masked by a security hook, NOT literally written as a placeholder on disk.
+// 2. The real value exists on disk and must not be overwritten or modified.
 
-const REDACTED_LABEL = "[REDACTED:hook]";
+export function getRedactedLabel(category = "credential"): string {
+  return `[OMP_SECURITY_HOOK: ${category} masked for privacy; real value exists on disk, do not modify]`;
+}
 
 // Harmless value allowlist: true secrets are never language primitives or protocol keywords
 const VALUE_ALLOWLIST: Record<string, true> = {
@@ -38,7 +35,16 @@ function isIgnoredKey(k: string): boolean {
   return false;
 }
 
-// True secret assignment key pattern (aligned with Gitleaks generic-api-key)
+// Identify category of secret for explicit labeling
+function categorizeSecretKey(k: string): string {
+  if (/password|passwd/.test(k)) return "password";
+  if (/api[_-]?(?:key|token)/.test(k)) return "api_key";
+  if (/private[_-]?key/.test(k)) return "private_key";
+  if (/auth[_-]?(?:token|secret|key|header)|bearer[_-]?token|refresh[_-]?token/.test(k)) return "auth_token";
+  if (/secret(?:_key)?|client[_-]?secret/.test(k)) return "secret";
+  return "credential";
+}
+
 function isSecretKey(k: string): boolean {
   return /(?:secret(?:_key)?|password|passwd|api[_-]?(?:key|token)|access[_-]?(?:key|token)|private[_-]?key|client[_-]?secret|auth[_-]?(?:token|secret|key|header)|refresh[_-]?token|bearer[_-]?token)/.test(k);
 }
@@ -54,38 +60,37 @@ function redactGenericKeyValue(text: string): string {
       const cleanVal = rawVal.replace(/["',;]/g, "").toLowerCase();
       if (VALUE_ALLOWLIST[cleanVal]) return match;
 
-      return `${prefix}${REDACTED_LABEL}`;
+      const cat = categorizeSecretKey(k);
+      return `${prefix}${getRedactedLabel(cat)}`;
     },
   );
 }
 
-const PATTERNS: { re: RegExp; keepPrefix: boolean }[] = [
-  { re: /\bAKIA[0-9A-Z]{16}\b/g, keepPrefix: false }, // AWS access key ids
-  { re: /(Bearer\s+)[A-Za-z0-9\-._~+/]{16,}=*/gi, keepPrefix: true }, // Authorization headers
+const PATTERNS: { re: RegExp; keepPrefix: boolean; category: string }[] = [
+  { re: /\bAKIA[0-9A-Z]{16}\b/g, keepPrefix: false, category: "aws_access_key" },
+  { re: /(Bearer\s+)[A-Za-z0-9\-._~+/]{16,}=*/gi, keepPrefix: true, category: "bearer_token" },
   {
-    // GitHub / GitLab tokens
     re: /\bgh[pousr]_[A-Za-z0-9]{36}\b|\bglpat-[A-Za-z0-9\-_]{20,}\b/g,
     keepPrefix: false,
+    category: "git_token",
   },
   {
-    // OpenAI / modern AI provider API keys (e.g. sk-proj-..., sk-live-...)
     re: /\bsk-(?:proj|live|ant)-[A-Za-z0-9_-]{20,}\b/g,
     keepPrefix: false,
+    category: "api_key",
   },
   {
-    // PEM private key blocks
     re: /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g,
     keepPrefix: false,
+    category: "private_key_block",
   },
   {
-    // DB connection strings with embedded passwords (e.g. postgres://user:pass@host)
     re: /(:\/\/[^\s:@/]+:)[^\s:@/]+(@)/g,
     keepPrefix: false,
+    category: "database_password",
   },
 ];
 
-// Gating generic key=value scanning out of known source-code extensions removes
-// false positives on object properties or function params named password/token/secret.
 const SOURCE_EXTENSIONS: Record<string, true> = {
   ts: true, tsx: true, js: true, jsx: true, mjs: true, cjs: true,
   py: true, go: true, rs: true, java: true, kt: true, swift: true,
@@ -104,11 +109,12 @@ export function redact(text: string, filePath?: string): string {
   if (!isSourceCode) {
     out = redactGenericKeyValue(out);
   }
-  for (const { re, keepPrefix } of PATTERNS) {
+  for (const { re, keepPrefix, category } of PATTERNS) {
+    const label = getRedactedLabel(category);
     out = out.replace(re, (match, p1: string, p2?: string) => {
-      if (keepPrefix) return `${p1}${REDACTED_LABEL}`;
-      if (p1 && p2) return `${p1}${REDACTED_LABEL}${p2}`; // connection string: keep user and @
-      return REDACTED_LABEL;
+      if (keepPrefix) return `${p1}${label}`;
+      if (p1 && p2) return `${p1}${label}${p2}`;
+      return label;
     });
   }
   return out;
