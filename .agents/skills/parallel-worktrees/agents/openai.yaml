@@ -1,0 +1,3 @@
+interface:
+  display_name: "Parallel Worktrees"
+  short_description: "Create isolated sibling worktrees for parallel features"

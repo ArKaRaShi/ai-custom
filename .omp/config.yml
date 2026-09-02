@@ -28,7 +28,7 @@ theme:
 setupVersion: 2
 statusLine:
   preset: custom
-  separator: none
+  separator: powerline-thin
   sessionAccent: true
   transparent: false
   compactThinkingLevel: false
@@ -36,19 +36,20 @@ statusLine:
   leftSegments:
     - model
     - mode
-    - collab
     - path
     - git
     - pr
-    - context_pct
   rightSegments:
+    - subagents
+    - context_pct
+    - cost
     - session_name
   segmentOptions:
     model:
       showThinkingLevel: true
     path:
       abbreviate: true
-      maxLength: 40
+      maxLength: 35
       stripWorkPrefix: true
     git:
       showBranch: true
