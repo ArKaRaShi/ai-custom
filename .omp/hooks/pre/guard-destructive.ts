@@ -1,34 +1,58 @@
 import type { HookAPI } from "@oh-my-pi/pi-coding-agent/extensibility/hooks";
 
-// Confirm before commands that can destroy data or push irreversible changes.
-// Add/remove regexes here to tune what counts as "destructive".
-const DESTRUCTIVE: { re: RegExp; label: string }[] = [
-  { re: /\brm\s+(-\w*r\w*\s+)+/, label: "recursive delete" },
-  { re: /\bgit\s+push\b/, label: "git push (remote history change)" },
-  { re: /\bgit\s+reset\s+--hard\b/, label: "git hard reset (discards work)" },
-  { re: /\bgit\s+clean\s+-\w*[dfx]\w*/, label: "git clean (deletes untracked files)" },
-  { re: /\b(drop\s+(table|database)|truncate\s+table)\b/i, label: "SQL drop/truncate" },
-  { re: /\bmkfs(\.\w+)?\b/, label: "format filesystem" },
-  { re: /\bdd\s+.*\bof=\/dev\//, label: "raw disk write" },
-  { re: />\s*\/dev\/(disk|sd|nvme)/, label: "raw disk overwrite" },
-  { re: /\bchmod\s+-R\s+777\s+\//, label: "world-writable root chmod" },
-  { re: /\bsudo\s+rm\b/, label: "sudo delete" },
+// Comprehensive safety guard: confirms before commands that can destroy data,
+// discard uncommitted work, or overwrite remote git history.
+export interface DestructivePattern {
+  re: RegExp;
+  category: "git" | "filesystem" | "database" | "disk";
+  label: string;
+}
+
+export const DESTRUCTIVE_PATTERNS: DestructivePattern[] = [
+  // --- GIT DESTRUCTIVE OPERATIONS ---
+  { re: /\bgit\s+push\b.*(?:--force|-f\b)/i, category: "git", label: "git push --force (remote history overwrite)" },
+  { re: /\bgit\s+push\b/i, category: "git", label: "git push (remote branch update)" },
+  { re: /\bgit\s+reset\s+--hard\b/i, category: "git", label: "git reset --hard (discards uncommitted work)" },
+  { re: /\bgit\s+(?:restore|checkout)\s+\.\s*(?:&&|;|$)/i, category: "git", label: "git restore/checkout . (wipes all working changes)" },
+  { re: /\bgit\s+clean\s+-[a-z]*[dfx][a-z]*\b/i, category: "git", label: "git clean (permanently deletes untracked files)" },
+  { re: /\bgit\s+branch\s+-D\b/i, category: "git", label: "git branch -D (force delete unmerged branch)" },
+
+  // --- FILESYSTEM & SYSTEM ---
+  { re: /\brm\s+(?:-[a-z]*r[a-z]*\s+)+/i, category: "filesystem", label: "recursive directory deletion (rm -r)" },
+  { re: /\bsudo\s+rm\b/i, category: "filesystem", label: "root-level delete (sudo rm)" },
+  { re: /\bchmod\s+-R\s+777\s+\//i, category: "filesystem", label: "world-writable root chmod" },
+
+  // --- DATABASE ---
+  { re: /\b(?:drop\s+(?:table|database|schema)|truncate\s+(?:table)?)\b/i, category: "database", label: "SQL drop/truncate (data loss)" },
+
+  // --- DISK & HARDWARE ---
+  { re: /\bmkfs(?:\.\w+)?\b/i, category: "disk", label: "format filesystem (mkfs)" },
+  { re: /\bdd\s+.*\bof=\/dev\//i, category: "disk", label: "raw disk write (dd)" },
+  { re: />\s*\/dev\/(?:disk|sd|nvme)/i, category: "disk", label: "raw disk overwrite" },
 ];
 
-export default function (pi: HookAPI): void {
+export function findDestructiveCommand(command: string): DestructivePattern | undefined {
+  return DESTRUCTIVE_PATTERNS.find((d) => d.re.test(command));
+}
+
+export default function guardDestructive(pi: HookAPI): void {
   pi.on("tool_call", async (event, ctx) => {
     if (event.toolName !== "bash") return;
-    const cmd = String(event.input.command ?? "");
-    const hit = DESTRUCTIVE.find((d) => d.re.test(cmd));
+    const cmd = String(event.input.command ?? "").trim();
+    const hit = findDestructiveCommand(cmd);
     if (!hit) return;
 
     if (!ctx.hasUI) {
-      return { block: true, reason: `blocked (no UI to confirm): ${hit.label} — ${cmd}` };
+      return { block: true, reason: `Blocked destructive command (${hit.label}): "${cmd}". Run manually if needed.` };
     }
+
     const ok = await ctx.ui.confirm(
-      `Destructive command: ${hit.label}`,
-      cmd,
+      `⚠️ Destructive Command (${hit.category.toUpperCase()})`,
+      `The agent wants to execute:\n\n${cmd}\n\nRisk: ${hit.label}\n\nDo you want to allow this?`,
     );
-    if (!ok) return { block: true, reason: `user declined: ${hit.label}` };
+
+    if (!ok) {
+      return { block: true, reason: `User declined execution of ${hit.label}: "${cmd}"` };
+    }
   });
 }
