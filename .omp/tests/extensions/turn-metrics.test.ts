@@ -26,6 +26,10 @@ describe("given turn-metrics extension, when formatting tokens or detecting suba
     expect(formatTurnMetrics("5.2", 450, 1250, 0)).toBe("5.2s · 450 out · 1.3k in");
     // Large numbers in millions: 2.5m cached + 5.0m new = 7.5m total in
     expect(formatTurnMetrics("12.0", 1200000, 5000000, 2500000)).toBe("12.0s · 1.2m out · 7.5m in (⚡ 2.5m cached · 5.0m new)");
+    // Sub-second turns (<0.1s)
+    expect(formatTurnMetrics("<0.1s", 50, 1200, 0)).toBe("<0.1s · 50 out · 1.2k in");
+    // Aborted turns
+    expect(formatTurnMetrics("⊘ aborted", 203, 11200, 146900)).toBe("⊘ aborted · 203 out · 158.1k in (⚡ 146.9k cached · 11.2k new)");
   });
 
   it("isSubagent correctly identifies subagent session journals vs parent sessions", () => {

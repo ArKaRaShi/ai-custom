@@ -38,7 +38,8 @@ export async function getTotalUsage(sessionFile: string): Promise<UsageSummary> 
 
 export function formatTurnMetrics(dur: string, dOut: number, dIn: number, dCache: number): string {
   const totalIn = dIn + dCache;
-  const parts = [`${dur}s`, `${formatTokens(dOut)} out`];
+  const durLabel = dur.endsWith("s") || dur.startsWith("⊘") ? dur : `${dur}s`;
+  const parts = [durLabel, `${formatTokens(dOut)} out`];
   if (dCache > 0) {
     parts.push(`${formatTokens(totalIn)} in (⚡ ${formatTokens(dCache)} cached · ${formatTokens(dIn)} new)`);
   } else {
@@ -90,7 +91,13 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("agent_end", async (_event: unknown, ctx: ExtensionContext) => {
     if (isSubagent(ctx)) return;
-    const dur = agentStartTime > 0 ? ((Date.now() - agentStartTime) / 1000).toFixed(1) : "0.0";
+    let dur: string;
+    if (agentStartTime <= 0) {
+      dur = "⊘ aborted";
+    } else {
+      const elapsed = (Date.now() - agentStartTime) / 1000;
+      dur = elapsed < 0.05 ? "<0.1s" : `${elapsed.toFixed(1)}s`;
+    }
     let dOut = 0;
     let dIn = 0;
     let dCache = 0;
