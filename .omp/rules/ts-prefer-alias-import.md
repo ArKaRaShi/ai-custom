@@ -11,7 +11,7 @@ scope:
   - "tool:edit(*.tsx)"
   - "tool:write(*.ts)"
   - "tool:write(*.tsx)"
-interruptMode: never
+interruptMode: always
 ---
 
 Prefer configured path aliases (such as `@/...` or `~/...`) over parent-relative
