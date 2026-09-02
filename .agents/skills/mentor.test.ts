@@ -7,7 +7,7 @@ const SKILL_PATH = path.join(
   ".agents/skills/mentor/SKILL.md",
 );
 
-describe("given mentor skill specification, when validating contracts and invariants, then complies with zero-assumption teaching guidelines", () => {
+describe("given mentor skill specification, when validating contracts and invariants, then complies with enhanced pedagogical guidelines", () => {
   it("exists and has valid YAML frontmatter with name and description", () => {
     expect(fs.existsSync(SKILL_PATH)).toBe(true);
     const content = fs.readFileSync(SKILL_PATH, "utf8");
@@ -44,5 +44,25 @@ describe("given mentor skill specification, when validating contracts and invari
     const content = fs.readFileSync(SKILL_PATH, "utf8");
     expect(content).toMatch(/never\s+blindly\s+trust|do\s+not\s+blind\s+trust/i);
     expect(content).toMatch(/uncertain|state\s+uncertainty|if\s+unsure/i);
+  });
+
+  it("tracks learning progress with an explicit 3-to-4 stage curriculum roadmap", () => {
+    const content = fs.readFileSync(SKILL_PATH, "utf8");
+    expect(content).toMatch(/curriculum|roadmap|stage\s+tracker/i);
+  });
+
+  it("identifies production gotchas, failure modes, and landmines", () => {
+    const content = fs.readFileSync(SKILL_PATH, "utf8");
+    expect(content).toMatch(/gotchas|traps|landmines|failure\s+modes/i);
+  });
+
+  it("disambiguates vendor/standard conventions from repo-specific quirks", () => {
+    const content = fs.readFileSync(SKILL_PATH, "utf8");
+    expect(content).toMatch(/vendor.*standard|standard.*vs.*repo|repo-specific/i);
+  });
+
+  it("provides safe, read-only runnable inspection prompts or commands for active verification", () => {
+    const content = fs.readFileSync(SKILL_PATH, "utf8");
+    expect(content).toMatch(/verify\s+it\s+yourself|runnable|safe\s+read-only|inspect/i);
   });
 });
