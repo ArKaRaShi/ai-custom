@@ -241,6 +241,50 @@ export function copyFileSafe(src: string, dest: string) {
   fs.copyFileSync(src, dest);
 }
 
+export function plainMergeFiles(
+  localFile: string,
+  repoFile: string,
+  baseFile?: string,
+): { success: boolean; hasConflicts: boolean; content: string } {
+  const tmpMerged = path.join(os.tmpdir(), `ai-sync-merge-${Date.now()}-${Math.random().toString(36).slice(2)}.tmp`);
+  const tmpBase = baseFile && fs.existsSync(baseFile)
+    ? baseFile
+    : path.join(os.tmpdir(), `ai-sync-base-${Date.now()}.tmp`);
+
+  if (!baseFile || !fs.existsSync(baseFile)) {
+    fs.writeFileSync(tmpBase, "");
+  }
+
+  fs.copyFileSync(localFile, tmpMerged);
+
+  let hasConflicts = false;
+  try {
+    // git merge-file <current/ours> <base> <other/theirs>
+    execSync(
+      `git merge-file -L "local (ours)" -L "base" -L "repo (theirs)" "${tmpMerged}" "${tmpBase}" "${repoFile}"`,
+      { stdio: "pipe" },
+    );
+  } catch (e: unknown) {
+    // git merge-file exits with positive status code equal to number of conflict blocks
+    hasConflicts = true;
+  } finally {
+    if (!baseFile && fs.existsSync(tmpBase)) {
+      fs.unlinkSync(tmpBase);
+    }
+  }
+
+  const content = fs.readFileSync(tmpMerged, "utf8");
+  if (fs.existsSync(tmpMerged)) {
+    fs.unlinkSync(tmpMerged);
+  }
+
+  return {
+    success: true,
+    hasConflicts,
+    content,
+  };
+}
+
 export function cmdDiff(fileA: string, fileB: string): string {
   if (!fs.existsSync(fileA) && !fs.existsSync(fileB)) return "No files to compare.";
   try {
@@ -405,8 +449,90 @@ export function cmdViewDiff(repoBase = DEFAULT_REPO, opts: SyncOptions = {}) {
     }
   }
 }
+export function cmdResolve(repoBase = DEFAULT_REPO, opts: SyncOptions = {}, mode: "interactive" | "merge-all" = "interactive") {
+  console.log(`\n🔄 Resolving divergent files between Local (ours) and Repo (theirs)...\n`);
+  const report = compare(repoBase, opts);
+  if (report.modified.length === 0) {
+    console.log(`✨ No content differences found between matching files.\n`);
+    return;
+  }
 
-// CLI argument parser
+  let resolved = 0;
+  for (const localFile of report.modified) {
+    for (const item of TARGET_MAP) {
+      if (localFile.startsWith(item.local)) {
+        const rel = path.relative(item.local, localFile);
+        const adjustedRepo = item.repo.replace(DEFAULT_REPO, repoBase);
+        const repoFile = path.join(adjustedRepo, rel);
+
+        console.log(`══════════════════════════════════════════════════════════════`);
+        console.log(`Conflict / Divergence: ${rel}`);
+        console.log(`Local (ours)  : ${localFile}`);
+        console.log(`Repo (theirs) : ${repoFile}`);
+        console.log(`══════════════════════════════════════════════════════════════`);
+
+        if (mode === "merge-all") {
+          const mergeRes = plainMergeFiles(localFile, repoFile);
+          fs.writeFileSync(localFile, mergeRes.content, "utf8");
+          fs.writeFileSync(repoFile, mergeRes.content, "utf8");
+          if (mergeRes.hasConflicts) {
+            console.log(`⚠️  Merged with conflict markers in both local and repo.`);
+            console.log(`👉 Notice for AI agent: Inspect conflict markers (<<<<<<< / >>>>>>>) and suggest rephrased synthesis.`);
+          } else {
+            console.log(`✅ Cleanly combined changes from both local and repo!`);
+          }
+          resolved++;
+          break;
+        }
+
+        // Non-interactive or script fallback if no TTY
+        console.log(`Options:`);
+        console.log(`  [d] View diff`);
+        console.log(`  [1] Keep ours (Local) -> overwrites Repo`);
+        console.log(`  [2] Accept theirs (Repo) -> overwrites Local`);
+        console.log(`  [3] Combine (Plain 3-way merge)`);
+        console.log(`  [s] Skip`);
+
+        let choice = "3"; // default to combine in non-interactive / agent mode
+        if (process.stdin.isTTY) {
+          const prompt = require("readline-sync");
+          choice = prompt.question("Choice [d/1/2/3/s] (default: 3): ").trim() || "3";
+        } else {
+          console.log(`Running in non-interactive / agent environment: defaulting to [3] Combine.`);
+        }
+
+        if (choice === "d") {
+          console.log(cmdDiff(localFile, repoFile));
+          continue;
+        } else if (choice === "1") {
+          copyFileSafe(localFile, repoFile);
+          console.log(`[~] Kept ours (Local): overwrote repo.`);
+          resolved++;
+        } else if (choice === "2") {
+          copyFileSafe(repoFile, localFile);
+          console.log(`[~] Accepted theirs (Repo): overwrote local.`);
+          resolved++;
+        } else if (choice === "3") {
+          const mergeRes = plainMergeFiles(localFile, repoFile);
+          fs.writeFileSync(localFile, mergeRes.content, "utf8");
+          fs.writeFileSync(repoFile, mergeRes.content, "utf8");
+          if (mergeRes.hasConflicts) {
+            console.log(`⚠️  Merged with conflict markers in both local and repo.`);
+            console.log(`👉 Action: Review conflict markers (<<<<<<< / >>>>>>>) and rephrase combined section.`);
+          } else {
+            console.log(`✅ Cleanly combined changes from both local and repo!`);
+          }
+          resolved++;
+        } else {
+          console.log(`[s] Skipped.`);
+        }
+        console.log();
+        break;
+      }
+    }
+  }
+  console.log(`\n🎉 Resolve finished: ${resolved} file(s) updated.\n`);
+}
 export function parseArgs(rawArgs: string[]): {
   command: string;
   repo: string;
@@ -465,6 +591,14 @@ if (import.meta.main) {
     case "diff":
       cmdViewDiff(repo, opts);
       break;
+    case "resolve":
+    case "review":
+      cmdResolve(repo, opts, "interactive");
+      break;
+    case "merge":
+    case "combine":
+      cmdResolve(repo, opts, "merge-all");
+      break;
     case "pull":
     case "apply":
       cmdPull(repo, opts);
@@ -475,7 +609,7 @@ if (import.meta.main) {
       cmdPush(repo, opts);
       break;
     default:
-      console.log(`Usage: bun sync.ts [status|diff|pull|push] [target|repo_path] [--exclude <name>] [--target <scope>]`);
+      console.log(`Usage: bun sync.ts [status|diff|resolve|merge|pull|push] [target|repo_path] [--exclude <name>] [--target <scope>]`);
       process.exit(1);
   }
 }
