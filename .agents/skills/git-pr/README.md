@@ -1,7 +1,6 @@
-# git-pr-convention
+# git-pr
 
-Repo-aware pull request titles and descriptions. PR-only; commit messages belong to `caveman-commit`.
-
+Repo-aware pull request titles and descriptions. This skill focuses strictly on pull requests.
 ## What it does
 
 Turns a real diff, issue/spec, and repository convention into a concise PR title and body. It explains motivation before implementation details and keeps testing claims tied to commands actually run.

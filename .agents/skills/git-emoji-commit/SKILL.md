@@ -1,5 +1,5 @@
 ---
-name: emoji-commit
+name: git-emoji-commit
 description: >
   Use when generating, drafting, or writing git commit messages with emoji or unicode symbols and adaptive body formatting (prose or capped bullets), or when asked for emoji commit messages.
 ---
