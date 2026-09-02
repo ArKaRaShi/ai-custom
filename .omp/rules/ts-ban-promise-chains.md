@@ -1,5 +1,5 @@
 ---
-description: Prefer async/await over Promise method chains (.then, .catch, .finally)
+description: Ban Promise method chains (.then, .catch, .finally) in favor of async/await
 globs:
   - "**/*.ts"
   - "**/*.tsx"
@@ -13,8 +13,8 @@ scope:
 interruptMode: always
 ---
 
-Prefer `async`/`await` with structured `try`/`catch`/`finally` blocks over raw
-Promise chains (`.then()`, `.catch()`, `.finally()`).
+Ban raw Promise chains (`.then()`, `.catch()`, `.finally()`). Always use
+`async`/`await` with structured `try`/`catch`/`finally` blocks.
 
 Linear async/await flow produces clearer stack traces, simplifies control flow
 (early returns, loops), and prevents unhandled promise rejection leaks.

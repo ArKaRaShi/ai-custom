@@ -1,5 +1,5 @@
 ---
-description: Prefer path alias imports over parent-relative paths
+description: Ban parent-relative path imports (../) in favor of path aliases
 globs:
   - "**/*.ts"
   - "**/*.tsx"
@@ -14,8 +14,9 @@ scope:
 interruptMode: always
 ---
 
-Prefer configured path aliases (such as `@/...` or `~/...`) over parent-relative
-paths (`../`). Sibling imports within the same directory (`./foo`) are allowed.
+Never use parent-relative path imports (`../`). Use configured path aliases
+(such as `@/...` or `~/...`). Sibling imports within the same directory (`./foo`)
+are allowed.
 
 Follow the project's existing `tsconfig.json` path mappings. If the project
 does not configure path aliases or standardizes on relative imports, follow the
