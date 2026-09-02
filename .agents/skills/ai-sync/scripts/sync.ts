@@ -3,44 +3,63 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import { createHash } from "crypto";
+import { execSync } from "child_process";
 
 const HOME = os.homedir();
 const DEFAULT_REPO = path.join(HOME, "Disk", "ai-custom");
 
-const TARGET_MAP: Array<{ local: string; repo: string; name: string }> = [
+export interface SyncTarget {
+  local: string;
+  repo: string;
+  name: string;
+  category: string;
+}
+
+export const TARGET_MAP: Array<SyncTarget> = [
   {
     name: "OMP Config",
+    category: "config",
     local: path.join(HOME, ".omp", "agent", "config.yml"),
     repo: path.join(DEFAULT_REPO, ".omp", "config.yml"),
   },
   {
     name: "OMP Extensions",
+    category: "extensions",
     local: path.join(HOME, ".omp", "agent", "extensions"),
     repo: path.join(DEFAULT_REPO, ".omp", "extensions"),
   },
   {
     name: "OMP Rules",
+    category: "rules",
     local: path.join(HOME, ".omp", "agent", "rules"),
     repo: path.join(DEFAULT_REPO, ".omp", "rules"),
   },
   {
     name: "OMP Hooks",
+    category: "hooks",
     local: path.join(HOME, ".omp", "agent", "hooks"),
     repo: path.join(DEFAULT_REPO, ".omp", "hooks"),
   },
   {
     name: "OMP Tests",
+    category: "tests",
     local: path.join(HOME, ".omp", "agent", "tests"),
     repo: path.join(DEFAULT_REPO, ".omp", "tests"),
   },
   {
     name: "User Skills",
+    category: "skills",
     local: path.join(HOME, ".agents", "skills"),
     repo: path.join(DEFAULT_REPO, ".agents", "skills"),
   },
 ];
 
-function sha256(filePath: string): string {
+export interface SyncOptions {
+  target?: string;
+  exclude?: string[];
+}
+
+export function sha256(filePath: string): string {
   try {
     const buf = fs.readFileSync(filePath);
     return createHash("sha256").update(buf).digest("hex");
@@ -49,7 +68,7 @@ function sha256(filePath: string): string {
   }
 }
 
-function getAllFiles(dir: string): string[] {
+export function getAllFiles(dir: string): string[] {
   if (!fs.existsSync(dir)) return [];
   const stat = fs.statSync(dir);
   if (!stat.isDirectory()) return [dir];
@@ -67,14 +86,47 @@ function getAllFiles(dir: string): string[] {
   return files;
 }
 
-interface DiffReport {
-  missingInRepo: string[];   // Present in local machine, missing in repo
-  missingInLocal: string[];  // Present in repo, missing in local machine
-  modified: string[];        // Exists in both but content differs
+export function matchesPattern(relPath: string, patterns: string[]): boolean {
+  if (!patterns || patterns.length === 0) return false;
+  const normalized = relPath.replace(/\\/g, "/");
+  return patterns.some((p) => {
+    const cleaned = p.trim().replace(/\\/g, "/");
+    if (!cleaned) return false;
+    if (cleaned.startsWith("*.")) {
+      const ext = cleaned.slice(1);
+      return normalized.endsWith(ext);
+    }
+    const parts = normalized.split("/");
+    return (
+      parts.includes(cleaned) ||
+      normalized === cleaned ||
+      normalized.startsWith(cleaned + "/") ||
+      normalized.includes("/" + cleaned + "/") ||
+      normalized.endsWith("/" + cleaned)
+    );
+  });
+}
+
+export function filterItems(paths: string[], opts: SyncOptions = {}): string[] {
+  let result = paths;
+  if (opts.target) {
+    const t = opts.target.toLowerCase();
+    result = result.filter((p) => p.toLowerCase().includes(t));
+  }
+  if (opts.exclude && opts.exclude.length > 0) {
+    result = result.filter((p) => !matchesPattern(p, opts.exclude!));
+  }
+  return result;
+}
+
+export interface DiffReport {
+  missingInRepo: string[];
+  missingInLocal: string[];
+  modified: string[];
   inSync: number;
 }
 
-function compare(repoBase = DEFAULT_REPO): DiffReport {
+export function compare(repoBase = DEFAULT_REPO, opts: SyncOptions = {}): DiffReport {
   const report: DiffReport = {
     missingInRepo: [],
     missingInLocal: [],
@@ -82,11 +134,21 @@ function compare(repoBase = DEFAULT_REPO): DiffReport {
     inSync: 0,
   };
 
-  for (const item of TARGET_MAP) {
+  const targets = opts.target
+    ? TARGET_MAP.filter((item) =>
+        item.category.includes(opts.target!.toLowerCase()) ||
+        item.name.toLowerCase().includes(opts.target!.toLowerCase())
+      )
+    : TARGET_MAP;
+
+  for (const item of targets) {
     const adjustedRepo = item.repo.replace(DEFAULT_REPO, repoBase);
 
-    // Single file comparison (like config.yml)
+    // Single file comparison
     if (fs.existsSync(item.local) && fs.statSync(item.local).isFile()) {
+      const rel = path.basename(item.local);
+      if (opts.exclude && matchesPattern(rel, opts.exclude)) continue;
+
       if (!fs.existsSync(adjustedRepo)) {
         report.missingInRepo.push(item.local);
       } else if (sha256(item.local) !== sha256(adjustedRepo)) {
@@ -102,12 +164,16 @@ function compare(repoBase = DEFAULT_REPO): DiffReport {
 
     const localRelMap = new Map<string, string>();
     for (const lf of localFiles) {
-      localRelMap.set(path.relative(item.local, lf), lf);
+      const rel = path.relative(item.local, lf);
+      if (opts.exclude && matchesPattern(rel, opts.exclude)) continue;
+      localRelMap.set(rel, lf);
     }
 
     const repoRelMap = new Map<string, string>();
     for (const rf of repoFiles) {
-      repoRelMap.set(path.relative(adjustedRepo, rf), rf);
+      const rel = path.relative(adjustedRepo, rf);
+      if (opts.exclude && matchesPattern(rel, opts.exclude)) continue;
+      repoRelMap.set(rel, rf);
     }
 
     // Check local files against repo
@@ -133,17 +199,75 @@ function compare(repoBase = DEFAULT_REPO): DiffReport {
   return report;
 }
 
-function copyFileSafe(src: string, dest: string) {
+export function checkGitRemoteStatus(repoDir: string): { isGit: boolean; message: string; ahead: number; behind: number } {
+  const result = { isGit: false, message: "", ahead: 0, behind: 0 };
+  if (!fs.existsSync(path.join(repoDir, ".git"))) return result;
+  result.isGit = true;
+
+  try {
+    // Quick status
+    const branch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: repoDir, stdio: "pipe" }).toString().trim();
+    const tracking = execSync("git rev-parse --abbrev-ref @{upstream} 2>/dev/null || true", { cwd: repoDir, stdio: "pipe" }).toString().trim();
+
+    if (!tracking) {
+      result.message = `Branch '${branch}' has no remote upstream configured.`;
+      return result;
+    }
+
+    // Check ahead/behind
+    const counts = execSync(`git rev-list --left-right --count ${branch}...@{upstream}`, { cwd: repoDir, stdio: "pipe" }).toString().trim();
+    const [ahead, behind] = counts.split(/\s+/).map(Number);
+    result.ahead = ahead || 0;
+    result.behind = behind || 0;
+
+    if (result.behind > 0 && result.ahead > 0) {
+      result.message = `Branch diverged: ${result.ahead} ahead, ${result.behind} behind '${tracking}' (run git pull --rebase)`;
+    } else if (result.behind > 0) {
+      result.message = `Behind remote: ${result.behind} commit(s) behind '${tracking}' (run 'git pull' or 'ai-sync pull')`;
+    } else if (result.ahead > 0) {
+      result.message = `Ahead of remote: ${result.ahead} unpushed commit(s) on '${branch}' (run 'git push')`;
+    } else {
+      result.message = `Up-to-date with remote '${tracking}'`;
+    }
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    result.message = `Git check failed: ${msg}`;
+  }
+  return result;
+}
+
+export function copyFileSafe(src: string, dest: string) {
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.copyFileSync(src, dest);
 }
 
-export function cmdStatus(repoBase = DEFAULT_REPO) {
+export function cmdDiff(fileA: string, fileB: string): string {
+  if (!fs.existsSync(fileA) && !fs.existsSync(fileB)) return "No files to compare.";
+  try {
+    const diff = execSync(`diff -u "${fileB}" "${fileA}" 2>&1 || true`, { stdio: "pipe" }).toString();
+    return diff;
+  } catch {
+    return "";
+  }
+}
+
+export function cmdStatus(repoBase = DEFAULT_REPO, opts: SyncOptions = {}) {
   console.log(`\n🔍 Scanning AI Custom Harness & Skills:`);
   console.log(`   Machine Home : ${HOME}`);
-  console.log(`   Repo Root    : ${repoBase}\n`);
+  console.log(`   Repo Root    : ${repoBase}`);
+  if (opts.target) console.log(`   Target Scope : ${opts.target}`);
+  if (opts.exclude && opts.exclude.length > 0) console.log(`   Excluding    : ${opts.exclude.join(", ")}`);
+  console.log();
 
-  const report = compare(repoBase);
+  // Git status check
+  const gitInfo = checkGitRemoteStatus(repoBase);
+  if (gitInfo.isGit) {
+    const icon = gitInfo.behind > 0 ? "⚠️ " : gitInfo.ahead > 0 ? "⬆️ " : "🌐";
+    console.log(`Git Status (${path.basename(repoBase)}):`);
+    console.log(`   ${icon} ${gitInfo.message}\n`);
+  }
+
+  const report = compare(repoBase, opts);
 
   console.log(`📊 Status Overview:`);
   console.log(`   ✨ In Sync   : ${report.inSync} files`);
@@ -174,12 +298,14 @@ export function cmdStatus(repoBase = DEFAULT_REPO) {
   }
 }
 
-export function cmdPull(repoBase = DEFAULT_REPO) {
+export function cmdPull(repoBase = DEFAULT_REPO, opts: SyncOptions = {}) {
   console.log(`\n⬇️  Pulling custom OMP & Skills from ${repoBase} into local machine...`);
-  const report = compare(repoBase);
+  if (opts.target) console.log(`   Target Scope : ${opts.target}`);
+  if (opts.exclude && opts.exclude.length > 0) console.log(`   Excluding    : ${opts.exclude.join(", ")}`);
 
+  const report = compare(repoBase, opts);
   let updated = 0;
-  // Copy missing files from repo to local
+
   for (const rf of report.missingInLocal) {
     for (const item of TARGET_MAP) {
       const adjustedRepo = item.repo.replace(DEFAULT_REPO, repoBase);
@@ -194,7 +320,6 @@ export function cmdPull(repoBase = DEFAULT_REPO) {
     }
   }
 
-  // Copy modified files from repo to local
   for (const lf of report.modified) {
     for (const item of TARGET_MAP) {
       if (lf.startsWith(item.local)) {
@@ -214,12 +339,14 @@ export function cmdPull(repoBase = DEFAULT_REPO) {
   console.log(`\n✅ Pull complete: ${updated} files updated on this machine.\n`);
 }
 
-export function cmdPush(repoBase = DEFAULT_REPO) {
+export function cmdPush(repoBase = DEFAULT_REPO, opts: SyncOptions = {}) {
   console.log(`\n⬆️  Backing up local machine OMP & Skills into ${repoBase}...`);
-  const report = compare(repoBase);
+  if (opts.target) console.log(`   Target Scope : ${opts.target}`);
+  if (opts.exclude && opts.exclude.length > 0) console.log(`   Excluding    : ${opts.exclude.join(", ")}`);
 
+  const report = compare(repoBase, opts);
   let updated = 0;
-  // Copy missing files from local to repo
+
   for (const lf of report.missingInRepo) {
     for (const item of TARGET_MAP) {
       if (lf.startsWith(item.local)) {
@@ -234,7 +361,6 @@ export function cmdPush(repoBase = DEFAULT_REPO) {
     }
   }
 
-  // Copy modified files from local to repo
   for (const lf of report.modified) {
     for (const item of TARGET_MAP) {
       if (lf.startsWith(item.local)) {
@@ -252,27 +378,104 @@ export function cmdPush(repoBase = DEFAULT_REPO) {
   console.log(`\n✅ Backup complete: ${updated} files backed up to ${repoBase}.\n`);
 }
 
-// CLI entrypoint
-const args = process.argv.slice(2);
-const command = args[0] || "status";
-const customRepo = args[1] || DEFAULT_REPO;
+export function cmdViewDiff(repoBase = DEFAULT_REPO, opts: SyncOptions = {}) {
+  console.log(`\n🔍 Inspecting diffs between local machine and ${repoBase}...\n`);
+  const report = compare(repoBase, opts);
+  if (report.modified.length === 0) {
+    console.log(`✨ No content differences found between matching files.\n`);
+    return;
+  }
 
-switch (command) {
-  case "status":
-  case "scan":
-  case "diff":
-    cmdStatus(customRepo);
-    break;
-  case "pull":
-  case "apply":
-    cmdPull(customRepo);
-    break;
-  case "push":
-  case "backup":
-  case "save":
-    cmdPush(customRepo);
-    break;
-  default:
-    console.log(`Usage: bun sync.ts [status|pull|push] [optional_repo_path]`);
-    process.exit(1);
+  for (const localFile of report.modified) {
+    for (const item of TARGET_MAP) {
+      if (localFile.startsWith(item.local)) {
+        const rel = path.relative(item.local, localFile);
+        const adjustedRepo = item.repo.replace(DEFAULT_REPO, repoBase);
+        const repoFile = path.join(adjustedRepo, rel);
+        console.log(`══════════════════════════════════════════════════════════════`);
+        console.log(`File: ${rel}`);
+        console.log(`Local: ${localFile}`);
+        console.log(`Repo : ${repoFile}`);
+        console.log(`══════════════════════════════════════════════════════════════`);
+        const diffText = cmdDiff(localFile, repoFile);
+        console.log(diffText || "(binary or identical)");
+        console.log();
+        break;
+      }
+    }
+  }
+}
+
+// CLI argument parser
+export function parseArgs(rawArgs: string[]): {
+  command: string;
+  repo: string;
+  opts: SyncOptions;
+} {
+  let command = "status";
+  let repo = DEFAULT_REPO;
+  const opts: SyncOptions = { exclude: [] };
+
+  const positional: string[] = [];
+  for (let i = 0; i < rawArgs.length; i++) {
+    const arg = rawArgs[i];
+    if (arg === "--exclude" || arg === "-x") {
+      if (i + 1 < rawArgs.length) {
+        opts.exclude!.push(rawArgs[++i]);
+      }
+    } else if (arg.startsWith("--exclude=")) {
+      opts.exclude!.push(arg.slice("--exclude=".length));
+    } else if (arg === "--target" || arg === "-t") {
+      if (i + 1 < rawArgs.length) {
+        opts.target = rawArgs[++i];
+      }
+    } else if (arg.startsWith("--target=")) {
+      opts.target = arg.slice("--target=".length);
+    } else if (!arg.startsWith("-")) {
+      positional.push(arg);
+    }
+  }
+
+  if (positional[0]) command = positional[0];
+  if (positional[1]) {
+    // If positional[1] is an existing dir or starts with / or ~, it is custom repo.
+    // Otherwise, it can be treated as target category if not already set.
+    if (positional[1].startsWith("/") || positional[1].startsWith("~") || fs.existsSync(positional[1])) {
+      repo = positional[1].replace(/^~/, HOME);
+    } else if (!opts.target) {
+      opts.target = positional[1];
+    }
+  }
+  if (positional[2] && !repo) {
+    repo = positional[2].replace(/^~/, HOME);
+  }
+
+  return { command, repo, opts };
+}
+
+// CLI entrypoint when run directly
+if (import.meta.main) {
+  const { command, repo, opts } = parseArgs(process.argv.slice(2));
+
+  switch (command) {
+    case "status":
+    case "scan":
+      cmdStatus(repo, opts);
+      break;
+    case "diff":
+      cmdViewDiff(repo, opts);
+      break;
+    case "pull":
+    case "apply":
+      cmdPull(repo, opts);
+      break;
+    case "push":
+    case "backup":
+    case "save":
+      cmdPush(repo, opts);
+      break;
+    default:
+      console.log(`Usage: bun sync.ts [status|diff|pull|push] [target|repo_path] [--exclude <name>] [--target <scope>]`);
+      process.exit(1);
+  }
 }

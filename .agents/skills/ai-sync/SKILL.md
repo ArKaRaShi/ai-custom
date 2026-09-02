@@ -1,6 +1,6 @@
 ---
 name: ai-sync
-description: Sync, scan, and fill gaps between your local AI setup (~/.omp and ~/.agents/skills) and your git-backed ~/Disk/ai-custom repository across machines.
+description: Use when synchronizing, auditing, or deploying custom OMP extensions, rules, hooks, configs, and agent skills between your local environment and git backup.
 ---
 
 # `ai-sync`
@@ -10,33 +10,72 @@ Synchronize your custom Oh My Pi (OMP) extensions, TTSR rules, hooks, configs, a
 ## When to Use
 
 - Check if your local machine is out of sync with your backup repo (`status` / `scan`).
-- Bootstrap a fresh machine by pulling down all extensions, rules, and skills (`pull`).
-- Back up newly authored extensions, rules, or skills into git (`push`).
-- Audit file diffs and drift across machines.
+- Check if your remote GitHub repo has new commits from other machines (`status`).
+- Inspect line-by-line file differences before syncing (`diff`).
+- Pull down everything or specific categories from `~/Disk/ai-custom` to local machine (`pull`).
+- Back up newly authored extensions, rules, or skills into git, with exclusions (`push`).
+- Audit configuration and skill drift across machines.
 
 ## How to Run
 
 Run via **Bun** (no installation required):
 
 ```bash
-# 1. Scan and detect drift / missing files
+# 1. Scan and detect drift, missing files, and remote git status
 bun ~/.agents/skills/ai-sync/scripts/sync.ts status
 
-# 2. Pull down everything from ~/Disk/ai-custom to local machine (fill gaps)
+# 2. Inspect exact line-by-line differences before taking action
+bun ~/.agents/skills/ai-sync/scripts/sync.ts diff
+
+# 3. Pull down everything from ~/Disk/ai-custom to local machine
 bun ~/.agents/skills/ai-sync/scripts/sync.ts pull
 
-# 3. Back up local changes to ~/Disk/ai-custom
+# 4. Back up local changes to ~/Disk/ai-custom
 bun ~/.agents/skills/ai-sync/scripts/sync.ts push
 ```
 
-## Custom Repo Path
+## Advanced Options
 
-You can optionally pass a custom repository path as the second argument:
+### 1. Scoped Category or Target Sync
+You can scope operations to a single category (`skills`, `rules`, `extensions`, `hooks`, `config`, `tests`) or a specific keyword:
+
+```bash
+# Only status or sync user skills
+bun ~/.agents/skills/ai-sync/scripts/sync.ts status skills
+bun ~/.agents/skills/ai-sync/scripts/sync.ts push skills
+
+# Only diff or pull extensions
+bun ~/.agents/skills/ai-sync/scripts/sync.ts diff extensions
+bun ~/.agents/skills/ai-sync/scripts/sync.ts pull extensions
+```
+
+### 2. Excluding Files or Directories
+Use `--exclude` (or `-x`) to skip experimental or unfinished skills and temp files:
+
+```bash
+# Back up everything except the experimental prototype skill
+bun ~/.agents/skills/ai-sync/scripts/sync.ts push --exclude prototype
+
+# Multiple exclusions or wildcard patterns
+bun ~/.agents/skills/ai-sync/scripts/sync.ts push -x prototype -x "*.log"
+```
+
+### 3. Custom Repo Path
+You can optionally pass an alternate git repository path:
 
 ```bash
 bun ~/.agents/skills/ai-sync/scripts/sync.ts status /path/to/custom-repo
 bun ~/.agents/skills/ai-sync/scripts/sync.ts pull /path/to/custom-repo
 ```
+
+## Quick Reference Table
+
+| Command | Action | Key Options |
+|---|---|---|
+| `sync.ts status` | Scans machine vs repo + remote git status | `--target <cat>`, `--exclude <name>` |
+| `sync.ts diff` | Shows line-by-line unified diffs for modified files | `--target <cat>` |
+| `sync.ts pull` | Imports files from repo to local machine (`~`) | `--target <cat>`, `--exclude <name>` |
+| `sync.ts push` | Exports files from local machine to repo | `--target <cat>`, `--exclude <name>` |
 
 ## What Gets Synced
 
