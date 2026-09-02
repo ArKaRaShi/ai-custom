@@ -33,4 +33,16 @@ describe("given mentor skill specification, when validating contracts and invari
     expect(content).toMatch(/trace|flow/i);
     expect(content).toMatch(/checkpoint|question/i);
   });
+
+  it("enforces active research via context7/web_search with official references and citations", () => {
+    const content = fs.readFileSync(SKILL_PATH, "utf8");
+    expect(content).toMatch(/context7|documentation|web_search/i);
+    expect(content).toMatch(/reference|citation|link/i);
+  });
+
+  it("mandates intellectual honesty: do not blind trust sources, state uncertainty explicitly", () => {
+    const content = fs.readFileSync(SKILL_PATH, "utf8");
+    expect(content).toMatch(/never\s+blindly\s+trust|do\s+not\s+blind\s+trust/i);
+    expect(content).toMatch(/uncertain|state\s+uncertainty|if\s+unsure/i);
+  });
 });
