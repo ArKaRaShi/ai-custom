@@ -31,8 +31,24 @@ export const DESTRUCTIVE_PATTERNS: DestructivePattern[] = [
   { re: />\s*\/dev\/(?:disk|sd|nvme)/i, category: "disk", label: "raw disk overwrite" },
 ];
 
+/**
+ * Strips commit messages, echo payloads, and quoted strings that are parameters
+ * rather than executable shell commands. This prevents `git commit -m "docs on git clean -fd"`
+ * or `echo "git reset --hard"` from falsely triggering destructive guards.
+ */
+export function sanitizeCommandForInspection(rawCommand: string): string {
+  return rawCommand
+    // Strip commit messages: git commit -m "..." or -m '...'
+    .replace(/(?:-m|--message)(?:\s+|=)(?:"[\s\S]*?"|'[\s\S]*?'|\S+)/g, "")
+    // Strip echo / printf payloads: echo "..." or echo '...'
+    .replace(/\b(?:echo|printf)\s+(?:"[\s\S]*?"|'[\s\S]*?'|[^\n;|&]+)/g, "")
+    // Strip grep search patterns: grep -E "..." or grep '...'
+    .replace(/\b(?:grep|rg)\s+(?:-[a-zA-Z0-9_-]+\s+)*(?:"[\s\S]*?"|'[\s\S]*?')/g, "");
+}
+
 export function findDestructiveCommand(command: string): DestructivePattern | undefined {
-  return DESTRUCTIVE_PATTERNS.find((d) => d.re.test(command));
+  const sanitized = sanitizeCommandForInspection(command);
+  return DESTRUCTIVE_PATTERNS.find((d) => d.re.test(sanitized));
 }
 
 export default function guardDestructive(pi: HookAPI): void {
