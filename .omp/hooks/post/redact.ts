@@ -50,8 +50,9 @@ function isSecretKey(k: string): boolean {
 }
 
 function redactGenericKeyValue(text: string): string {
+  // (?<![.\w]) prevents matching object property access like user.password or data["password"]
   return text.replace(
-    /\b([A-Za-z0-9_]*["']?\s*[:=]\s*["']?)(?![A-Za-z_][A-Za-z0-9_]*\()([^\s"'\n(),;}{]{4,})/g,
+    /(?:^|[\s,;{(["'])(?<!\.)([A-Za-z0-9_]+["']?\s*[:=]\s*["']?)(?![A-Za-z_][A-Za-z0-9_]*\()([^\s"'\n(),;}{]{4,})/g,
     (match, prefix: string, rawVal: string) => {
       const k = prefix.replace(/["'\s:=]/g, "").toLowerCase();
       if (isIgnoredKey(k)) return match;
@@ -61,7 +62,7 @@ function redactGenericKeyValue(text: string): string {
       if (VALUE_ALLOWLIST[cleanVal]) return match;
 
       const cat = categorizeSecretKey(k);
-      return `${prefix}${getRedactedLabel(cat)}`;
+      return match.replace(`${prefix}${rawVal}`, `${prefix}${getRedactedLabel(cat)}`);
     },
   );
 }
@@ -120,6 +121,9 @@ export function redact(text: string, filePath?: string): string {
   return out;
 }
 
+// Only scan tools that surface external content.
+// CRITICAL: NEVER redact `edit` or `write` tool results - those contain the agent's
+// application code and must never be mutated or contaminated by redaction markers.
 const READ_TOOLS: Record<string, true> = { read: true, grep: true, glob: true, bash: true };
 
 export default function (pi: HookAPI): void {
