@@ -55,7 +55,7 @@ statusLine:
       showStaged: true
       showUnstaged: true
       showUntracked: true
-  contextLine: percentage
+  contextLine: embedded
 dev:
   autoqaConsent: granted
 display:
@@ -72,9 +72,10 @@ providers:
   tinyModelDtype: default
   memoryModel: online
 composer:
-  shape: box
+  shape: rule
 memory:
   backend: mnemopi
 browser:
   headless: false
   relay: true
+colorBlindMode: false
