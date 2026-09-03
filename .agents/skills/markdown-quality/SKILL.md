@@ -1,112 +1,180 @@
 ---
 name: markdown-quality
-description: Review existing Markdown files for three quality criteria — efficiency (no bloat, no redundancy), standards (heading hierarchy, link validity, code-fence languages, list indentation), and conciseness (no fluff, no AI-slop, no weasel words). Wraps `markdownlint-cli2` (structure), `Vale` (prose + readability + repetition), and optionally `slopless` (AI-slop). Use when auditing, reviewing, or QA-ing existing `.md`/`.mdx` files in any repo. Triggers on requests like "review my markdown", "check this doc for quality", "is this doc bloated", "lint my docs", or "tighten this README".
+description: Use when creating, editing, formatting, reviewing, or validating Markdown files, documentation, READMEs, or agent instruction files (AGENTS.md, CLAUDE.md)
 ---
 
-# Markdown Quality Review
+# Markdown Quality & Optimization
 
-Review-only audit pass for existing Markdown. Never silently rewrites; produces a structured report and optional auto-fix diff.
+Two-layer quality standard for Markdown: deterministic structural validation and auto-fixing via `markdownlint-cli2`, followed by prose and semantic AI-context optimization via `Vale` and cognitive contracting.
 
-## When To Use
+## When to Use
 
-- Reviewing/auditing an existing `.md` or `.mdx` file
-- Checking a doc for bloat, redundancy, or AI-slop
-- Pre-commit / pre-PR doc QA
-- Bulk audit of `docs/**` or `README.md`
+- After creating or editing any `.md` file, guide, or documentation.
+- When drafting or updating agent instruction files (`AGENTS.md`, `CLAUDE.md`, `.cursorrules`).
+- Pre-commit or pre-PR documentation reviews.
+- When optimizing token efficiency and context clarity for AI agents.
 
-## When NOT To Use
+## When NOT to Use
 
-- Writing a new doc from scratch → use `markdown-writing`
-- Fixing prose in a non-Markdown file → use `copy-editing` or `writing-clearly-and-concisely`
-- Single typo / single link fix → just edit it
+- For non-Markdown source code files (Python, TypeScript, SQL).
+- For pure code refactoring (use code linters and language servers instead).
 
-## Three Criteria
+## Quick Reference
 
-| Criterion | What it means | Tool |
-|---|---|---|
-| **Standards** | Heading hierarchy, link validity, code-fence langs, list indent, no duplicate headings | `markdownlint-cli2` |
-| **Conciseness** | No fluff, no weasel words, no passive voice, no clichés, no AI-slop | `Vale` (`write-good`+`proselint`+`alex`) + optional `slopless` |
-| **Efficiency** | No repetition, no oversized paragraphs, no empty sections, good readability | `Vale` (`Readability`+`Repetition`+ custom `Bloat.yml`) |
-
-## Workflow
-
-```
-inputs:  paths (globs), severity threshold, --fix flag
-                │
-                ▼
-   ┌────────────────────────────┐
-   │ 1. Standards  (auto-fix?)   │  markdownlint-cli2
-   ├────────────────────────────┤
-   │ 2. Prose      (Vale)        │  write-good + proselint + alex
-   ├────────────────────────────┤
-   │ 3. Bloat      (Vale + cus)  │  Readability + Repetition + Bloat.yml
-   ├────────────────────────────┤
-   │ 4. AI-Slop    (optional)    │  slopless preset
-   └────────────────────────────┘
-                │
-                ▼
-   report: ✅ keep  ⚠️ tighten  ❌ cut
-```
-
-## Run
-
-Use the bundled runner — it handles all three passes and aggregates output:
+Always resolve the skill directory with an overridable fallback:
 
 ```bash
-~/.agents/skills/markdown-quality/scripts/review.sh "**/*.md"
+SKILL_DIR="${SKILL_DIR:-$HOME/.agents/skills/markdown-quality}"
+
+# 1. Instant structural auto-fix (whitespace, blank lines, headings)
+"$SKILL_DIR/scripts/fix.sh" "<file.md>"
+
+# 2. Full QA scorecard (standards + prose + bloat + AI-slop)
+"$SKILL_DIR/scripts/review.sh" "<file.md>"
+
+# 3. Full QA scorecard with automatic structural fixes applied
+"$SKILL_DIR/scripts/review.sh" "<file.md>" --fix
 ```
 
-Add `--fix` to apply auto-fixes from `markdownlint-cli2` (only safe structural changes). Never `--fix` prose.
+## Prerequisites & Installation
 
-## Output Format
+Before running checks, verify that the required CLI tools are available:
 
-For each finding emit one line:
-
-```
-[LINT] path/to/file.md:42 [MD024] Duplicate heading under same parent
-[VALE] path/to/file.md:18 [write-good.weasel] "very" is a weasel word
-[SLOP] path/to/file.md:7  [boilerplate-framing] "Let me be honest..." (slop)
-[REPT] path/to/file.md:33 [Vale.Repetition] "the the" appears twice
-```
-
-Then a verdict block:
-
-```
-SUMMARY
-  Standards:  3 errors, 5 warnings
-  Conciseness: 2 errors, 8 warnings
-  Efficiency:  0 errors, 1 warning
-  AI-Slop:     4 hits (if run)
-  ─────────────────────────────────
-  VERDICT: ⚠️  needs tightening — 2 errors must be fixed
-```
-
-## What This Skill Does NOT Do
-
-- Rewrite the file silently
-- Modify prose (Vale/slopless are report-only)
-- Commit, push, or open PRs
-- Install the underlying tools (user runs `npm i -D` themselves)
-
-## Setup
-
-The skill assumes the tools are reachable via `npx`. To install:
+### 1. `markdownlint-cli2` (Structural Validation & Fixes)
 
 ```bash
-npm i -D markdownlint-cli2 vale
-npm i -D slopless   # optional
+which markdownlint-cli2 >/dev/null 2>&1 || npm install -g markdownlint-cli2
 ```
 
-Then copy the bundled config files into the repo root:
+### 2. `vale` (Prose & Style Review)
 
 ```bash
-cp ~/.agents/skills/markdown-quality/assets/.markdownlint-cli2.jsonc ./
-cp ~/.agents/skills/markdown-quality/assets/.vale.ini ./
-mkdir -p .vale/styles
-cp ~/.agents/skills/markdown-quality/assets/Bloat.yml ./.vale/styles/
+which vale >/dev/null 2>&1 || brew install vale
 ```
 
-## References
+### 3. Global Base Configuration (`~/.markdownlint-cli2.yaml`)
 
-- Detailed tool/rule reference: [references/tool-reference.md](references/tool-reference.md)
-- Pre-commit / CI snippets: [references/ci-integration.md](references/ci-integration.md)
+If the user-level configuration is missing, initialize it once to prevent false-positive 80-character line-length errors across projects:
+
+```bash
+test -f ~/.markdownlint-cli2.yaml || cat << 'EOF' > ~/.markdownlint-cli2.yaml
+config:
+  default: true
+  MD013: false # disable strict 80-char line length
+  MD033: false # allow inline HTML (<details>, <summary>)
+  MD041: false # allow files to start with H2 or frontmatter
+  MD024:
+    siblings_only: true
+  MD034: false # allow bare URLs
+  MD029: false # allow flexible ordered lists
+  MD036: false # allow emphasis
+ignores:
+  - "node_modules/**"
+  - ".git/**"
+  - ".venv*/**"
+  - "dist/**"
+  - "build/**"
+EOF
+```
+
+---
+
+## Layer 1: Structural Standards (Tool-Enforced)
+
+Automated CLI checks that prevent broken Markdown AST parsing, table misalignment, and tokenizer context splitting.
+
+Run auto-fix directly:
+
+```bash
+SKILL_DIR="${SKILL_DIR:-$HOME/.agents/skills/markdown-quality}"
+"$SKILL_DIR/scripts/fix.sh" "<target.md>"
+```
+
+### Non-Negotiable Invariants
+
+1. **`MD040` — Explicit Code Fence Language**: Every code block must specify a language identifier (e.g. ````bash`,````python`, ````text`, ````json`). Never leave backticks bare.
+2. **`MD031` / `MD032` — Blanks Around Fences and Lists**: Code blocks and list items must have empty lines before and after.
+3. **`MD018` — Single Space After Heading Hash**: Use `## Heading`, never `##Heading`.
+4. **Plain Text Symbols**: Use clean arrows `->` or Unicode `→`, never unrendered LaTeX `$\rightarrow$` in standard documentation.
+
+---
+
+## Layer 2: Prose & Semantic AI Context (Agent-Evaluated)
+
+Cognitive review applied by the agent to ensure documentation is dense, unambiguous, and token-efficient for LLMs and human engineers.
+
+### Five Semantic Criteria
+
+#### 1. Positive Recipes Over Vague Prohibitions
+
+State the concrete shape of what should exist rather than loose negative rules.
+
+- ❌ *Vague:* "Don't write complex functions and avoid huge files."
+- ✅ *Recipe:* "Functions must stay under 40 lines. Use early-return guard clauses."
+
+#### 2. Executable Verification Command
+
+Conclude every rule, setup guide, or domain doc with a runnable command so agents can self-verify before claiming completion:
+
+```bash
+.venv-app/bin/python manage.py check
+```
+
+#### 3. Table Compaction for Multi-Variable Data
+
+Convert narrative paragraphs into compact Markdown tables. Tables prevent hallucination and make lookup instantaneous:
+
+| Entity | Storage Engine | Qualification | Example |
+| --- | --- | --- | --- |
+| Sensor Readings | TimescaleDB | Subclasses `TimescaleModel` | `UmhIndicatorTimeSeries` |
+| Asset Metadata | MySQL (`default`) | Standard `models.Model` | `anomaly.SensorData` |
+
+#### 4. Token Density & Zero Slop
+
+- Eliminate conversational filler ("Let's dive in", "It is worth noting that").
+- Eliminate ASCII art banners (`+---+`, `|===|`), which tokenizers fragment into dozens of disjointed tokens.
+
+#### 5. Progressive Disclosure
+
+Keep root instruction files (`AGENTS.md`) concise. Link to domain documentation instead of dumping monolithic 500-line walls of text.
+
+---
+
+## Concrete Comparison
+
+### ❌ Fails Both Layers (Syntax Errors + Semantic Slop)
+
+````markdown
+## Database Details
+Our platform uses several databases for storing things. Some stuff goes into timeseries, but other stuff is in MySQL.
+```
+print("testing")
+```
+Try to write clean queries and avoid putting sensor data in the wrong database.
+````
+
+### ✅ Passes Both Layers (Clean Syntax + Deterministic Contract)
+
+````markdown
+## Database Routing
+
+| Target DB | Base Class | Fields | Example |
+|---|---|---|---|
+| `timescaledb` | `TimescaleModel` | `TimescaleDateTimeField` | `UmhIndicatorTimeSeries` |
+| `default` (MySQL) | `models.Model` | Standard ORM fields / FK | `anomaly.SensorData` |
+
+### Verification Command
+```bash
+.venv-app/bin/python manage.py shell -c "from apm.routers import TimescaleDBRouter; from <app>.models import <Model>; print(TimescaleDBRouter().db_for_read(<Model>) or 'default')"
+```
+````
+
+---
+
+## Rationalizations & Red Flags
+
+| Excuse | Reality |
+| --- | --- |
+| "It's just documentation, formatting doesn't matter" | Malformed tables and unclosed code blocks silently break LLM chunking, tool parsers, and IDE previews. |
+| "I'll manually eyeball spacing and headings" | Automated CLI checks catch trailing spaces and list indentations that human eyes miss. |
+| "The review script takes too long" | `scripts/fix.sh` executes in <0.2 seconds and automatically repairs 90% of formatting errors. |
