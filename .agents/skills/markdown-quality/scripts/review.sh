@@ -39,9 +39,9 @@ RED=$'\033[31m'; YEL=$'\033[33m'; GRN=$'\033[32m'; DIM=$'\033[2m'; RST=$'\033[0m
 # Helper to run markdownlint-cli2 via local binary or npx
 run_markdownlint() {
   if command -v markdownlint-cli2 >/dev/null 2>&1; then
-    markdownlint-cli2 "${CONFIG_ARG[@]}" "$@"
+    markdownlint-cli2 ${CONFIG_ARG[@]+"${CONFIG_ARG[@]}"} "$@"
   else
-    npx -y markdownlint-cli2 "${CONFIG_ARG[@]}" "$@"
+    npx -y markdownlint-cli2 ${CONFIG_ARG[@]+"${CONFIG_ARG[@]}"} "$@"
   fi
 }
 
@@ -65,16 +65,21 @@ echo ""
 echo "${DIM}── 2/3 Prose + Bloat (Vale) ──${RST}"
 if command -v vale >/dev/null 2>&1; then
   VALE_CONFIG=()
-  if [ ! -f .vale.ini ] && [ -f "$SCRIPT_DIR/assets/.vale.ini" ]; then
-    VALE_CONFIG=(--config="$SCRIPT_DIR/assets/.vale.ini")
+  USER_VALE="$HOME/Library/Application Support/vale/.vale.ini"
+  if [ ! -f .vale.ini ]; then
+    if [ -f "$USER_VALE" ]; then
+      VALE_CONFIG=()
+    elif [ -f "$SCRIPT_DIR/assets/.vale.ini" ]; then
+      VALE_CONFIG=(--config="$SCRIPT_DIR/assets/.vale.ini")
+    fi
   fi
-  VALE_OUT=$(vale "${VALE_CONFIG[@]}" --minAlertLevel="$MIN_LEVEL" "$GLOB" 2>&1 || true)
+  VALE_OUT=$(vale ${VALE_CONFIG[@]+"${VALE_CONFIG[@]}"} --minAlertLevel="$MIN_LEVEL" "$GLOB" 2>&1 || true)
   if [ -z "$VALE_OUT" ]; then
     echo "${GRN}✓ no prose/bloat issues${RST}"
     VALE_ERR=0
   else
     echo "$VALE_OUT" | sed "s/^/[VALE] /"
-    VALE_ERR=$(echo "$VALE_OUT" | grep -cE "^(error|warning)" || true)
+    VALE_ERR=$(echo "$VALE_OUT" | grep -cE "(error|warning)[[:space:]]" || true)
   fi
 else
   echo "${YEL}⊘ vale CLI not installed — skipping (brew install vale)${RST}"

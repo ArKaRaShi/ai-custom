@@ -21,7 +21,7 @@ fi
 
 # Run global binary if installed, or npx fallback
 if command -v markdownlint-cli2 >/dev/null 2>&1; then
-  markdownlint-cli2 "${CONFIG_ARG[@]}" --fix "$TARGET"
+  markdownlint-cli2 ${CONFIG_ARG[@]+"${CONFIG_ARG[@]}"} --fix "$TARGET"
 else
-  npx -y markdownlint-cli2 "${CONFIG_ARG[@]}" --fix "$TARGET"
+  npx -y markdownlint-cli2 ${CONFIG_ARG[@]+"${CONFIG_ARG[@]}"} --fix "$TARGET"
 fi
