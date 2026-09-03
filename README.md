@@ -17,12 +17,13 @@ Cross-machine AI coding harness configuration, OMP extensions, TTSR rules, lifec
     ├── ai-sync/                # Bidirectional sync engine between machine and repository
     ├── markdown-quality/       # 2-phase Markdown QA (markdownlint-cli2 + Vale with ai-tells)
     ├── db-sandbox/             # Disposable database sandboxing (MySQL & PostgreSQL)
-    ├── parallel-worktrees/     # Concurrent isolated Git worktrees
-    ├── git-pr-convention/      # Conventional PR generator
+    ├── isolated-worktree/      # Isolated Git worktree development (renamed from parallel-worktrees)
+    ├── git-pr/                 # Proportional PR title and body generator (renamed from git-pr-convention)
+    ├── git-emoji-commit/       # Semantic emoji conventional commit messages (renamed from emoji-commit)
     ├── domain-modeling/        # Ubiquitous language, CONTEXT.md, and ADRs
     ├── mentor/                 # Read-only architectural teaching and system tracing
-    ├── cavecrew/               # Subagent delegation with compressed context
-    └── ...                     # Additional productivity skills
+    ├── caveman/                # Token-compressed communication and review subagents
+    └── ...                     # Additional productivity skills (graphify, prototype, grilling)
 ```
 
 ## Toolchain & Prerequisites
