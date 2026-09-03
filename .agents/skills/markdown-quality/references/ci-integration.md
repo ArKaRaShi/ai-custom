@@ -13,11 +13,7 @@ repos:
     rev: v2.1.2
     hooks:
       - id: vale
-  - repo: https://github.com/seochecks-ai/slopless
-    rev: v0.2.22
-    hooks:
-      - id: slopless
-        # optional — comment out if docs are hand-written
+  # (ai-tells rules are run directly by Vale via .vale.ini)
 ```
 
 Install: `pip install pre-commit && pre-commit install`.
@@ -54,8 +50,7 @@ jobs:
           fail_on_error: true
           reporter: github-pr-review
 
-      - name: slopless (optional)
-        run: npx -y slopless "**/*.md" || true
+
 ```
 
 ## Local `package.json` scripts
@@ -66,12 +61,10 @@ jobs:
     "lint:md": "markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
     "lint:md:fix": "markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\"",
     "lint:md:prose": "vale \"**/*.md\"",
-    "lint:md:slop": "slopless \"**/*.md\"",
-    "lint:md:all": "npm run lint:md && npm run lint:md:prose && npm run lint:md:slop"
+    "lint:md:all": "npm run lint:md && npm run lint:md:prose"
   },
   "devDependencies": {
-    "markdownlint-cli2": "^0.22.1",
-    "slopless": "^0.2.22"
+    "markdownlint-cli2": "^0.23.2"
   }
 }
 ```

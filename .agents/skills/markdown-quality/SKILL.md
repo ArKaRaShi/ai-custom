@@ -29,7 +29,7 @@ SKILL_DIR="${SKILL_DIR:-$HOME/.agents/skills/markdown-quality}"
 # 1. Instant structural auto-fix (whitespace, blank lines, headings)
 "$SKILL_DIR/scripts/fix.sh" "<file.md>"
 
-# 2. Full QA scorecard (standards + prose + bloat + AI-slop)
+# 2. Full QA scorecard (standards + prose + AI-tells)
 "$SKILL_DIR/scripts/review.sh" "<file.md>"
 
 # 3. Full QA scorecard with automatic structural fixes applied
