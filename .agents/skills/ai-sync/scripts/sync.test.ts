@@ -12,6 +12,8 @@ import {
   withOriginFilter,
   SkillsManifest,
   autoDetectSkill,
+  DEFAULT_REPO,
+  SKILLS_DIR,
 } from "./sync";
 describe("given pattern filter inputs, when evaluating paths and exclusions, then matches and exclusions are correctly applied", () => {
   it("matches exact relative paths and glob-like wildcard exclusions", () => {
@@ -195,5 +197,14 @@ describe("given local skill directories and metadata, when auto-detecting proven
     expect(res.origin).toBe("authored");
     expect(res.sync).toBe(false);
     expect(res.detectionReason).toContain("private to this machine");
+  });
+});
+
+describe("given path resolution configuration, when inspecting default paths, then respects home and defaults", () => {
+  it("resolves DEFAULT_REPO and SKILLS_DIR to sensible paths under HOME by default", () => {
+    const home = os.homedir();
+    expect(DEFAULT_REPO).toContain(home);
+    expect(SKILLS_DIR).toContain(home);
+    expect(SKILLS_DIR).toContain(".agents");
   });
 });

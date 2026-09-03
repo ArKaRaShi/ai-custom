@@ -43,31 +43,34 @@ vale sync
 git clone https://github.com/ArKaRaShi/ai-custom.git ~/Disk/ai-custom
 
 # 2. Bootstrap: syncs authored skills & installs external dependencies
-bun ~/Disk/ai-custom/.agents/skills/ai-sync/scripts/sync.ts bootstrap
+REPO_DIR="${AI_CUSTOM_REPO:-$HOME/Disk/ai-custom}"
+bun "$REPO_DIR/.agents/skills/ai-sync/scripts/sync.ts" bootstrap
 
 # 3. Run automated validation suite
-bun test ~/Disk/ai-custom/.omp/tests
+bun test "$REPO_DIR/.omp/tests"
 ```
 
 ## Workflow Commands
 
 ```bash
+SKILL_DIR="${SKILL_DIR:-$HOME/.agents/skills/ai-sync}"
+
 # 1. Auto-discover installed skills & generate provenance report
-bun ~/.agents/skills/ai-sync/scripts/sync.ts discover
+bun "$SKILL_DIR/scripts/sync.ts" discover
 
 # 2. Check drift between local machine and git backup
-bun ~/.agents/skills/ai-sync/scripts/sync.ts status
+bun "$SKILL_DIR/scripts/sync.ts" status
 
 # 3. Pull repository updates to local machine
-bun ~/.agents/skills/ai-sync/scripts/sync.ts pull
+bun "$SKILL_DIR/scripts/sync.ts" pull
 
 # 4. Export local modifications back into repo (excludes sync: false)
-bun ~/.agents/skills/ai-sync/scripts/sync.ts push
+bun "$SKILL_DIR/scripts/sync.ts" push
 
 # 5. Track a skill explicitly in the manifest
-bun ~/.agents/skills/ai-sync/scripts/sync.ts track mentor authored
-bun ~/.agents/skills/ai-sync/scripts/sync.ts track archify external --from tt-a1i/archify
-bun ~/.agents/skills/ai-sync/scripts/sync.ts track prototype authored --no-sync
+bun "$SKILL_DIR/scripts/sync.ts" track mentor authored
+bun "$SKILL_DIR/scripts/sync.ts" track archify external --from tt-a1i/archify
+bun "$SKILL_DIR/scripts/sync.ts" track prototype authored --no-sync
 ```
 Test suite verifies rule syntax, regex correctness, and sync mappings:
 

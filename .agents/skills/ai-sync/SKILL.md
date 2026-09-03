@@ -19,40 +19,43 @@ Synchronize your custom Oh My Pi (OMP) extensions, TTSR rules, hooks, configs, a
 
 ## How to Run
 
-Run via **Bun** (no installation required):
+Declare the portable skill path (mirrors `db-sandbox` standard):
 
 ```bash
+SKILL_DIR="${SKILL_DIR:-$HOME/.agents/skills/ai-sync}"
+
 # 1. Auto-discover all installed skills, categorize provenance, and generate report
-bun ~/.agents/skills/ai-sync/scripts/sync.ts discover
+bun "$SKILL_DIR/scripts/sync.ts" discover
 
 # 2. Scan and detect drift, missing files, and remote git status
-bun ~/.agents/skills/ai-sync/scripts/sync.ts status
+bun "$SKILL_DIR/scripts/sync.ts" status
+
 # 3. Inspect exact line-by-line differences before taking action
-bun ~/.agents/skills/ai-sync/scripts/sync.ts diff
+bun "$SKILL_DIR/scripts/sync.ts" diff
 
-# 3. Resolve conflicts interactively (choose ours, theirs, or combine)
-bun ~/.agents/skills/ai-sync/scripts/sync.ts resolve
+# 4. Resolve conflicts interactively (choose ours, theirs, or combine)
+bun "$SKILL_DIR/scripts/sync.ts" resolve
 
-# 4. Automatically combine divergent files via plain 3-way merge
-bun ~/.agents/skills/ai-sync/scripts/sync.ts merge
+# 5. Automatically combine divergent files via plain 3-way merge
+bun "$SKILL_DIR/scripts/sync.ts" merge
 
-# 5. Pull down everything from ~/Disk/ai-custom to local machine
-bun ~/.agents/skills/ai-sync/scripts/sync.ts pull
+# 6. Pull down everything from ~/Disk/ai-custom to local machine
+bun "$SKILL_DIR/scripts/sync.ts" pull
 
-# 6. Back up local changes to ~/Disk/ai-custom (automatically excludes skills where sync: false)
-bun ~/.agents/skills/ai-sync/scripts/sync.ts push
+# 7. Back up local changes to ~/Disk/ai-custom (automatically excludes skills where sync: false)
+bun "$SKILL_DIR/scripts/sync.ts" push
 
-# 7. Track a skill in the manifest (origin defaults sync: authored->true, external->false)
-bun ~/.agents/skills/ai-sync/scripts/sync.ts track mentor authored
-bun ~/.agents/skills/ai-sync/scripts/sync.ts track archify external --from tt-a1i/archify --version 2.17.0
+# 8. Track a skill in the manifest (origin defaults sync: authored->true, external->false)
+bun "$SKILL_DIR/scripts/sync.ts" track mentor authored
+bun "$SKILL_DIR/scripts/sync.ts" track archify external --from tt-a1i/archify --version 2.17.0
 
 # Explicitly override sync behavior:
-bun ~/.agents/skills/ai-sync/scripts/sync.ts track prototype authored --no-sync
-bun ~/.agents/skills/ai-sync/scripts/sync.ts track my-forked-tool external --sync
+bun "$SKILL_DIR/scripts/sync.ts" track prototype authored --no-sync
+bun "$SKILL_DIR/scripts/sync.ts" track my-forked-tool external --sync
 
-# 8. Bootstrap / restore on a fresh machine (pulls sync: true skills, reinstalls externals)
-bun ~/.agents/skills/ai-sync/scripts/sync.ts bootstrap
-
+# 9. Bootstrap / restore on a fresh machine (pulls sync: true skills, reinstalls externals)
+bun "$SKILL_DIR/scripts/sync.ts" bootstrap
+```
 ## Conflict Resolution & Merge Protocol
 
 When a skill or file has been modified differently on this local machine (`ours`) versus the repo (`theirs`):

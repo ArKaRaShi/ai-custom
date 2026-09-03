@@ -5,8 +5,9 @@ import * as os from "os";
 import { createHash } from "crypto";
 import { execSync } from "child_process";
 
-const HOME = os.homedir();
-const DEFAULT_REPO = path.join(HOME, "Disk", "ai-custom");
+export const HOME = os.homedir();
+export const DEFAULT_REPO = process.env.AI_CUSTOM_REPO || path.join(HOME, "Disk", "ai-custom");
+export const SKILLS_DIR = process.env.AGENTS_SKILLS_DIR || path.join(HOME, ".agents", "skills");
 
 export interface SyncTarget {
   local: string;
@@ -47,9 +48,8 @@ export const TARGET_MAP: Array<SyncTarget> = [
     repo: path.join(DEFAULT_REPO, ".omp", "tests"),
   },
   {
-    name: "User Skills",
     category: "skills",
-    local: path.join(HOME, ".agents", "skills"),
+    local: SKILLS_DIR,
     repo: path.join(DEFAULT_REPO, ".agents", "skills"),
   },
 ];
@@ -174,7 +174,7 @@ export interface SkillsManifest {
 }
 
 export const MANIFEST_FILENAME = "skills-manifest.json";
-export const LOCAL_MANIFEST_FILE = path.join(HOME, ".agents", "skills", MANIFEST_FILENAME);
+export const LOCAL_MANIFEST_FILE = path.join(SKILLS_DIR, MANIFEST_FILENAME);
 
 export function loadManifest(manifestPath: string): SkillsManifest {
   try {
