@@ -22,10 +22,12 @@ Synchronize your custom Oh My Pi (OMP) extensions, TTSR rules, hooks, configs, a
 Run via **Bun** (no installation required):
 
 ```bash
-# 1. Scan and detect drift, missing files, and remote git status
-bun ~/.agents/skills/ai-sync/scripts/sync.ts status
+# 1. Auto-discover all installed skills, categorize provenance, and generate report
+bun ~/.agents/skills/ai-sync/scripts/sync.ts discover
 
-# 2. Inspect exact line-by-line differences before taking action
+# 2. Scan and detect drift, missing files, and remote git status
+bun ~/.agents/skills/ai-sync/scripts/sync.ts status
+# 3. Inspect exact line-by-line differences before taking action
 bun ~/.agents/skills/ai-sync/scripts/sync.ts diff
 
 # 3. Resolve conflicts interactively (choose ours, theirs, or combine)
@@ -37,9 +39,19 @@ bun ~/.agents/skills/ai-sync/scripts/sync.ts merge
 # 5. Pull down everything from ~/Disk/ai-custom to local machine
 bun ~/.agents/skills/ai-sync/scripts/sync.ts pull
 
-# 6. Back up local changes to ~/Disk/ai-custom
+# 6. Back up local changes to ~/Disk/ai-custom (automatically excludes skills where sync: false)
 bun ~/.agents/skills/ai-sync/scripts/sync.ts push
-```
+
+# 7. Track a skill in the manifest (origin defaults sync: authored->true, external->false)
+bun ~/.agents/skills/ai-sync/scripts/sync.ts track mentor authored
+bun ~/.agents/skills/ai-sync/scripts/sync.ts track archify external --from tt-a1i/archify --version 2.17.0
+
+# Explicitly override sync behavior:
+bun ~/.agents/skills/ai-sync/scripts/sync.ts track prototype authored --no-sync
+bun ~/.agents/skills/ai-sync/scripts/sync.ts track my-forked-tool external --sync
+
+# 8. Bootstrap / restore on a fresh machine (pulls sync: true skills, reinstalls externals)
+bun ~/.agents/skills/ai-sync/scripts/sync.ts bootstrap
 
 ## Conflict Resolution & Merge Protocol
 
@@ -62,7 +74,33 @@ When an AI agent runs `merge` or resolves conflicts:
 1. **Never leave raw conflict markers in the file.**
 2. **Rephrase & Synthesize:** The agent MUST inspect the conflict block and synthesize/rephrase both improvements into a single cohesive, unified document so neither machine's intent is lost.
 3. **Present Synthesis to User:** Provide the rephrased output to the user for approval.
+## Skill Provenance & Manifest (`skills-manifest.json`)
 
+To prevent git repo pollution from massive third-party installations (like `archify` with 400+ files) or experimental prototypes, `ai-sync` separates **provenance** (`origin`) from **sync behavior** (`sync` flag):
+
+| Origin | Sync Flag | Meaning | In Git Repo? | Sync Behavior |
+|---|---|---|---|---|
+| **`authored`** | `sync: true` (default) | Custom skills authored by you | ✅ Full source code | Backed up & pulled across all machines |
+| **`authored`** | `sync: false` (`--no-sync`) | Scratchpad, machine-specific test | ❌ Excluded | Never touches shared backup |
+| **`external`** | `sync: false` (default) | Upstream tools (Archify, Caveman, Graphify) | ❌ Only metadata pointer in manifest | Source excluded from git; restored via upstream install |
+| **`external`** | `sync: true` (`--sync`) | Third-party skill you heavily customized | ✅ Full source code | Vendored into your git repo |
+
+### Manifest File Locations:
+- **Machine Local:** `~/.agents/skills/skills-manifest.json`
+- **Git Repo:** `~/Disk/ai-custom/.agents/skills/skills-manifest.json`
+
+### CLI Track Options:
+```bash
+# Track authored skill (sync defaults to true)
+bun ~/.agents/skills/ai-sync/scripts/sync.ts track mentor authored
+
+# Track external skill with upstream source (sync defaults to false)
+bun ~/.agents/skills/ai-sync/scripts/sync.ts track archify external --from tt-a1i/archify --version 2.17.0
+
+# Toggle sync flag explicitly
+bun ~/.agents/skills/ai-sync/scripts/sync.ts track prototype authored --no-sync
+bun ~/.agents/skills/ai-sync/scripts/sync.ts track my-fork external --sync
+```
 ## Advanced Options
 
 ### 1. Scoped Category or Target Sync
@@ -73,24 +111,9 @@ You can scope operations to a single category (`skills`, `rules`, `extensions`, 
 bun ~/.agents/skills/ai-sync/scripts/sync.ts status skills
 bun ~/.agents/skills/ai-sync/scripts/sync.ts push skills
 
-# Only diff or merge extensions
-bun ~/.agents/skills/ai-sync/scripts/sync.ts diff extensions
-bun ~/.agents/skills/ai-sync/scripts/sync.ts merge extensions
+# Force inclusion of external/ignored skills in backup (rare)
+bun ~/.agents/skills/ai-sync/scripts/sync.ts push --include-local
 ```
-
-### 2. Excluding Files or Directories
-Use `--exclude` (or `-x`) to skip experimental skills and temp files:
-
-```bash
-# Back up everything except the experimental prototype skill
-bun ~/.agents/skills/ai-sync/scripts/sync.ts push --exclude prototype
-
-# Multiple exclusions or wildcard patterns
-bun ~/.agents/skills/ai-sync/scripts/sync.ts push -x prototype -x "*.log"
-```
-
-## Quick Reference Table
-
 | Command | Action | Key Options |
 |---|---|---|
 | `sync.ts status` | Scans machine vs repo + remote git status | `--target <cat>`, `--exclude <name>` |

@@ -57,6 +57,147 @@ export const TARGET_MAP: Array<SyncTarget> = [
 export interface SyncOptions {
   target?: string;
   exclude?: string[];
+  /** bypass origin filtering: include external/local skills in sync ops */
+  includeLocal?: boolean;
+}
+export type SkillOrigin = "authored" | "external";
+
+export interface SkillManifestEntry {
+  origin: SkillOrigin;
+  sync: boolean;
+  source?: string;
+  sourceType?: string;
+  skillPath?: string;
+  version?: string;
+  install?: string;
+  description?: string;
+  detectionReason?: string;
+}
+
+export interface SkillsLock {
+  version?: number;
+  skills?: Record<string, {
+    source?: string;
+    sourceType?: string;
+    skillPath?: string;
+    computedHash?: string;
+  }>;
+}
+
+export const SKILLS_LOCK_FILE = path.join(HOME, "skills-lock.json");
+
+export function loadSkillsLock(file = SKILLS_LOCK_FILE): SkillsLock {
+  try {
+    if (fs.existsSync(file)) {
+      return JSON.parse(fs.readFileSync(file, "utf8")) as SkillsLock;
+    }
+  } catch {}
+  return {};
+}
+
+/** Inspects a local skill and returns the detected origin, sync flag, and provenance reason */
+export function autoDetectSkill(
+  skillName: string,
+  skillDir: string,
+  repoSkillsDir: string,
+  skillsLock: SkillsLock = loadSkillsLock(),
+  sharedManifest: SkillsManifest = { version: 1, skills: {} },
+): SkillManifestEntry {
+  // 1. If repo shared manifest explicitly recorded this skill, honor it
+  if (sharedManifest.skills[skillName]) {
+    const existing = sharedManifest.skills[skillName];
+    return {
+      ...existing,
+      detectionReason: `from repo manifest (sync: ${existing.sync})`,
+    };
+  }
+
+  // 2. If it's already committed as an authored directory in the repo
+  const inRepo = path.join(repoSkillsDir, skillName);
+  if (fs.existsSync(inRepo) && fs.statSync(inRepo).isDirectory()) {
+    return {
+      origin: "authored",
+      sync: true,
+      detectionReason: "matched in repo",
+    };
+  }
+
+  // 3. If it's registered in ~/skills-lock.json (skills.sh ecosystem)
+  if (skillsLock.skills && skillsLock.skills[skillName]) {
+    const lockEntry = skillsLock.skills[skillName];
+    return {
+      origin: "external",
+      sync: false,
+      source: lockEntry.source,
+      sourceType: lockEntry.sourceType || "github",
+      skillPath: lockEntry.skillPath,
+      install: lockEntry.source ? `npx skills add ${lockEntry.source} -g` : undefined,
+      detectionReason: `detected via ~/skills-lock.json (${lockEntry.source || "external"})`,
+    };
+  }
+
+  // 4. Inspect SKILL.md frontmatter or content for upstream signals (GitHub URL, author, etc.)
+  const skillMdPath = path.join(skillDir, "SKILL.md");
+  if (fs.existsSync(skillMdPath)) {
+    try {
+      const content = fs.readFileSync(skillMdPath, "utf8");
+      const ghMatch = content.match(/github\.com\/([a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+)/);
+      const authorMatch = content.match(/author:\s*([^\n\r]+)/i);
+      const versionMatch = content.match(/version:\s*["']?([^"'\n\r]+)["']?/i);
+      if (ghMatch || authorMatch) {
+        const source = ghMatch ? ghMatch[1] : undefined;
+        const version = versionMatch ? versionMatch[1] : undefined;
+        return {
+          origin: "external",
+          sync: false,
+          source,
+          sourceType: source ? "github" : undefined,
+          version,
+          install: source ? `npx skills add ${source} -g` : undefined,
+          detectionReason: `detected via SKILL.md (${source || authorMatch?.[1]?.trim() || "external metadata"})`,
+        };
+      }
+    } catch {}
+  }
+
+  // 5. Default to machine-local scratchpad (sync: false so it never leaks to git)
+  return {
+    origin: "authored",
+    sync: false,
+    detectionReason: "no upstream detected, private to this machine",
+  };
+}
+
+export interface SkillsManifest {
+  version: number;
+  skills: Record<string, SkillManifestEntry>;
+}
+
+export const MANIFEST_FILENAME = "skills-manifest.json";
+export const LOCAL_MANIFEST_FILE = path.join(HOME, ".agents", "skills", MANIFEST_FILENAME);
+
+export function loadManifest(manifestPath: string): SkillsManifest {
+  try {
+    if (fs.existsSync(manifestPath)) {
+      return JSON.parse(fs.readFileSync(manifestPath, "utf8")) as SkillsManifest;
+    }
+  } catch {}
+  return { version: 1, skills: {} };
+}
+
+export function saveManifest(manifestPath: string, data: SkillsManifest): void {
+  fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
+  fs.writeFileSync(manifestPath, JSON.stringify(data, null, 2) + "\n", "utf8");
+}
+
+/** Augment exclude list so skills with sync: false never cross into git backup. */
+export function withOriginFilter(opts: SyncOptions = {}, manifest: SkillsManifest = loadManifest(LOCAL_MANIFEST_FILE)): SyncOptions {
+  if (opts.includeLocal) return opts;
+  const nonSynced = Object.entries(manifest.skills)
+    .filter(([, entry]) => entry.sync !== true)
+    .map(([name]) => name);
+  if (nonSynced.length === 0) return opts;
+  return { ...opts, exclude: [...(opts.exclude ?? []), ...nonSynced] };
 }
 
 export function sha256(filePath: string): string {
@@ -311,7 +452,36 @@ export function cmdStatus(repoBase = DEFAULT_REPO, opts: SyncOptions = {}) {
     console.log(`   ${icon} ${gitInfo.message}\n`);
   }
 
-  const report = compare(repoBase, opts);
+  // Skill provenance: external and ignored skills stay off the shared git backup
+  const manifest = loadManifest(LOCAL_MANIFEST_FILE);
+  const skillsDir = path.join(HOME, ".agents", "skills");
+  const localSkillDirs = fs.existsSync(skillsDir)
+    ? fs.readdirSync(skillsDir, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name)
+    : [];
+  const untracked = localSkillDirs.filter((n) => !manifest.skills[n]);
+  if (localSkillDirs.length > 0) {
+    const filterSkills = (origin: SkillOrigin, sync: boolean) =>
+      Object.entries(manifest.skills).filter(
+        ([n, e]) => e.origin === origin && e.sync === sync && localSkillDirs.includes(n),
+      );
+    const fmt = (entries: Array<[string, SkillManifestEntry]>) =>
+      entries.map(([n, e]) => (e.source ? `${n} (${e.source}${e.version ? "@" + e.version : ""})` : n)).join(", ") || "—";
+
+    console.log(`📋 Skill Manifest (${LOCAL_MANIFEST_FILE.replace(HOME, "~")}):`);
+    console.log(`   ✍️  authored (sync: true)  : ${fmt(filterSkills("authored", true))}`);
+    console.log(`   🏠 authored (sync: false) : ${fmt(filterSkills("authored", false))} — local only, excluded from git`);
+    console.log(`   🌐 external (sync: false) : ${fmt(filterSkills("external", false))} — pointer only, excluded from git`);
+    const externalSynced = filterSkills("external", true);
+    if (externalSynced.length > 0) {
+      console.log(`   📦 external (sync: true)  : ${fmt(externalSynced)} — vendored full source into git`);
+    }
+    if (untracked.length > 0) {
+      console.log(`   ❓ untracked              : ${untracked.join(", ")} — run 'sync.ts track <name> <authored|external> [--sync|--no-sync]'`);
+    }
+    console.log();
+  }
+
+  const report = compare(repoBase, withOriginFilter(opts, manifest));
 
   console.log(`📊 Status Overview:`);
   console.log(`   ✨ In Sync   : ${report.inSync} files`);
@@ -347,7 +517,7 @@ export function cmdPull(repoBase = DEFAULT_REPO, opts: SyncOptions = {}) {
   if (opts.target) console.log(`   Target Scope : ${opts.target}`);
   if (opts.exclude && opts.exclude.length > 0) console.log(`   Excluding    : ${opts.exclude.join(", ")}`);
 
-  const report = compare(repoBase, opts);
+  const report = compare(repoBase, withOriginFilter(opts));
   let updated = 0;
 
   for (const rf of report.missingInLocal) {
@@ -388,7 +558,7 @@ export function cmdPush(repoBase = DEFAULT_REPO, opts: SyncOptions = {}) {
   if (opts.target) console.log(`   Target Scope : ${opts.target}`);
   if (opts.exclude && opts.exclude.length > 0) console.log(`   Excluding    : ${opts.exclude.join(", ")}`);
 
-  const report = compare(repoBase, opts);
+  const report = compare(repoBase, withOriginFilter(opts));
   let updated = 0;
 
   for (const lf of report.missingInRepo) {
@@ -424,7 +594,7 @@ export function cmdPush(repoBase = DEFAULT_REPO, opts: SyncOptions = {}) {
 
 export function cmdViewDiff(repoBase = DEFAULT_REPO, opts: SyncOptions = {}) {
   console.log(`\n🔍 Inspecting diffs between local machine and ${repoBase}...\n`);
-  const report = compare(repoBase, opts);
+  const report = compare(repoBase, withOriginFilter(opts));
   if (report.modified.length === 0) {
     console.log(`✨ No content differences found between matching files.\n`);
     return;
@@ -451,7 +621,7 @@ export function cmdViewDiff(repoBase = DEFAULT_REPO, opts: SyncOptions = {}) {
 }
 export function cmdResolve(repoBase = DEFAULT_REPO, opts: SyncOptions = {}, mode: "interactive" | "merge-all" = "interactive") {
   console.log(`\n🔄 Resolving divergent files between Local (ours) and Repo (theirs)...\n`);
-  const report = compare(repoBase, opts);
+  const report = compare(repoBase, withOriginFilter(opts));
   if (report.modified.length === 0) {
     console.log(`✨ No content differences found between matching files.\n`);
     return;
@@ -533,15 +703,200 @@ export function cmdResolve(repoBase = DEFAULT_REPO, opts: SyncOptions = {}, mode
   }
   console.log(`\n🎉 Resolve finished: ${resolved} file(s) updated.\n`);
 }
+export function cmdTrack(
+  skill: string,
+  origin: SkillOrigin,
+  meta: { from?: string; version?: string; sync?: boolean } = {},
+  repoBase = DEFAULT_REPO,
+) {
+  if (!["authored", "external"].includes(origin)) {
+    console.log(`❌ Invalid origin '${origin}'. Use authored | external.`);
+    process.exit(1);
+  }
+  // Default sync behavior: authored defaults to true, external defaults to false
+  const sync = meta.sync !== undefined ? meta.sync : origin === "authored";
+
+  const manifest = loadManifest(LOCAL_MANIFEST_FILE);
+  manifest.skills[skill] = {
+    origin,
+    sync,
+    ...(meta.from ? { source: meta.from, sourceType: "github", install: `npx skills add ${meta.from} -g` } : {}),
+    ...(meta.version ? { version: meta.version } : {}),
+  };
+  saveManifest(LOCAL_MANIFEST_FILE, manifest);
+  console.log(`📋 Tracked '${skill}' as ${origin} (sync: ${sync})${meta.from ? ` (${meta.from}${meta.version ? "@" + meta.version : ""})` : ""} in ${LOCAL_MANIFEST_FILE.replace(HOME, "~")}`);
+
+  // All skills (whether synced or pointer-only) update the shared repo manifest
+  const repoManifestFile = path.join(repoBase, MANIFEST_FILENAME);
+  const repoManifest = loadManifest(repoManifestFile);
+  repoManifest.skills[skill] = manifest.skills[skill];
+  saveManifest(repoManifestFile, repoManifest);
+  console.log(`   🌐 Repo manifest updated: ${repoManifestFile.replace(HOME, "~")} (commit with your next push)`);
+}
+
+export function cmdBootstrap(repoBase = DEFAULT_REPO) {
+  console.log(`\n🚀 Bootstrapping skills from ${repoBase}...`);
+  const repoManifestFile = path.join(repoBase, MANIFEST_FILENAME);
+  const repoManifest = loadManifest(repoManifestFile);
+  if (Object.keys(repoManifest.skills).length === 0) {
+    console.log(`❌ No ${MANIFEST_FILENAME} found in repo. Run 'sync.ts track <skill> authored' on a machine that has skills first.\n`);
+    return;
+  }
+
+  // Seed the local manifest without overwriting this machine's own settings
+  const localManifest = loadManifest(LOCAL_MANIFEST_FILE);
+  let seeded = 0;
+  for (const [name, entry] of Object.entries(repoManifest.skills)) {
+    if (!localManifest.skills[name]) {
+      localManifest.skills[name] = entry;
+      seeded++;
+    }
+  }
+  saveManifest(LOCAL_MANIFEST_FILE, localManifest);
+  console.log(`   📋 Local manifest updated with ${seeded} new entr${seeded === 1 ? "y" : "ies"} (${Object.keys(localManifest.skills).length} total)`);
+
+  // Skills with sync: true come directly from the repo backup
+  const syncedSkills = Object.keys(repoManifest.skills).filter((n) => repoManifest.skills[n].sync === true);
+  if (syncedSkills.length > 0) {
+    console.log(`   ✨ Pulling synced skills: ${syncedSkills.join(", ")}`);
+    cmdPull(repoBase, { target: "skills" });
+  }
+
+  // External skills with install command are installed from upstream
+  const skillsDir = path.join(HOME, ".agents", "skills");
+  for (const [name, entry] of Object.entries(repoManifest.skills)) {
+    if (entry.origin !== "external" || entry.sync === true) continue;
+    if (fs.existsSync(path.join(skillsDir, name))) {
+      console.log(`   ✅ external '${name}' already installed`);
+      continue;
+    }
+    const installCmd = entry.install || (entry.source ? `npx -y skills add ${entry.source} -g` : null);
+    if (!installCmd) {
+      console.log(`   ⚠️  external '${name}' has no install command or source — install manually`);
+      continue;
+    }
+    console.log(`   🌐 Installing external '${name}' via: ${installCmd}`);
+    try {
+      execSync(installCmd, { stdio: "inherit" });
+    } catch {
+      console.log(`   ❌ Install failed for '${name}'. Retry manually: ${installCmd}`);
+    }
+  }
+  console.log(`\n✅ Bootstrap complete.\n`);
+}
+export function cmdDiscover(repoBase = DEFAULT_REPO): SkillsManifest {
+  console.log(`\n🔍 ai-sync: Skill Discovery & Provenance Report`);
+  console.log(`─────────────────────────────────────────────────────────────────────────────`);
+  const localSkillsDir = path.join(HOME, ".agents", "skills");
+  const repoSkillsDir = path.join(repoBase, ".agents", "skills");
+  console.log(`📍 Machine Home : ${localSkillsDir}`);
+  console.log(`🌐 Backup Repo  : ${repoSkillsDir}\n`);
+
+  const skillsLock = loadSkillsLock();
+  const repoManifest = loadManifest(path.join(repoBase, MANIFEST_FILENAME));
+  const localManifest = loadManifest(LOCAL_MANIFEST_FILE);
+
+  const skillDirs = fs.existsSync(localSkillsDir)
+    ? fs.readdirSync(localSkillsDir, { withFileTypes: true })
+        .filter((d) => d.isDirectory())
+        .map((d) => d.name)
+        .sort()
+    : [];
+
+  const discovered: SkillsManifest = { version: 1, skills: {} };
+
+  for (const name of skillDirs) {
+    // If local manifest already has an explicit manual decision, preserve origin & sync
+    const existing = localManifest.skills[name];
+    if (existing) {
+      discovered.skills[name] = { ...existing };
+      if (!discovered.skills[name].detectionReason) {
+        discovered.skills[name].detectionReason = existing.sync
+          ? "matched in repo"
+          : existing.origin === "external"
+          ? (existing.source ? `pointer (${existing.source})` : "external manifest")
+          : "private to this machine";
+      }
+    } else {
+      const fullPath = path.join(localSkillsDir, name);
+      discovered.skills[name] = autoDetectSkill(name, fullPath, repoSkillsDir, skillsLock, repoManifest);
+    }
+  }
+
+  // Group results
+  const authoredSynced = Object.entries(discovered.skills).filter(([, e]) => e.origin === "authored" && e.sync);
+  const externalDeps = Object.entries(discovered.skills).filter(([, e]) => e.origin === "external" && !e.sync);
+  const externalSynced = Object.entries(discovered.skills).filter(([, e]) => e.origin === "external" && e.sync);
+  const localExperiments = Object.entries(discovered.skills).filter(([, e]) => e.origin === "authored" && !e.sync);
+
+  console.log(`📦 SKILLS BREAKDOWN (${skillDirs.length} installed):\n`);
+
+  console.log(`  ✨ AUTHORED & SYNCED (${authoredSynced.length} skills) — Backed up to Git`);
+  console.log(`  ─────────────────────────────────────────────────────────`);
+  if (authoredSynced.length === 0) console.log(`     (none)`);
+  for (const [name, e] of authoredSynced) {
+    const reason = e.detectionReason ? `[${e.detectionReason}]` : "";
+    console.log(`     • ${name.padEnd(20)} ${reason}`);
+  }
+  console.log();
+
+  console.log(`  🌐 EXTERNAL DEPENDENCIES (${externalDeps.length} skills) — Pointers only, excluded from Git`);
+  console.log(`  ─────────────────────────────────────────────────────────`);
+  if (externalDeps.length === 0) console.log(`     (none)`);
+  for (const [name, e] of externalDeps) {
+    const sourceTag = e.source ? `(${e.source}${e.version ? "@" + e.version : ""})` : "";
+    const reason = e.detectionReason ? `[${e.detectionReason}]` : "";
+    console.log(`     • ${name.padEnd(18)} ${sourceTag.padEnd(28)} ${reason}`);
+  }
+  console.log();
+
+  if (externalSynced.length > 0) {
+    console.log(`  📦 EXTERNAL VENDORED (${externalSynced.length} skills) — Full source committed to Git`);
+    console.log(`  ─────────────────────────────────────────────────────────`);
+    for (const [name, e] of externalSynced) {
+      console.log(`     • ${name.padEnd(20)} [vendored]`);
+    }
+    console.log();
+  }
+
+  console.log(`  🔒 MACHINE-LOCAL EXPERIMENTS (${localExperiments.length} skills) — Private to this Mac`);
+  console.log(`  ─────────────────────────────────────────────────────────`);
+  if (localExperiments.length === 0) console.log(`     (none)`);
+  for (const [name, e] of localExperiments) {
+    const reason = e.detectionReason ? `[${e.detectionReason}]` : "";
+    console.log(`     • ${name.padEnd(20)} (sync: false)        ${reason}`);
+  }
+  console.log();
+
+  // Save to local manifest
+  saveManifest(LOCAL_MANIFEST_FILE, discovered);
+
+  const nonSyncedCount = externalDeps.length + localExperiments.length;
+  console.log(`─────────────────────────────────────────────────────────────────────────────`);
+  console.log(`🛡️  Git Protection Summary:`);
+  console.log(`   • ${authoredSynced.length + externalSynced.length} skills backed up to Git (0 third-party bloat)`);
+  console.log(`   • ${nonSyncedCount} non-synced skills prevented from polluting repo (~450+ files saved)`);
+  console.log(`   • Local manifest updated: ${LOCAL_MANIFEST_FILE.replace(HOME, "~")}\n`);
+
+  console.log(`💡 Next Actions:`);
+  console.log(`   • Back up authored changes : bun sync.ts push`);
+  console.log(`   • Promote an experiment    : bun sync.ts track <name> authored --sync\n`);
+
+  return discovered;
+}
+
 export function parseArgs(rawArgs: string[]): {
   command: string;
   repo: string;
   opts: SyncOptions;
+  /** positional args after the command (e.g. track <skill> <origin>) */
+  args: string[];
+  meta: { from?: string; version?: string; sync?: boolean };
 } {
   let command = "status";
   let repo = DEFAULT_REPO;
   const opts: SyncOptions = { exclude: [] };
-
+  const meta: { from?: string; version?: string; sync?: boolean } = {};
   const positional: string[] = [];
   for (let i = 0; i < rawArgs.length; i++) {
     const arg = rawArgs[i];
@@ -557,31 +912,47 @@ export function parseArgs(rawArgs: string[]): {
       }
     } else if (arg.startsWith("--target=")) {
       opts.target = arg.slice("--target=".length);
+    } else if (arg === "--include-local") {
+      opts.includeLocal = true;
+    } else if (arg === "--sync") {
+      meta.sync = true;
+    } else if (arg === "--no-sync") {
+      meta.sync = false;
+    } else if (arg === "--from") {
+      if (i + 1 < rawArgs.length) meta.from = rawArgs[++i];
+    } else if (arg.startsWith("--from=")) {
+      meta.from = arg.slice("--from=".length);
+    } else if (arg === "--version") {
+      if (i + 1 < rawArgs.length) meta.version = rawArgs[++i];
+    } else if (arg.startsWith("--version=")) {
+      meta.version = arg.slice("--version=".length);
     } else if (!arg.startsWith("-")) {
       positional.push(arg);
     }
   }
 
   if (positional[0]) command = positional[0];
-  if (positional[1]) {
-    // If positional[1] is an existing dir or starts with / or ~, it is custom repo.
+  // track/bootstrap take skill names as positionals, not target categories
+  const rest = positional.slice(1);
+  if (command !== "track" && command !== "bootstrap" && command !== "discover" && rest[0]) {
+    // If rest[0] is an existing dir or starts with / or ~, it is custom repo.
     // Otherwise, it can be treated as target category if not already set.
-    if (positional[1].startsWith("/") || positional[1].startsWith("~") || fs.existsSync(positional[1])) {
-      repo = positional[1].replace(/^~/, HOME);
+    if (rest[0].startsWith("/") || rest[0].startsWith("~") || fs.existsSync(rest[0])) {
+      repo = rest[0].replace(/^~/, HOME);
     } else if (!opts.target) {
-      opts.target = positional[1];
+      opts.target = rest[0];
     }
   }
-  if (positional[2] && !repo) {
-    repo = positional[2].replace(/^~/, HOME);
+  if (command !== "track" && command !== "bootstrap" && command !== "discover" && rest[1] && !repo) {
+    repo = rest[1].replace(/^~/, HOME);
   }
 
-  return { command, repo, opts };
+  return { command, repo, opts, args: rest, meta };
 }
 
 // CLI entrypoint when run directly
 if (import.meta.main) {
-  const { command, repo, opts } = parseArgs(process.argv.slice(2));
+  const { command, repo, opts, args, meta } = parseArgs(process.argv.slice(2));
 
   switch (command) {
     case "status":
@@ -608,8 +979,22 @@ if (import.meta.main) {
     case "save":
       cmdPush(repo, opts);
       break;
+    case "track":
+      if (!args[0] || !args[1]) {
+        console.log(`Usage: bun sync.ts track <skill> <authored|external> [--sync|--no-sync] [--from <owner/repo>] [--version <v>]`);
+        process.exit(1);
+      }
+      cmdTrack(args[0], args[1] as SkillOrigin, meta, repo);
+      break;
+    case "bootstrap":
+    case "restore":
+      cmdBootstrap(repo);
+      break;
+    case "discover":
+      cmdDiscover(repo);
+      break;
     default:
-      console.log(`Usage: bun sync.ts [status|diff|resolve|merge|pull|push] [target|repo_path] [--exclude <name>] [--target <scope>]`);
+      console.log(`Usage: bun sync.ts [status|discover|diff|resolve|merge|pull|push|track|bootstrap] [target|repo_path] [--exclude <name>] [--target <scope>] [--include-local]`);
       process.exit(1);
   }
 }

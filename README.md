@@ -10,22 +10,19 @@ Cross-machine AI coding harness configuration, OMP extensions, TTSR rules, lifec
 │   ├── config.yml              # Model routing, themes, statusline
 │   ├── extensions/             # Extensions (caveman-stats, quota-status, turn-metrics)
 │   ├── hooks/                  # Lifecycle hooks
-│   │   ├── pre/                # Safety guards (guard-destructive, protect-branch)
+│   │   ├── pre/                # Safety guards (guard-destructive)
 │   │   └── post/               # Output filters & alerts (redact, smart-terminal-notifier)
 │   ├── rules/                  # 16 TTSR Python & TypeScript code quality rules
-│   └── tests/                  # 126 automated test assertions across 14 suites
-└── .agents/skills/             # User-level agent skills (~/.agents/skills/)
-    ├── ai-sync/                # Bidirectional sync engine between machine and repository
-    ├── markdown-quality/       # 2-phase Markdown QA (markdownlint-cli2 + Vale with ai-tells)
+│   └── tests/                  # 120 automated test assertions across 13 suites
+└── .agents/skills/             # Authored agent skills & dependency manifest
+    ├── skills-manifest.json    # Provenance manifest (authored vs external pointers)
+    ├── ai-sync/                # Bidirectional sync engine + auto-discovery tracker
     ├── db-sandbox/             # Disposable database sandboxing (MySQL & PostgreSQL)
-    ├── isolated-worktree/      # Isolated Git worktree development (renamed from parallel-worktrees)
-    ├── git-pr/                 # Proportional PR title and body generator (renamed from git-pr-convention)
-    ├── git-emoji-commit/       # Semantic emoji conventional commit messages (renamed from emoji-commit)
-    ├── domain-modeling/        # Ubiquitous language, CONTEXT.md, and ADRs
-    ├── mentor/                 # Read-only architectural teaching and system tracing
-    ├── caveman/                # Token-compressed communication and review subagents
-    └── ...                     # Additional productivity skills (graphify, prototype, grilling)
-```
+    ├── git-emoji-commit/       # Semantic emoji conventional commit messages
+    ├── git-pr/                 # Proportional PR title and body generator
+    ├── isolated-worktree/      # Isolated Git worktree development
+    ├── markdown-quality/       # 2-phase Markdown QA (markdownlint-cli2 + Vale)
+    └── mentor/                 # Senior engineer interactive teaching harness
 
 ## Toolchain & Prerequisites
 
@@ -39,14 +36,14 @@ brew install markdownlint-cli2 vale
 vale sync
 ```
 
-## Quick Sync on Any Machine
+## Quick Setup on a Fresh Machine
 
 ```bash
 # 1. Clone your backup repository
 git clone https://github.com/ArKaRaShi/ai-custom.git ~/Disk/ai-custom
 
-# 2. Pull and apply configuration to this machine
-bun ~/Disk/ai-custom/.agents/skills/ai-sync/scripts/sync.ts pull
+# 2. Bootstrap: syncs authored skills & installs external dependencies
+bun ~/Disk/ai-custom/.agents/skills/ai-sync/scripts/sync.ts bootstrap
 
 # 3. Run automated validation suite
 bun test ~/Disk/ai-custom/.omp/tests
@@ -55,18 +52,23 @@ bun test ~/Disk/ai-custom/.omp/tests
 ## Workflow Commands
 
 ```bash
-# Check drift between local machine and git backup
+# 1. Auto-discover installed skills & generate provenance report
+bun ~/.agents/skills/ai-sync/scripts/sync.ts discover
+
+# 2. Check drift between local machine and git backup
 bun ~/.agents/skills/ai-sync/scripts/sync.ts status
 
-# Apply repo updates to local machine
+# 3. Pull repository updates to local machine
 bun ~/.agents/skills/ai-sync/scripts/sync.ts pull
 
-# Export local machine modifications back into repo
+# 4. Export local modifications back into repo (excludes sync: false)
 bun ~/.agents/skills/ai-sync/scripts/sync.ts push
+
+# 5. Track a skill explicitly in the manifest
+bun ~/.agents/skills/ai-sync/scripts/sync.ts track mentor authored
+bun ~/.agents/skills/ai-sync/scripts/sync.ts track archify external --from tt-a1i/archify
+bun ~/.agents/skills/ai-sync/scripts/sync.ts track prototype authored --no-sync
 ```
-
-## Automated Test Suite
-
 Test suite verifies rule syntax, regex correctness, and sync mappings:
 
 ```bash

@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "skills": {
+    "ai-sync": {
+      "origin": "authored",
+      "sync": true,
+      "description": "Cross-machine sync harness for OMP rules, hooks, configs, and skills",
+      "detectionReason": "matched in repo"
+    },
+    "archify": {
+      "origin": "external",
+      "sync": false,
+      "source": "tt-a1i/archify",
+      "sourceType": "github",
+      "version": "2.17.0",
+      "install": "npx skills add tt-a1i/archify -g",
+      "detectionReason": "pointer (tt-a1i/archify)"
+    },
+    "cavecrew": {
+      "origin": "external",
+      "sync": false,
+      "source": "JuliusBrussee/caveman",
+      "sourceType": "github",
+      "skillPath": "skills/cavecrew/SKILL.md",
+      "install": "npx skills add JuliusBrussee/caveman -g",
+      "detectionReason": "pointer (JuliusBrussee/caveman)"
+    },
+    "caveman": {
+      "origin": "external",
+      "sync": false,
+      "source": "JuliusBrussee/caveman",
+      "sourceType": "github",
+      "skillPath": "skills/caveman/SKILL.md",
+      "install": "npx skills add JuliusBrussee/caveman -g",
+      "detectionReason": "pointer (JuliusBrussee/caveman)"
+    },
+    "caveman-commit": {
+      "origin": "external",
+      "sync": false,
+      "source": "JuliusBrussee/caveman",
+      "sourceType": "github",
+      "skillPath": "skills/caveman-commit/SKILL.md",
+      "install": "npx skills add JuliusBrussee/caveman -g",
+      "detectionReason": "pointer (JuliusBrussee/caveman)"
+    },
+    "caveman-compress": {
+      "origin": "external",
+      "sync": false,
+      "source": "JuliusBrussee/caveman",
+      "sourceType": "github",
+      "skillPath": "skills/caveman-compress/SKILL.md",
+      "install": "npx skills add JuliusBrussee/caveman -g",
+      "detectionReason": "pointer (JuliusBrussee/caveman)"
+    },
+    "caveman-help": {
+      "origin": "external",
+      "sync": false,
+      "source": "JuliusBrussee/caveman",
+      "sourceType": "github",
+      "skillPath": "skills/caveman-help/SKILL.md",
+      "install": "npx skills add JuliusBrussee/caveman -g",
+      "detectionReason": "pointer (JuliusBrussee/caveman)"
+    },
+    "caveman-review": {
+      "origin": "external",
+      "sync": false,
+      "source": "JuliusBrussee/caveman",
+      "sourceType": "github",
+      "skillPath": "skills/caveman-review/SKILL.md",
+      "install": "npx skills add JuliusBrussee/caveman -g",
+      "detectionReason": "pointer (JuliusBrussee/caveman)"
+    },
+    "caveman-stats": {
+      "origin": "external",
+      "sync": false,
+      "source": "JuliusBrussee/caveman",
+      "sourceType": "github",
+      "skillPath": "skills/caveman-stats/SKILL.md",
+      "install": "npx skills add JuliusBrussee/caveman -g",
+      "detectionReason": "pointer (JuliusBrussee/caveman)"
+    },
+    "db-sandbox": {
+      "origin": "authored",
+      "sync": true,
+      "description": "Disposable database sandbox per branch/worktree",
+      "detectionReason": "matched in repo"
+    },
+    "domain-modeling": {
+      "origin": "external",
+      "sync": false,
+      "description": "DDD ubiquitous language and domain model tool",
+      "detectionReason": "external manifest"
+    },
+    "find-skills": {
+      "origin": "external",
+      "sync": false,
+      "description": "Skill discovery tool for agent ecosystems",
+      "detectionReason": "external manifest"
+    },
+    "git-emoji-commit": {
+      "origin": "authored",
+      "sync": true,
+      "description": "Git commit messages with emoji standards",
+      "detectionReason": "matched in repo"
+    },
+    "git-pr": {
+      "origin": "authored",
+      "sync": true,
+      "description": "PR drafting and review conventional tool",
+      "detectionReason": "matched in repo"
+    },
+    "graphify": {
+      "origin": "external",
+      "sync": false,
+      "description": "GraphRAG knowledge graph builder for codebases",
+      "detectionReason": "external manifest"
+    },
+    "grill-me": {
+      "origin": "external",
+      "sync": false,
+      "description": "Relentless plan interview",
+      "detectionReason": "external manifest"
+    },
+    "grill-with-docs": {
+      "origin": "external",
+      "sync": false,
+      "description": "Relentless plan interview with ADR creation",
+      "detectionReason": "external manifest"
+    },
+    "grilling": {
+      "origin": "external",
+      "sync": false,
+      "description": "Interactive stress-test interviewer",
+      "detectionReason": "external manifest"
+    },
+    "isolated-worktree": {
+      "origin": "authored",
+      "sync": true,
+      "description": "Git worktree isolation for experiments and subagents",
+      "detectionReason": "matched in repo"
+    },
+    "markdown-quality": {
+      "origin": "authored",
+      "sync": true,
+      "description": "Markdown and agent doc quality reviewer",
+      "detectionReason": "matched in repo"
+    },
+    "mentor": {
+      "origin": "authored",
+      "sync": true,
+      "description": "Senior engineer interactive teaching harness",
+      "detectionReason": "matched in repo"
+    },
+    "prototype": {
+      "origin": "external",
+      "sync": false,
+      "detectionReason": "external manifest"
+    }
+  }
+}
