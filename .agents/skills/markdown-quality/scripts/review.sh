@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # scripts/review.sh — Two-layer Markdown QA review runner
 # Usage: review.sh "<glob>" [--fix] [--min-level=error|warning|suggestion]
-
 set -uo pipefail
 
 GLOB="${1:-**/*.md}"
@@ -89,7 +88,23 @@ if command -v vale >/dev/null 2>&1; then
   echo "Config: $VALE_CONFIG_SOURCE"
   echo "Styles: $VALE_STYLES"
   echo "MinAlert: $MIN_LEVEL"
-  VALE_OUT=$(vale ${VALE_CONFIG[@]+"${VALE_CONFIG[@]}"} --minAlertLevel="$MIN_LEVEL" "$GLOB" 2>&1 || true)
+
+  # Expand glob for Vale since Vale expects file paths or directories
+  TARGET_FILES=()
+  if [[ "$GLOB" == *"**"* ]]; then
+    while IFS= read -r f; do
+      [ -f "$f" ] && TARGET_FILES+=("$f")
+    done < <(python3 -c "import glob, sys; [print(p) for p in glob.glob(sys.argv[1], recursive=True)]" "$GLOB")
+  else
+    for f in $GLOB; do
+      [ -e "$f" ] && TARGET_FILES+=("$f")
+    done
+  fi
+  if [ ${#TARGET_FILES[@]} -eq 0 ]; then
+    TARGET_FILES=("$GLOB")
+  fi
+
+  VALE_OUT=$(vale ${VALE_CONFIG[@]+"${VALE_CONFIG[@]}"} --minAlertLevel="$MIN_LEVEL" "${TARGET_FILES[@]}" 2>&1 || true)
   VALE_LINES=$(echo "$VALE_OUT" | grep -E "[[:space:]]+(error|warning)[[:space:]]" || true)
   if [ -z "$VALE_LINES" ]; then
     echo "Status: clean (0 issues)"
