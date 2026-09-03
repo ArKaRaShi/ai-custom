@@ -8,11 +8,12 @@ Cross-machine AI coding harness configuration, OMP extensions, TTSR rules, lifec
 ~/Disk/ai-custom/
 ├── .omp/                       # Oh My Pi runtime configuration (~/.omp/agent/)
 │   ├── config.yml              # Model routing, themes, statusline
-│   ├── extensions/             # Extensions (quota-status, turn-metrics, caveman-stats)
-│   ├── hooks/post/             # Lifecycle hooks (redact)
+│   ├── extensions/             # Extensions (caveman-stats, quota-status, turn-metrics)
+│   ├── hooks/                  # Lifecycle hooks
+│   │   ├── pre/                # Safety guards (block-dangerous-git, guard-destructive)
+│   │   └── post/               # Output filters & alerts (redact, redact-keys, notify-sound)
 │   ├── rules/                  # 10 TTSR Python & TypeScript code quality rules
 │   └── tests/                  # 92 automated test assertions across 12 suites
-│
 └── .agents/skills/             # User-level agent skills (~/.agents/skills/)
     ├── ai-sync/                # Bidirectional sync engine between machine and repository
     ├── markdown-quality/       # 2-phase Markdown QA (markdownlint-cli2 + Vale with ai-tells)
