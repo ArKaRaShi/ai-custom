@@ -9,12 +9,7 @@
     },
     "archify": {
       "origin": "external",
-      "sync": false,
-      "source": "tt-a1i/archify",
-      "sourceType": "github",
-      "version": "2.17.0",
-      "install": "npx skills add tt-a1i/archify -g",
-      "detectionReason": "pointer (tt-a1i/archify)"
+      "sync": true
     },
     "cavecrew": {
       "origin": "external",
