@@ -38,21 +38,17 @@ SKILL_DIR="${SKILL_DIR:-$HOME/.agents/skills/markdown-quality}"
 
 ## Prerequisites & Installation
 
-Before running checks, verify that the required CLI tools are available:
+Before running checks, verify that the required CLI tools are installed via Homebrew:
 
-### 1. `markdownlint-cli2` (Structural Validation & Fixes)
+### 1. Unified Installation via Homebrew (macOS)
 
-```bash
-which markdownlint-cli2 >/dev/null 2>&1 || npm install -g markdownlint-cli2
-```
-
-### 2. `vale` (Prose & Style Review)
+Both tools are managed natively under Homebrew:
 
 ```bash
-which vale >/dev/null 2>&1 || brew install vale
+which markdownlint-cli2 >/dev/null 2>&1 && which vale >/dev/null 2>&1 || brew install markdownlint-cli2 vale
 ```
 
-### 3. Global Base Configuration (`~/.markdownlint-cli2.yaml`)
+### 2. Global Base Configuration (`~/.markdownlint-cli2.yaml`)
 
 If the user-level configuration is missing, initialize it once to prevent false-positive 80-character line-length errors across projects:
 
