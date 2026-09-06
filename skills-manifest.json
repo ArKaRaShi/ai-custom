@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "skills": {
+    "writing-for-agents": {
+      "origin": "external",
+      "sync": true,
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "install": "npx skills add mattpocock/skills -g"
+    }
+  }
+}

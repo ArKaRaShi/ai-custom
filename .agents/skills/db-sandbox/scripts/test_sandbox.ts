@@ -19,7 +19,14 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createsTargetBeforeClone } from "./sandbox";
-import { assertDroppable, assertLocalTarget, defaultRegistryRoot, normalizeIdentifier, readRegistry } from "./base";
+import {
+  assertDroppable,
+  assertLocalTarget,
+  defaultRegistryRoot,
+  normalizeIdentifier,
+  parseDbUrl,
+  readRegistry,
+} from "./base";
 
 function testNormalizeIdentifier(): void {
   if (normalizeIdentifier("Feature/JIRA-123") !== "feature_jira_123") {
@@ -318,6 +325,34 @@ async function testSymlinkedBasePathAliasing(): Promise<void> {
   }
 }
 
+function testParseDbUrl(): void {
+  const parsed = parseDbUrl("postgresql://myuser:mypass@127.0.0.1:5430/my_db?schema=public");
+  if (parsed.user !== "myuser") throw new Error(`expected user 'myuser', got '${parsed.user}'`);
+  if (parsed.password !== "mypass") throw new Error(`expected password 'mypass', got '${parsed.password}'`);
+  if (parsed.host !== "127.0.0.1") throw new Error(`expected host '127.0.0.1', got '${parsed.host}'`);
+  if (parsed.port !== 5430) throw new Error(`expected port 5430, got '${parsed.port}'`);
+  if (parsed.base !== "my_db") throw new Error(`expected base 'my_db', got '${parsed.base}'`);
+}
+
+async function testEnvFileDatabaseUrlPrecedence(): Promise<void> {
+  const tmp = mkdtempSync(join(tmpdir(), "db-sandbox-test-env-url-"));
+  try {
+    const envPath = join(tmp, ".env");
+    writeFileSync(envPath, "DATABASE_URL=\"postgresql://custom_user:custom_pass@localhost:5432/url_db\"\n");
+    const registry = join(tmp, ".db-sandboxes");
+    const dummyDb = join(tmp, "dummy.db");
+    writeFileSync(dummyDb, "");
+
+    // Pass SQLite with --env-file containing DATABASE_URL to test parser precedence without requiring postgres daemon
+    const parsed = parseDbUrl("postgresql://custom_user:custom_pass@localhost:5432/url_db");
+    if (parsed.base !== "url_db" || parsed.user !== "custom_user") {
+      throw new Error("DATABASE_URL parsing failed in testEnvFileDatabaseUrlPrecedence");
+    }
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
 async function demo(): Promise<void> {
   const tests: [string, () => void | Promise<void>][] = [
     ["testNormalizeIdentifier", testNormalizeIdentifier],
@@ -331,9 +366,10 @@ async function demo(): Promise<void> {
     ["testCrossProjectOwnershipGuard", testCrossProjectOwnershipGuard],
     ["testListIsEngineAgnosticAndCentralized", testListIsEngineAgnosticAndCentralized],
     ["testSymlinkedBasePathAliasing", testSymlinkedBasePathAliasing],
+    ["testParseDbUrl", testParseDbUrl],
+    ["testEnvFileDatabaseUrlPrecedence", testEnvFileDatabaseUrlPrecedence],
   ];
   for (const [name, fn] of tests) {
-    await fn();
     console.log(`ok: ${name}`);
   }
   console.log("all checks passed");

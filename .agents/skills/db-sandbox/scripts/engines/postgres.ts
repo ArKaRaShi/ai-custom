@@ -50,17 +50,33 @@ export async function drop(conn: Conn, target: string): Promise<void> {
   await psql(conn, MAINTENANCE_DB, `DROP DATABASE "${target}"`);
 }
 
-async function logicalClone(conn: Conn, source: string, target: string): Promise<void> {
+async function terminateOtherBackends(conn: Conn, database: string): Promise<void> {
+  try {
+    await psql(
+      conn,
+      MAINTENANCE_DB,
+      `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='${database}' AND pid <> pg_backend_pid()`,
+    );
+  } catch {
+    // If caller doesn't have superuser/privileges to terminate backends, ignore and proceed
+  }
+}
+
+async function logicalClone(conn: Conn, source: string, target: string, isTimescaleDb = false): Promise<void> {
   const dumpDir = mkdtempSync(join(tmpdir(), "db-sandbox-pg-"));
   const dumpPath = join(dumpDir, "database.dump");
   try {
     await $`pg_dump -h ${conn.host ?? "localhost"} -p ${conn.port ?? 5432} -U ${conn.user ?? "postgres"} -d ${source} -Fc -f ${dumpPath}`
       .env(pgEnvironment(conn));
-    await psql(conn, target, "CREATE EXTENSION IF NOT EXISTS timescaledb");
-    await psql(conn, target, "SELECT timescaledb_pre_restore()");
+    if (isTimescaleDb) {
+      await psql(conn, target, "CREATE EXTENSION IF NOT EXISTS timescaledb");
+      await psql(conn, target, "SELECT timescaledb_pre_restore()");
+    }
     await $`pg_restore -h ${conn.host ?? "localhost"} -p ${conn.port ?? 5432} -U ${conn.user ?? "postgres"} -d ${target} --no-owner --no-privileges --exit-on-error ${dumpPath}`
       .env(pgEnvironment(conn));
-    await psql(conn, target, "SELECT timescaledb_post_restore()");
+    if (isTimescaleDb) {
+      await psql(conn, target, "SELECT timescaledb_post_restore()");
+    }
   } finally {
     rmSync(dumpDir, { recursive: true, force: true });
   }
@@ -73,8 +89,28 @@ export async function clone(
   mode: CloneMode = "template",
 ): Promise<void> {
   if (mode === "logical") {
-    await logicalClone(conn, source, target);
+    await logicalClone(conn, source, target, true);
     return;
   }
-  await psql(conn, MAINTENANCE_DB, `CREATE DATABASE "${target}" TEMPLATE "${source}"`);
+
+  // Step 1: Disconnect any idle connections to source database
+  await terminateOtherBackends(conn, source);
+
+  try {
+    await psql(conn, MAINTENANCE_DB, `CREATE DATABASE "${target}" TEMPLATE "${source}"`);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("accessed by other users") || msg.includes("being accessed")) {
+      // Step 2: Fallback to logical clone if template copy was locked out
+      await create(conn, target);
+      try {
+        await logicalClone(conn, source, target, false);
+      } catch (fallbackErr) {
+        await drop(conn, target);
+        throw fallbackErr;
+      }
+      return;
+    }
+    throw err;
+  }
 }

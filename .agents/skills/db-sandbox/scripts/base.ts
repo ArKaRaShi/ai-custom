@@ -202,3 +202,24 @@ export function resolveField(
 ): string | undefined {
   return cliValue ?? envFileValues[envKey] ?? process.env[envKey] ?? fallback;
 }
+
+/**
+ * Parse connection URI like postgresql://user:pass@host:port/dbname.
+ * Decodes URI components and strips query parameters.
+ */
+export function parseDbUrl(urlStr?: string): Partial<Conn & { base: string }> {
+  if (!urlStr) return {};
+  try {
+    const u = new URL(urlStr);
+    const pathname = u.pathname?.replace(/^\//, "");
+    return {
+      host: u.hostname || undefined,
+      port: u.port ? Number(u.port) : undefined,
+      user: u.username ? decodeURIComponent(u.username) : undefined,
+      password: u.password ? decodeURIComponent(u.password) : undefined,
+      base: pathname ? decodeURIComponent(pathname) : undefined,
+    };
+  } catch {
+    return {};
+  }
+}

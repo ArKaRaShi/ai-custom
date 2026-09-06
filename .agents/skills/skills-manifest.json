@@ -150,6 +150,13 @@
       "origin": "external",
       "sync": false,
       "detectionReason": "external manifest"
+    },
+    "writing-for-agents": {
+      "origin": "external",
+      "sync": true,
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "install": "npx skills add mattpocock/skills -g"
     }
   }
 }

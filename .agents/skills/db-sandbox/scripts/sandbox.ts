@@ -32,6 +32,7 @@ import {
   listRegistry,
   loadEnvFile,
   normalizeIdentifier,
+  parseDbUrl,
   readRegistry,
   registryPath,
   resolveField,
@@ -69,14 +70,17 @@ function parseArgs(argv: string[]): { positional: string[]; flags: Flags } {
 /** Resolve connection + base db name/path from --flags, --env-file, then ambient env. */
 function resolveConfig(engineName: EngineName, flags: Flags): { conn: Conn; base: string | undefined } {
   const envFileValues = flags["env-file"] ? loadEnvFile(flags["env-file"]) : {};
+  const dbUrl = envFileValues.DATABASE_URL ?? envFileValues.DATABASE_URI ?? process.env.DATABASE_URL ?? process.env.DATABASE_URI;
+  const parsedUrl = parseDbUrl(dbUrl);
+
   const conn: Conn = {
-    host: resolveField(flags.host, envFileValues, "DB_HOST", "localhost"),
-    port: Number(resolveField(flags.port, envFileValues, "DB_PORT")) || undefined,
-    user: resolveField(flags.user, envFileValues, "DB_USER"),
-    password: resolveField(flags.password, envFileValues, "DB_PASSWORD"),
+    host: resolveField(flags.host, envFileValues, "DB_HOST", parsedUrl.host ?? "localhost"),
+    port: Number(resolveField(flags.port, envFileValues, "DB_PORT", parsedUrl.port ? String(parsedUrl.port) : undefined)) || undefined,
+    user: resolveField(flags.user, envFileValues, "DB_USER", parsedUrl.user),
+    password: resolveField(flags.password, envFileValues, "DB_PASSWORD", parsedUrl.password),
   };
   const baseEnvKey = engineName === "sqlite" ? "DB_PATH" : "DB_NAME";
-  const base = resolveField(flags.base, envFileValues, baseEnvKey);
+  const base = resolveField(flags.base, envFileValues, baseEnvKey, parsedUrl.base);
   return { conn, base };
 }
 
