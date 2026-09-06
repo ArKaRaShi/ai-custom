@@ -12,6 +12,12 @@ import {
   withOriginFilter,
   SkillsManifest,
   autoDetectSkill,
+  repoManifestPath,
+  removeManifestEntry,
+  untrackSkill,
+  removeOrphanedManifestEntries,
+  migrateLegacyManifest,
+  TARGET_MAP,
   DEFAULT_REPO,
   SKILLS_DIR,
 } from "./sync";
@@ -206,5 +212,123 @@ describe("given path resolution configuration, when inspecting default paths, th
     expect(DEFAULT_REPO).toContain(home);
     expect(SKILLS_DIR).toContain(home);
     expect(SKILLS_DIR).toContain(".agents");
+  });
+});
+
+describe("given skill manifest lifecycle operations, when tracking shared state, then uses one canonical repo manifest", () => {
+  it("locates the shared manifest beneath the repo skills directory", () => {
+    expect(repoManifestPath("/tmp/ai-custom")).toBe("/tmp/ai-custom/.agents/skills/skills-manifest.json");
+  });
+
+  it("removes a retired skill entry without changing remaining entries", () => {
+    const manifest: SkillsManifest = {
+      version: 1,
+      skills: {
+        retained: { origin: "authored", sync: true },
+        retired: { origin: "authored", sync: false },
+      },
+    };
+
+    expect(removeManifestEntry(manifest, "retired")).toBe(true);
+    expect(manifest.skills).toEqual({ retained: { origin: "authored", sync: true } });
+    expect(removeManifestEntry(manifest, "retired")).toBe(false);
+  });
+});
+
+describe("given local and shared manifests, when untracking a retired skill, then removes only its metadata", () => {
+  it("updates both manifests without deleting any skill directories", () => {
+    const manifestDir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-sync-untrack-test-"));
+    const localManifest = path.join(manifestDir, "local.json");
+    const sharedManifest = path.join(manifestDir, "shared.json");
+    const manifest: SkillsManifest = {
+      version: 1,
+      skills: {
+        retained: { origin: "authored", sync: true },
+        retired: { origin: "authored", sync: false },
+      },
+    };
+    try {
+      saveManifest(localManifest, manifest);
+      saveManifest(sharedManifest, manifest);
+
+      expect(untrackSkill("retired", localManifest, sharedManifest)).toEqual({
+        local: true,
+        shared: true,
+      });
+      expect(loadManifest(localManifest).skills).toEqual({ retained: { origin: "authored", sync: true } });
+      expect(loadManifest(sharedManifest).skills).toEqual({ retained: { origin: "authored", sync: true } });
+    } finally {
+      fs.rmSync(manifestDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("given untracked local skills, when discovery runs without --write, then leaves the manifest unchanged", () => {
+  it("reports provenance without creating a local manifest", () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "ai-sync-discover-home-"));
+    const repo = fs.mkdtempSync(path.join(os.tmpdir(), "ai-sync-discover-repo-"));
+    const skillDir = path.join(home, ".agents", "skills", "scratch");
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(path.join(skillDir, "SKILL.md"), "---\nname: scratch\n---\n");
+    try {
+      const result = Bun.spawnSync(["bun", path.join(import.meta.dir, "sync.ts"), "discover"], {
+        env: { ...process.env, HOME: home, AI_CUSTOM_REPO: repo },
+      });
+
+      expect(result.exitCode).toBe(0);
+      expect(fs.existsSync(path.join(home, ".agents", "skills", "skills-manifest.json"))).toBe(false);
+    } finally {
+      fs.rmSync(home, { recursive: true, force: true });
+      fs.rmSync(repo, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("given a local manifest and installed skills, when pruning orphaned records, then retains installed skill metadata", () => {
+  it("removes only entries whose directories are absent", () => {
+    const manifest: SkillsManifest = {
+      version: 1,
+      skills: {
+        installed: { origin: "authored", sync: true },
+        retired: { origin: "authored", sync: true },
+      },
+    };
+
+    expect(removeOrphanedManifestEntries(manifest, ["installed"])).toEqual(["retired"]);
+    expect(manifest.skills).toEqual({ installed: { origin: "authored", sync: true } });
+  });
+});
+
+describe("given a legacy root manifest, when migrating it to the skills target, then preserves records at the canonical path", () => {
+  it("moves the legacy file only when no canonical manifest exists", () => {
+    const repo = fs.mkdtempSync(path.join(os.tmpdir(), "ai-sync-manifest-migration-"));
+    const legacy = path.join(repo, "skills-manifest.json");
+    const canonical = path.join(repo, ".agents", "skills", "skills-manifest.json");
+    const manifest: SkillsManifest = {
+      version: 1,
+      skills: { retained: { origin: "authored", sync: true } },
+    };
+    try {
+      saveManifest(legacy, manifest);
+
+      expect(migrateLegacyManifest(legacy, canonical)).toBe(true);
+      expect(loadManifest(canonical)).toEqual(manifest);
+      expect(fs.existsSync(legacy)).toBe(false);
+    } finally {
+      fs.rmSync(repo, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("given synchronization targets, when backing up OMP task agents, then includes their user agent directory", () => {
+  it("maps user task agents into the repository OMP agents directory", () => {
+    const agentsTarget = TARGET_MAP.find((target) => target.category === "agents");
+
+    expect(agentsTarget).toEqual({
+      name: "OMP Agents",
+      category: "agents",
+      local: path.join(os.homedir(), ".omp", "agent", "agents"),
+      repo: path.join(DEFAULT_REPO, ".omp", "agents"),
+    });
   });
 });

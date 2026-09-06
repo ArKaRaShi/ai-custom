@@ -9,7 +9,8 @@
     },
     "archify": {
       "origin": "external",
-      "sync": true
+      "sync": true,
+      "detectionReason": "matched in repo"
     },
     "cavecrew": {
       "origin": "external",
@@ -151,12 +152,9 @@
       "sync": false,
       "detectionReason": "external manifest"
     },
-    "writing-for-agents": {
-      "origin": "external",
-      "sync": true,
-      "source": "mattpocock/skills",
-      "sourceType": "github",
-      "install": "npx skills add mattpocock/skills -g"
+    "writing-omp-agents": {
+      "origin": "authored",
+      "sync": true
     }
   }
 }

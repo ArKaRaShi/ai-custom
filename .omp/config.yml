@@ -9,6 +9,8 @@ modelRoles:
   task: kimi-code/k3:off
   advisor: google-antigravity/gemini-3.7-flash:auto
   default: anthropic/claude-sonnet-5:xhigh
+  free: openrouter/z-ai/glm-5.2:free:high
+  boilerplate: openrouter/z-ai/glm-5.3-flash:auto
 retry:
   fallbackChains:
     smol:
@@ -21,8 +23,22 @@ retry:
     commit:
       - google-antigravity/gemini-3.7-flash:auto
     task:
+      - openai-codex/gpt-5.6-luna:high
       - anthropic/claude-sonnet-5:auto
       - openai-codex/gpt-5.6-terra:auto
+    free:
+      - openrouter/minimax/minimax-m3:free:high
+      - openrouter/poolside/laguna-s-2.1:free:high
+      - openrouter/minimax/minimax-m2.7:free:high
+      - openrouter/thinkingmachines/inkling-small:free:high
+      - openrouter/thinkingmachines/inkling:free:high
+      - openrouter/nvidia/nemotron-3-ultra-550b-a55b:free:high
+      - openrouter/google/gemma-4-31b-it:free:high
+      - openrouter/google/gemma-4-26b-a4b-it:free:high
+      - openrouter/nvidia/nemotron-3-super-120b-a12b:free:medium
+      - openrouter/cohere/north-mini-code:free:high
+      - openrouter/nvidia/nemotron-3.5-lightning:free:high
+      - openrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free:high
 symbolPreset: nerd
 theme:
   dark: dark-catppuccin

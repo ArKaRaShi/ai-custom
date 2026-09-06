@@ -24,6 +24,12 @@ export const TARGET_MAP: Array<SyncTarget> = [
     repo: path.join(DEFAULT_REPO, ".omp", "config.yml"),
   },
   {
+    name: "OMP Agents",
+    category: "agents",
+    local: path.join(HOME, ".omp", "agent", "agents"),
+    repo: path.join(DEFAULT_REPO, ".omp", "agents"),
+  },
+  {
     name: "OMP Extensions",
     category: "extensions",
     local: path.join(HOME, ".omp", "agent", "extensions"),
@@ -59,6 +65,10 @@ export interface SyncOptions {
   exclude?: string[];
   /** bypass origin filtering: include external/local skills in sync ops */
   includeLocal?: boolean;
+  /** persist auto-detected manifest entries during discovery */
+  write?: boolean;
+  /** apply a manifest cleanup after printing its candidates */
+  apply?: boolean;
 }
 export type SkillOrigin = "authored" | "external";
 
@@ -175,6 +185,49 @@ export interface SkillsManifest {
 
 export const MANIFEST_FILENAME = "skills-manifest.json";
 export const LOCAL_MANIFEST_FILE = path.join(SKILLS_DIR, MANIFEST_FILENAME);
+
+/** The shared manifest belongs beside the repository's synchronized skills. */
+export function repoManifestPath(repoBase = DEFAULT_REPO): string {
+  return path.join(repoBase, ".agents", "skills", MANIFEST_FILENAME);
+}
+
+/** Remove one manifest entry without changing any skill files. */
+export function removeManifestEntry(manifest: SkillsManifest, skill: string): boolean {
+  if (!manifest.skills[skill]) return false;
+  delete manifest.skills[skill];
+  return true;
+}
+
+/** Remove one skill from local and shared manifests without deleting the skill itself. */
+export function untrackSkill(
+  skill: string,
+  localManifestFile = LOCAL_MANIFEST_FILE,
+  sharedManifestFile = repoManifestPath(),
+): { local: boolean; shared: boolean } {
+  const localManifest = loadManifest(localManifestFile);
+  const sharedManifest = loadManifest(sharedManifestFile);
+  const local = removeManifestEntry(localManifest, skill);
+  const shared = removeManifestEntry(sharedManifest, skill);
+  if (local) saveManifest(localManifestFile, localManifest);
+  if (shared) saveManifest(sharedManifestFile, sharedManifest);
+  return { local, shared };
+}
+
+/** Remove manifest records whose skill directories are absent. */
+export function removeOrphanedManifestEntries(manifest: SkillsManifest, installedSkills: string[]): string[] {
+  const installed = new Set(installedSkills);
+  const orphaned = Object.keys(manifest.skills).filter((name) => !installed.has(name));
+  for (const name of orphaned) delete manifest.skills[name];
+  return orphaned;
+}
+
+/** Move a legacy root manifest into the canonical skills target without overwriting it. */
+export function migrateLegacyManifest(legacyManifestFile: string, canonicalManifestFile: string): boolean {
+  if (!fs.existsSync(legacyManifestFile) || fs.existsSync(canonicalManifestFile)) return false;
+  fs.mkdirSync(path.dirname(canonicalManifestFile), { recursive: true });
+  fs.renameSync(legacyManifestFile, canonicalManifestFile);
+  return true;
+}
 
 export function loadManifest(manifestPath: string): SkillsManifest {
   try {
@@ -727,16 +780,63 @@ export function cmdTrack(
   console.log(`📋 Tracked '${skill}' as ${origin} (sync: ${sync})${meta.from ? ` (${meta.from}${meta.version ? "@" + meta.version : ""})` : ""} in ${LOCAL_MANIFEST_FILE.replace(HOME, "~")}`);
 
   // All skills (whether synced or pointer-only) update the shared repo manifest
-  const repoManifestFile = path.join(repoBase, MANIFEST_FILENAME);
+  const repoManifestFile = repoManifestPath(repoBase);
   const repoManifest = loadManifest(repoManifestFile);
   repoManifest.skills[skill] = manifest.skills[skill];
   saveManifest(repoManifestFile, repoManifest);
   console.log(`   🌐 Repo manifest updated: ${repoManifestFile.replace(HOME, "~")} (commit with your next push)`);
 }
 
+export function cmdUntrack(skill: string, repoBase = DEFAULT_REPO): void {
+  const result = untrackSkill(skill, LOCAL_MANIFEST_FILE, repoManifestPath(repoBase));
+  if (!result.local && !result.shared) {
+    console.log(`📋 '${skill}' was not tracked in either manifest.`);
+    return;
+  }
+  console.log(`📋 Untracked '${skill}' from ${result.local ? "local" : "shared"}${result.local && result.shared ? " and shared" : ""} manifest${result.local || result.shared ? "s" : ""}. Skill files were not deleted.`);
+}
+
+export function cmdPruneManifest(apply = false): void {
+  const manifest = loadManifest(LOCAL_MANIFEST_FILE);
+  const installedSkills = fs.existsSync(SKILLS_DIR)
+    ? fs.readdirSync(SKILLS_DIR, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => entry.name)
+    : [];
+  const candidates = Object.keys(manifest.skills).filter((name) => !installedSkills.includes(name));
+  if (candidates.length === 0) {
+    console.log(`📋 No orphaned local manifest entries.`);
+    return;
+  }
+  if (!apply) {
+    console.log(`📋 Orphaned local manifest entries: ${candidates.join(", ")}\n   Review, then run: bun sync.ts prune-manifest --apply`);
+    return;
+  }
+  removeOrphanedManifestEntries(manifest, installedSkills);
+  saveManifest(LOCAL_MANIFEST_FILE, manifest);
+  console.log(`📋 Removed orphaned local manifest entries: ${candidates.join(", ")}. Shared manifest unchanged.`);
+}
+
+export function cmdMigrateManifest(repoBase = DEFAULT_REPO, apply = false): void {
+  const legacyManifestFile = path.join(repoBase, MANIFEST_FILENAME);
+  const canonicalManifestFile = repoManifestPath(repoBase);
+  if (!fs.existsSync(legacyManifestFile)) {
+    console.log(`📋 No legacy root manifest.`);
+    return;
+  }
+  if (fs.existsSync(canonicalManifestFile)) {
+    console.log(`⚠️  Both legacy and canonical manifests exist. Resolve their contents before deleting the legacy file.`);
+    return;
+  }
+  if (!apply) {
+    console.log(`📋 Legacy manifest found: ${legacyManifestFile}\n   Review, then run: bun sync.ts migrate-manifest --apply`);
+    return;
+  }
+  migrateLegacyManifest(legacyManifestFile, canonicalManifestFile);
+  console.log(`📋 Moved the legacy manifest to ${canonicalManifestFile}.`);
+}
+
 export function cmdBootstrap(repoBase = DEFAULT_REPO) {
   console.log(`\n🚀 Bootstrapping skills from ${repoBase}...`);
-  const repoManifestFile = path.join(repoBase, MANIFEST_FILENAME);
+  const repoManifestFile = repoManifestPath(repoBase);
   const repoManifest = loadManifest(repoManifestFile);
   if (Object.keys(repoManifest.skills).length === 0) {
     console.log(`❌ No ${MANIFEST_FILENAME} found in repo. Run 'sync.ts track <skill> authored' on a machine that has skills first.\n`);
@@ -784,7 +884,7 @@ export function cmdBootstrap(repoBase = DEFAULT_REPO) {
   }
   console.log(`\n✅ Bootstrap complete.\n`);
 }
-export function cmdDiscover(repoBase = DEFAULT_REPO): SkillsManifest {
+export function cmdDiscover(repoBase = DEFAULT_REPO, write = false): SkillsManifest {
   console.log(`\n🔍 ai-sync: Skill Discovery & Provenance Report`);
   console.log(`─────────────────────────────────────────────────────────────────────────────`);
   const localSkillsDir = path.join(HOME, ".agents", "skills");
@@ -793,7 +893,7 @@ export function cmdDiscover(repoBase = DEFAULT_REPO): SkillsManifest {
   console.log(`🌐 Backup Repo  : ${repoSkillsDir}\n`);
 
   const skillsLock = loadSkillsLock();
-  const repoManifest = loadManifest(path.join(repoBase, MANIFEST_FILENAME));
+  const repoManifest = loadManifest(repoManifestPath(repoBase));
   const localManifest = loadManifest(LOCAL_MANIFEST_FILE);
 
   const skillDirs = fs.existsSync(localSkillsDir)
@@ -802,6 +902,9 @@ export function cmdDiscover(repoBase = DEFAULT_REPO): SkillsManifest {
         .map((d) => d.name)
         .sort()
     : [];
+
+  const invalidSkillDirs = skillDirs.filter((name) => !fs.existsSync(path.join(localSkillsDir, name, "SKILL.md")));
+  const orphanedManifestEntries = Object.keys(localManifest.skills).filter((name) => !skillDirs.includes(name));
 
   const discovered: SkillsManifest = { version: 1, skills: {} };
 
@@ -868,15 +971,27 @@ export function cmdDiscover(repoBase = DEFAULT_REPO): SkillsManifest {
   }
   console.log();
 
-  // Save to local manifest
-  saveManifest(LOCAL_MANIFEST_FILE, discovered);
+  if (invalidSkillDirs.length > 0) {
+    console.log(`⚠️  Invalid skill directories (missing SKILL.md): ${invalidSkillDirs.join(", ")}`);
+  }
+  if (orphanedManifestEntries.length > 0) {
+    console.log(`⚠️  Orphaned local manifest entries: ${orphanedManifestEntries.join(", ")} — run 'sync.ts prune-manifest --apply' after review`);
+  }
+  if (invalidSkillDirs.length > 0 || orphanedManifestEntries.length > 0) console.log();
+
+  if (write) {
+    saveManifest(LOCAL_MANIFEST_FILE, {
+      version: localManifest.version,
+      skills: { ...localManifest.skills, ...discovered.skills },
+    });
+  }
 
   const nonSyncedCount = externalDeps.length + localExperiments.length;
   console.log(`─────────────────────────────────────────────────────────────────────────────`);
   console.log(`🛡️  Git Protection Summary:`);
   console.log(`   • ${authoredSynced.length + externalSynced.length} skills backed up to Git (0 third-party bloat)`);
   console.log(`   • ${nonSyncedCount} non-synced skills prevented from polluting repo (~450+ files saved)`);
-  console.log(`   • Local manifest updated: ${LOCAL_MANIFEST_FILE.replace(HOME, "~")}\n`);
+  console.log(`   • Local manifest ${write ? "updated" : "unchanged"}: ${LOCAL_MANIFEST_FILE.replace(HOME, "~")}\n`);
 
   console.log(`💡 Next Actions:`);
   console.log(`   • Back up authored changes : bun sync.ts push`);
@@ -914,8 +1029,12 @@ export function parseArgs(rawArgs: string[]): {
       opts.target = arg.slice("--target=".length);
     } else if (arg === "--include-local") {
       opts.includeLocal = true;
+    } else if (arg === "--write") {
+      opts.write = true;
     } else if (arg === "--sync") {
       meta.sync = true;
+    } else if (arg === "--apply") {
+      opts.apply = true;
     } else if (arg === "--no-sync") {
       meta.sync = false;
     } else if (arg === "--from") {
@@ -934,7 +1053,7 @@ export function parseArgs(rawArgs: string[]): {
   if (positional[0]) command = positional[0];
   // track/bootstrap take skill names as positionals, not target categories
   const rest = positional.slice(1);
-  if (command !== "track" && command !== "bootstrap" && command !== "discover" && rest[0]) {
+  if (command !== "track" && command !== "untrack" && command !== "prune-manifest" && command !== "migrate-manifest" && command !== "bootstrap" && command !== "discover" && rest[0]) {
     // If rest[0] is an existing dir or starts with / or ~, it is custom repo.
     // Otherwise, it can be treated as target category if not already set.
     if (rest[0].startsWith("/") || rest[0].startsWith("~") || fs.existsSync(rest[0])) {
@@ -943,7 +1062,7 @@ export function parseArgs(rawArgs: string[]): {
       opts.target = rest[0];
     }
   }
-  if (command !== "track" && command !== "bootstrap" && command !== "discover" && rest[1] && !repo) {
+  if (command !== "track" && command !== "untrack" && command !== "prune-manifest" && command !== "migrate-manifest" && command !== "bootstrap" && command !== "discover" && rest[1] && !repo) {
     repo = rest[1].replace(/^~/, HOME);
   }
 
@@ -986,15 +1105,28 @@ if (import.meta.main) {
       }
       cmdTrack(args[0], args[1] as SkillOrigin, meta, repo);
       break;
+    case "untrack":
+      if (!args[0]) {
+        console.log(`Usage: bun sync.ts untrack <skill>`);
+        process.exit(1);
+      }
+      cmdUntrack(args[0], repo);
+      break;
+    case "prune-manifest":
+      cmdPruneManifest(opts.apply === true);
+      break;
+    case "migrate-manifest":
+      cmdMigrateManifest(repo, opts.apply === true);
+      break;
     case "bootstrap":
     case "restore":
       cmdBootstrap(repo);
       break;
     case "discover":
-      cmdDiscover(repo);
+      cmdDiscover(repo, opts.write === true);
       break;
     default:
-      console.log(`Usage: bun sync.ts [status|discover|diff|resolve|merge|pull|push|track|bootstrap] [target|repo_path] [--exclude <name>] [--target <scope>] [--include-local]`);
+      console.log(`Usage: bun sync.ts [status|discover|diff|resolve|merge|pull|push|track|untrack|prune-manifest|migrate-manifest|bootstrap] [target|repo_path] [--exclude <name>] [--target <scope>] [--include-local] [--write] [--apply]`);
       process.exit(1);
   }
 }
