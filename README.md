@@ -38,9 +38,8 @@ vale sync
 
 ## Quick Setup on a Fresh Machine
 
-> Secrets (API keys used by `.omp/mcp.json`, MCP servers, etc.) are never stored in this
-> repo. See [`docs/SECRETS.md`](docs/SECRETS.md) for how to set up `~/.secrets` and export
-> credentials via `~/.zshrc` before bootstrapping.
+> [`docs/SECRETS.md`](docs/SECRETS.md) covers credential setup — read it before bootstrapping
+> if any MCP server or config needs an API key.
 
 ```bash
 # 1. Clone your backup repository
@@ -76,6 +75,7 @@ bun "$SKILL_DIR/scripts/sync.ts" track mentor authored
 bun "$SKILL_DIR/scripts/sync.ts" track archify external --from tt-a1i/archify
 bun "$SKILL_DIR/scripts/sync.ts" track prototype authored --no-sync
 ```
+
 Test suite verifies rule syntax, regex correctness, and sync mappings:
 
 ```bash
