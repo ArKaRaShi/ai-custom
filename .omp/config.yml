@@ -6,7 +6,7 @@ modelRoles:
   plan: anthropic/claude-sonnet-5:xhigh
   designer: anthropic/claude-sonnet-5:auto
   commit: openai-codex/gpt-5.6-luna:auto
-  task: anthropic/claude-sonnet-5:auto
+  task: kimi-code/k3:off
   advisor: google-antigravity/gemini-3.7-flash:auto
   default: anthropic/claude-sonnet-5:xhigh
 retry:
@@ -21,6 +21,7 @@ retry:
     commit:
       - google-antigravity/gemini-3.7-flash:auto
     task:
+      - anthropic/claude-sonnet-5:auto
       - openai-codex/gpt-5.6-terra:auto
 symbolPreset: nerd
 theme:
@@ -73,6 +74,7 @@ providers:
   tinyModelDevice: default
   tinyModelDtype: default
   memoryModel: online
+  webSearchOrder: auto
 composer:
   shape: rule
 memory:
@@ -81,3 +83,5 @@ browser:
   headless: false
   relay: true
 colorBlindMode: false
+codexResets:
+  autoRedeem: "no"
