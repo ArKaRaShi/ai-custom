@@ -12,15 +12,6 @@
       "sync": true,
       "detectionReason": "matched in repo"
     },
-    "cavecrew": {
-      "origin": "external",
-      "sync": false,
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/cavecrew/SKILL.md",
-      "install": "npx skills add JuliusBrussee/caveman -g",
-      "detectionReason": "pointer (JuliusBrussee/caveman)"
-    },
     "caveman": {
       "origin": "external",
       "sync": false,
@@ -36,42 +27,6 @@
       "source": "JuliusBrussee/caveman",
       "sourceType": "github",
       "skillPath": "skills/caveman-commit/SKILL.md",
-      "install": "npx skills add JuliusBrussee/caveman -g",
-      "detectionReason": "pointer (JuliusBrussee/caveman)"
-    },
-    "caveman-compress": {
-      "origin": "external",
-      "sync": false,
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/caveman-compress/SKILL.md",
-      "install": "npx skills add JuliusBrussee/caveman -g",
-      "detectionReason": "pointer (JuliusBrussee/caveman)"
-    },
-    "caveman-help": {
-      "origin": "external",
-      "sync": false,
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/caveman-help/SKILL.md",
-      "install": "npx skills add JuliusBrussee/caveman -g",
-      "detectionReason": "pointer (JuliusBrussee/caveman)"
-    },
-    "caveman-review": {
-      "origin": "external",
-      "sync": false,
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/caveman-review/SKILL.md",
-      "install": "npx skills add JuliusBrussee/caveman -g",
-      "detectionReason": "pointer (JuliusBrussee/caveman)"
-    },
-    "caveman-stats": {
-      "origin": "external",
-      "sync": false,
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/caveman-stats/SKILL.md",
       "install": "npx skills add JuliusBrussee/caveman -g",
       "detectionReason": "pointer (JuliusBrussee/caveman)"
     },
