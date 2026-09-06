@@ -38,6 +38,10 @@ vale sync
 
 ## Quick Setup on a Fresh Machine
 
+> Secrets (API keys used by `.omp/mcp.json`, MCP servers, etc.) are never stored in this
+> repo. See [`docs/SECRETS.md`](docs/SECRETS.md) for how to set up `~/.secrets` and export
+> credentials via `~/.zshrc` before bootstrapping.
+
 ```bash
 # 1. Clone your backup repository
 git clone https://github.com/ArKaRaShi/ai-custom.git ~/Disk/ai-custom
