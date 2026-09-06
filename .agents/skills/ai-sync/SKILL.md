@@ -164,6 +164,20 @@ For a rename: run `track` for the new name, `untrack` the old name, then `push s
 | “Missing locally means delete shared metadata.” | Use `prune-manifest --apply` only for local metadata; use `untrack` for global retirement. |
 | “`discover` is harmless.” | It is read-only unless `--write` is present. |
 
+## Final Report (Required)
+
+`status`, `push`, and `pull` end with a native `⚠️ Needs your decision` table. Always relay it to the user verbatim, and add one line stating what happened (pushed/pulled file counts or "100% in sync").
+
+Each row is one decision for the user:
+
+| Row | Meaning | User's options |
+| --- | --- | --- |
+| `skills/<name>/` — local only, not in manifest | Untracked local skill; may be stale or intentional | Remove the directory, or `track` it |
+| `manifest: <name>` — manifest only | Manifest entry with no local files (this machine may be stale) | `pull` to restore, or `prune-manifest --apply` after review |
+| `skills/<name> (sync: false)` | Intentionally local-only | Nothing — informational |
+
+Report only — never delete a skill directory or manifest entry without explicit user approval. A missing entry can mean "should be removed" or "this machine is stale"; the user decides.
+
 ## Advanced Options
 
 ### 1. Scoped Category or Target Sync

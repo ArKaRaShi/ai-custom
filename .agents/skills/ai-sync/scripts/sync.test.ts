@@ -332,3 +332,33 @@ describe("given synchronization targets, when backing up OMP task agents, then i
     });
   });
 });
+
+describe("given untracked and orphaned skill records, when status runs, then flags them for a user decision", () => {
+  it("prints removal and prune candidates without deleting anything", () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "ai-sync-summary-home-"));
+    const repo = fs.mkdtempSync(path.join(os.tmpdir(), "ai-sync-summary-repo-"));
+    const skillsDir = path.join(home, ".agents", "skills");
+    fs.mkdirSync(path.join(skillsDir, "scratch"), { recursive: true });
+    fs.writeFileSync(path.join(skillsDir, "scratch", "SKILL.md"), "---\nname: scratch\n---\n");
+    fs.writeFileSync(
+      path.join(skillsDir, "skills-manifest.json"),
+      JSON.stringify({ version: 1, skills: { retired: { origin: "authored", sync: true } } }),
+    );
+    try {
+      const result = Bun.spawnSync(["bun", path.join(import.meta.dir, "sync.ts"), "status"], {
+        env: { ...process.env, HOME: home, AI_CUSTOM_REPO: repo },
+      });
+
+      const out = result.stdout.toString();
+      expect(result.exitCode).toBe(0);
+      expect(out).toContain("Needs your decision");
+      expect(out).toContain("skills/scratch/");
+      expect(out).toContain("manifest: retired");
+      expect(fs.existsSync(path.join(skillsDir, "scratch"))).toBe(true);
+      expect(loadManifest(path.join(skillsDir, "skills-manifest.json")).skills.retired).toBeDefined();
+    } finally {
+      fs.rmSync(home, { recursive: true, force: true });
+      fs.rmSync(repo, { recursive: true, force: true });
+    }
+  });
+});
