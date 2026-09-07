@@ -73,14 +73,14 @@ bun "$SKILL_DIR/scripts/sync.ts" bootstrap
 
 ## Conflict Resolution & Merge Protocol
 
-When a skill or file has been modified differently on this local machine (`ours`) versus the repo (`theirs`):
+When local and repository files differ, `ours` means the local copy and `theirs` means the repository copy:
 
 ### 1. Plain Merge
 
 `bun sync.ts merge` executes a 3-way text merge (`git merge-file`).
 
-- **Clean Merge:** Non-overlapping improvements from both sides are preserved automatically.
-- **Colliding Merge:** Standard conflict markers are inserted:
+- **Clean Merge:** the tool preserves non-overlapping improvements from both sides.
+- **Colliding Merge:** the tool inserts standard conflict markers:
 
   ```text
   <<<<<<< local (ours)
@@ -95,8 +95,8 @@ When a skill or file has been modified differently on this local machine (`ours`
 When an AI agent runs `merge` or resolves conflicts:
 
 1. **Never leave raw conflict markers in the file.**
-2. **Rephrase & Synthesize:** The agent MUST inspect the conflict block and synthesize/rephrase both improvements into a single cohesive, unified document so neither machine's intent is lost.
-3. **Present Synthesis to User:** Provide the rephrased output to the user for approval.
+2. **Rephrase and synthesize:** inspect the conflict block, then combine both improvements into one cohesive document so neither machine's intent disappears.
+3. **Present the synthesis to the user:** ask the user to approve the rephrased output.
 
 ## Skill Provenance & Manifest (`skills-manifest.json`)
 
@@ -137,52 +137,52 @@ bun ~/.agents/skills/ai-sync/scripts/sync.ts track my-fork external --sync
 | Situation | Command | Effect |
 | --- | --- | --- |
 | Inspect provenance | `discover` | Read-only report. |
-| Record detected local skills | `discover --write` | Adds detected entries locally; preserves existing entries. |
+| Record detected local skills | `discover --write` | Adds detected entries locally. Preserves existing entries. |
 | Add or change a tracked skill | `track <skill> <origin> [--sync\|--no-sync]` | Writes local and shared manifests. |
-| Retire a shared skill | `untrack <skill>` | Removes the named entry from both manifests; never deletes skill files. |
-| Remove local metadata for missing files | `prune-manifest --apply` | Removes only orphaned **local** entries; does not change the shared manifest. |
-| Migrate a legacy root manifest | `migrate-manifest --apply` | Moves it to the canonical skills target only when no canonical manifest exists. |
+| Retire a shared skill | `untrack <skill>` | Removes the entry from both manifests. Never deletes skill files. |
+| Remove local metadata for missing files | `prune-manifest --apply` | Removes only orphaned local entries. Leaves the shared manifest unchanged. |
+| Migrate a legacy root manifest | `migrate-manifest --apply` | Moves the manifest to the canonical skills target when no canonical manifest exists. |
 
-For a rename: run `track` for the new name, `untrack` the old name, then `push skills`. Other machines must `pull` before their next `push`, or they can restore the retired directory.
+For a rename, run `track` for the new name, `untrack` the old name, then `push skills`. Other machines must run `pull` before their next `push`. Otherwise, they can restore the retired directory.
 
 ### Manifest Repair Guide
 
 | Symptom | Required action |
 | --- | --- |
-| `discover` reports a directory without `SKILL.md` | Remove or repair that directory; do not track it. |
+| `discover` reports a directory without `SKILL.md` | Remove or repair that directory. Do not track it. |
 | `discover` reports an orphaned local entry | Review it, then run `prune-manifest --apply` only when the local record is obsolete. |
-| Retired skill | Run `untrack <skill>`; do not hand-edit one manifest or force-copy manifests. |
-| A skill should remain private | Use `track <skill> authored --no-sync`; do not use `push --include-local`. |
-| A root-level backup manifest exists | Review it, then run `migrate-manifest --apply`; resolve manually if a canonical manifest also exists. |
+| Retired skill | Run `untrack <skill>`. Do not hand-edit either manifest or force-copy manifests. |
+| A skill should remain private | Use `track <skill> authored --no-sync`. Do not use `push --include-local`. |
+| A root-level backup manifest exists | Review it, then run `migrate-manifest --apply`. Resolve manually if a canonical manifest also exists. |
 
 ### Manifest Red Flags
 
 | Shortcut | Correct path |
 | --- | --- |
-| “`push` will remove the old skill.” | `push` copies local changes; run `untrack <skill>` first. |
-| “I can edit one manifest.” | `untrack` changes both manifests atomically at the command level. |
-| “Missing locally means delete shared metadata.” | Use `prune-manifest --apply` only for local metadata; use `untrack` for global retirement. |
-| “`discover` is harmless.” | It is read-only unless `--write` is present. |
+| “`push` will remove the old skill.” | `push` copies local changes. Run `untrack <skill>` first. |
+| “I can edit one manifest.” | `untrack` changes both manifests atomically. |
+| “Missing locally means delete shared metadata.” | Use `prune-manifest --apply` only for local metadata. Use `untrack` for global retirement. |
+| “`discover` is harmless.” | It only reads unless you pass `--write`. |
 
 ## Final Report (Required)
 
-`status`, `push`, and `pull` end with a native `⚠️ Needs your decision` table. Always relay it to the user verbatim, and add one line stating what happened (pushed/pulled file counts or "100% in sync").
+`status`, `push`, and `pull` end with a native `⚠️ Needs your decision` table. Always relay it verbatim, then state what happened, such as the pushed or pulled file count or `100% in sync`.
 
-Each row is one decision for the user:
+Each row gives the user one decision:
 
 | Row | Meaning | User's options |
 | --- | --- | --- |
-| `skills/<name>/` — local only, not in manifest | Untracked local skill; may be stale or intentional | Remove the directory, or `track` it |
-| `manifest: <name>` — manifest only | Manifest entry with no local files (this machine may be stale) | `pull` to restore, or `prune-manifest --apply` after review |
-| `skills/<name> (sync: false)` | Intentionally local-only | Nothing — informational |
+| `skills/<name>/` (local only, not in manifest) | Untracked local skill; it may be stale or intentional | Remove the directory, or `track` it |
+| `manifest: <name>` (manifest only) | Manifest entry with no local files; this machine may be stale | `pull` to restore, or `prune-manifest --apply` after review |
+| `skills/<name> (sync: false)` | Intentionally local-only | Nothing; informational |
 
-Report only — never delete a skill directory or manifest entry without explicit user approval. A missing entry can mean "should be removed" or "this machine is stale"; the user decides.
+Report only. Never delete a skill directory or manifest entry without explicit user approval. A missing entry may need removal, or this machine may need an update. The user decides.
 
 ## Advanced Options
 
 ### 1. Scoped Category or Target Sync
 
-You can scope operations to a single category (`skills`, `instructions`, `agents`, `rules`, `extensions`, `hooks`, `config`, `tests`) or a specific keyword:
+You can scope operations to one category (`skills`, `instructions`, `agents`, `rules`, `extensions`, `hooks`, `config`, `tests`) or a specific keyword:
 
 ```bash
 # Only status or sync user skills
@@ -195,7 +195,7 @@ bun ~/.agents/skills/ai-sync/scripts/sync.ts push --include-local
 
 | Command | Action | Key Options |
 | --- | --- | --- |
-| `sync.ts status` | Scans machine vs repo + remote git status | `--target <cat>`, `--exclude <name>` |
+| `sync.ts status` | Scans differences between the machine and repository, plus remote git status | `--target <cat>`, `--exclude <name>` |
 | `sync.ts diff` | Shows line-by-line unified diffs for modified files | `--target <cat>` |
 | `sync.ts resolve` | Interactive resolution: [1] ours, [2] theirs, [3] combine | `--target <cat>` |
 | `sync.ts merge` | Plain 3-way merge to combine changes into both sides | `--target <cat>` |
