@@ -1,6 +1,6 @@
 # Secret Credentials Setup
 
-This repo never stores literal API keys or tokens — `.omp/mcp.json` and `.omp/config.yml`
+This repo never stores literal API keys or tokens. `.omp/mcp.json` and `.omp/config.yml`
 reference secrets only via `${VAR_NAME}` placeholders, resolved from your shell environment
 at runtime. Each machine keeps its own credentials locally, outside git.
 
@@ -35,7 +35,7 @@ fi
 ```
 
 `set -a` auto-exports every variable sourced afterward; `set +a` turns that back off so it
-doesn't leak to unrelated assignments later in the file.
+does not leak to unrelated assignments later in the file.
 
 ## 3. Verify
 
@@ -59,13 +59,13 @@ printenv OPENROUTER_API_KEY | sed 's/./*/g'   # prints masked value, confirms it
 }
 ```
 
-OMP resolves `${VAR}` from the process environment when it spawns/connects the server —
-restart the omp session after changing `~/.secrets` or `~/.zshrc` for it to pick up a new
+OMP resolves `${VAR}` from the process environment when it spawns/connects the server.
+Restart the omp session after changing `~/.secrets` or `~/.zshrc` for it to pick up a new
 or updated key.
 
 ## Per-machine caveat
 
-`~/.secrets` is machine-local and never travels through git — a fresh machine needs its
+`~/.secrets` is machine-local and never travels through git. A fresh machine needs its
 own file populated with that machine's keys, not a copy of another machine's. `ai-sync
 bootstrap` (see README) restores everything else; secrets are the one piece it deliberately
 skips.

@@ -12,8 +12,8 @@ Cross-machine AI coding harness configuration, OMP extensions, TTSR rules, lifec
 │   ├── hooks/                  # Lifecycle hooks
 │   │   ├── pre/                # Safety guards (guard-destructive)
 │   │   └── post/               # Output filters & alerts (redact, smart-terminal-notifier)
-│   ├── rules/                  # 16 TTSR Python & TypeScript code quality rules
-│   └── tests/                  # 120 automated test assertions across 13 suites
+│   ├── rules/                  # 17 TTSR Python & TypeScript code quality rules
+│   └── tests/                  # Automated test assertions across 14 suites
 └── .agents/skills/             # Authored agent skills & dependency manifest
     ├── skills-manifest.json    # Provenance manifest (authored vs external pointers)
     ├── ai-sync/                # Bidirectional sync engine + auto-discovery tracker
@@ -21,8 +21,10 @@ Cross-machine AI coding harness configuration, OMP extensions, TTSR rules, lifec
     ├── git-emoji-commit/       # Semantic emoji conventional commit messages
     ├── git-pr/                 # Proportional PR title and body generator
     ├── isolated-worktree/      # Isolated Git worktree development
-    ├── markdown-quality/       # 2-phase Markdown QA (markdownlint-cli2 + Vale)
-    └── mentor/                 # Senior engineer interactive teaching harness
+    ├── markdown-quality/       # 6-phase Markdown QA & validation pipeline
+    ├── mentor/                 # Senior engineer interactive teaching harness
+    └── writing-omp-agents/     # OMP task-agent contract engineering & quality
+```
 
 ## Toolchain & Prerequisites
 
@@ -38,7 +40,7 @@ vale sync
 
 ## Quick Setup on a Fresh Machine
 
-> [`docs/SECRETS.md`](docs/SECRETS.md) covers credential setup — read it before bootstrapping
+> [`docs/SECRETS.md`](docs/SECRETS.md) covers credential setup. Read it before bootstrapping
 > if any MCP server or config needs an API key.
 
 ```bash

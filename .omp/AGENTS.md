@@ -9,6 +9,8 @@ Use LSP whenever available.
 
 ## Workflow
 
+Follow these execution principles during every session:
+
 ### Work tracking
 
 Use the todo tool for two or more actions. Use it for smaller tasks when it clarifies progress.
