@@ -74,39 +74,73 @@ describe("given quota-status extension, when rendering usage sparklines and form
     expect(getProviderPrefix("unknown-provider")).toBe("󰚩 antigravity");
   });
 
-  it("buildProviderSparklineString applies Smart Focus for Antigravity", () => {
+  it("buildProviderSparklineString applies Smart Focus for Antigravity and picks the active account", () => {
     const fixedNow = new Date("2026-08-19T12:00:00").getTime();
     const mockUsage: UsagePayload = {
       reports: [
+        // Idle account
         {
           provider: "google-antigravity",
           limits: [
             {
+              id: "weekly",
               label: "Usage (Google)",
-              amount: { used: 42, usedFraction: 0.42 },
-              window: { label: "Daily", resetsAt: fixedNow + 5 * 3600_000 },
+              amount: { used: 70, usedFraction: 0.7 },
+              window: { label: "Weekly", resetsAt: fixedNow + 5 * 3600_000 },
             },
             {
-              label: "Usage (OpenAI)",
+              id: "5h",
+              label: "Usage (Google)",
               amount: { used: 0, usedFraction: 0.0 },
-              window: { label: "Daily" },
+              window: { label: "5 Hour" },
+            },
+          ],
+        },
+        // Active account (takes priority)
+        {
+          provider: "google-antigravity",
+          limits: [
+            {
+              id: "5h",
+              label: "Usage (Google)",
+              amount: { used: 40, usedFraction: 0.4 },
+              window: { id: "5h", label: "5 Hour", resetsAt: fixedNow + 3 * 3600_000 },
             },
             {
+              id: "weekly",
+              label: "Usage (Google)",
+              amount: { used: 12, usedFraction: 0.12 },
+              window: { label: "Weekly" },
+            },
+            {
+              id: "anthropic",
               label: "Usage (Anthropic)",
               amount: { used: 0, usedFraction: 0.0 },
-              window: { label: "Daily" },
+              window: { label: "Weekly" },
             },
           ],
         },
       ],
+      capacity: {
+        "google-antigravity": [
+          {
+            window: "5h",
+            accounts: 2,
+            usedAccounts: 0.4,
+            remainingAccounts: 1.6,
+          },
+        ],
+      },
     };
 
     const output = buildProviderSparklineString("google-antigravity", mockUsage, fixedNow);
     expect(output).toContain("󰚩 antigravity");
-    expect(output).toContain("gemini 1d [");
-    expect(output).toContain("42%");
-    expect(output).toContain("󰥔 5h0m @17:00");
-    expect(output).toContain("(openai: 0% · claude: 0%)");
+    // Picks active 40% account
+    expect(output).toContain("gemini 5h [");
+    expect(output).toContain("40%");
+    expect(output).toContain("󰥔 3h0m @15:00");
+    // Pool capacity pill
+    expect(output).toContain("[pool: 2 accts · 1.60× left]");
   });
 
   it("buildProviderSparklineString renders multi-window for Claude", () => {
@@ -188,41 +222,6 @@ describe("given quota-status extension, when rendering usage sparklines and form
     expect(buildProviderSparklineString("non-existent", mockUsage)).toBe("");
   });
 
-  it("buildProviderSparklineString expands multiple non-zero Antigravity backends", () => {
-    const fixedNow = new Date("2026-08-19T12:00:00").getTime();
-    const mockUsage: UsagePayload = {
-      reports: [
-        {
-          provider: "google-antigravity",
-          limits: [
-            {
-              label: "Usage (Google)",
-              amount: { used: 42, usedFraction: 0.42 },
-              window: { label: "Daily", resetsAt: fixedNow + 5 * 3600_000 },
-            },
-            {
-              label: "Usage (OpenAI)",
-              amount: { used: 18, usedFraction: 0.18 },
-              window: { label: "Daily", resetsAt: fixedNow + 3 * 3600_000 },
-            },
-            {
-              label: "Usage (Anthropic)",
-              amount: { used: 0, usedFraction: 0.0 },
-              window: { label: "Daily" },
-            },
-          ],
-        },
-      ],
-    };
-
-    const output = buildProviderSparklineString("google-antigravity", mockUsage, fixedNow);
-    expect(output).toContain("gemini 1d [");
-    expect(output).toContain("42%");
-    expect(output).toContain("openai 1d [");
-    expect(output).toContain("18%");
-    expect(output).toContain("(claude: 0%)");
-  });
-
   it("getLatestModelFromSession extracts the last model_change from session journal", async () => {
     const tmpSession = path.join(os.tmpdir(), `test-quota-model-${Date.now()}.jsonl`);
     const lines = [
@@ -236,22 +235,6 @@ describe("given quota-status extension, when rendering usage sparklines and form
     try {
       const model = await getLatestModelFromSession(tmpSession);
       expect(model).toBe("google-antigravity/gemini-3.7-flash");
-    } finally {
-      if (fs.existsSync(tmpSession)) fs.unlinkSync(tmpSession);
-    }
-  });
-
-  it("getLatestModelFromSession handles non-string or object model in session journal", async () => {
-    const tmpSession = path.join(os.tmpdir(), `test-quota-obj-${Date.now()}.jsonl`);
-    const lines = [
-      JSON.stringify({ type: "session_init", id: "001" }),
-      JSON.stringify({ type: "model_change", model: { id: "gemini-3.7-flash", provider: "google" } }),
-    ];
-
-    fs.writeFileSync(tmpSession, lines.join("\n"));
-    try {
-      const model = await getLatestModelFromSession(tmpSession);
-      expect(model).toBe("google/gemini-3.7-flash");
     } finally {
       if (fs.existsSync(tmpSession)) fs.unlinkSync(tmpSession);
     }

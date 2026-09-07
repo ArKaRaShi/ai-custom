@@ -45,6 +45,7 @@ export interface ProviderReportMetadata {
   error?: string;
   account?: string;
   plan?: string;
+  email?: string;
 }
 
 export interface ProviderReport {
@@ -53,11 +54,19 @@ export interface ProviderReport {
   metadata?: ProviderReportMetadata;
 }
 
+export interface CapacityItem {
+  window?: string;
+  durationMs?: number;
+  accounts?: number;
+  usedAccounts?: number;
+  remainingAccounts?: number;
+}
+
 export interface UsagePayload {
   version?: number;
   timestamp?: number;
   reports: ProviderReport[];
-  capacity?: Record<string, unknown>;
+  capacity?: Record<string, CapacityItem[]>;
 }
 
 let cachedUsage: UsagePayload | null = null;
@@ -179,24 +188,45 @@ export function getProviderPrefix(provider: string): string {
   }
 }
 
+/**
+ * Renders the Option A layout: Active account focus + deduplicated idle tags + pool capacity pill.
+ */
 export function buildProviderSparklineString(
   provider: string,
   usageData: UsagePayload,
   now = Date.now(),
   fetchedAtMs?: number,
 ): string {
-  const report = usageData.reports?.find(
+  const matchingReports = usageData.reports?.filter(
     (r) =>
       r.provider.toLowerCase() === provider.toLowerCase() ||
       provider.toLowerCase().includes(r.provider.toLowerCase()),
   );
-  if (!report || !report.limits || report.limits.length === 0) return "";
+
+  if (!matchingReports || matchingReports.length === 0) return "";
+
+  // 1. Pick the Active Account:
+  // Sort accounts so that the one with active short-window usage (5h) comes first.
+  const activeReport = [...matchingReports].sort((a, b) => {
+    const shortLimitA = a.limits?.find((l) => /5h|5\s*hour/i.test(l.id || l.label || ""));
+    const shortLimitB = b.limits?.find((l) => /5h|5\s*hour/i.test(l.id || l.label || ""));
+    const usedA = shortLimitA?.amount?.usedFraction ?? 0;
+    const usedB = shortLimitB?.amount?.usedFraction ?? 0;
+    if (usedA !== usedB) return usedB - usedA; // highest 5h activity first
+
+    // Fallback: highest overall max window usage
+    const maxA = Math.max(0, ...(a.limits || []).map((l) => l.amount?.usedFraction ?? 0));
+    const maxB = Math.max(0, ...(b.limits || []).map((l) => l.amount?.usedFraction ?? 0));
+    return maxB - maxA;
+  })[0];
+
+  if (!activeReport || !activeReport.limits || activeReport.limits.length === 0) return "";
 
   const activeBars: string[] = [];
-  const idleSummaries: string[] = [];
+  const idleSummariesSet = new Set<string>();
 
   // Sort limits so short windows (5h, 1d) always display before long windows (7d, 30d)
-  const sortedLimits = [...report.limits].sort((a, b) => {
+  const sortedLimits = [...activeReport.limits].sort((a, b) => {
     const durA = a.window?.durationMs ?? (/5h|5\s*hour/i.test(a.label || a.id || "") ? 18000000 : 604800000);
     const durB = b.window?.durationMs ?? (/5h|5\s*hour/i.test(b.label || b.id || "") ? 18000000 : 604800000);
     return durA - durB;
@@ -204,15 +234,23 @@ export function buildProviderSparklineString(
 
   for (const l of sortedLimits) {
     let name = (l.id || l.window?.label || l.label || "").trim();
-    if (/Usage \(Google\)/i.test(l.label || "")) name = "gemini 1d";
-    else if (/Usage \(OpenAI\)/i.test(l.label || "")) name = "openai 1d";
-    else if (/Usage \(Anthropic\)/i.test(l.label || "")) name = "claude 1d";
-    else if (/5\s*h|5-hour/i.test(name) || l.id === "5h") name = "5h";
-    else if (/7\s*d|7-day|total\s*quota/i.test(name) || l.id === "7d") name = "7d";
-    else if (/daily|1\s*d/i.test(name) || l.id === "1d") name = "1d";
-    else if (/month|30\s*d/i.test(name) || l.id === "30d") name = "30d";
+    if (/Usage \(Google\)/i.test(l.label || "")) {
+      name = /5h|5\s*hour/i.test(l.id || l.window?.id || "") ? "gemini 5h" : "gemini 1d";
+    } else if (/Usage \(OpenAI\)/i.test(l.label || "")) {
+      name = /5h|5\s*hour/i.test(l.id || l.window?.id || "") ? "openai 5h" : "openai 1d";
+    } else if (/Usage \(Anthropic\)/i.test(l.label || "")) {
+      name = /5h|5\s*hour/i.test(l.id || l.window?.id || "") ? "claude 5h" : "claude 1d";
+    } else if (/5\s*h|5-hour/i.test(name) || l.id === "5h") {
+      name = "5h";
+    } else if (/7\s*d|7-day|total\s*quota/i.test(name) || l.id === "7d") {
+      name = "7d";
+    } else if (/daily|1\s*d/i.test(name) || l.id === "1d") {
+      name = "1d";
+    } else if (/month|30\s*d/i.test(name) || l.id === "30d") {
+      name = "30d";
+    }
 
-    const fraction = l.amount.usedFraction;
+    const fraction = l.amount?.usedFraction ?? 0;
     const pct = Math.round(fraction * 100);
     const resetStr = l.window?.resetsAt ? ` 󰥔 ${formatReset(l.window.resetsAt, now)}` : "";
 
@@ -222,10 +260,10 @@ export function buildProviderSparklineString(
       continue;
     }
 
-    // Smart Focus: collapse 0% sub-quotas in Antigravity
-    if (provider === "google-antigravity" && pct === 0 && report.limits.length > 1) {
-      const shortName = name.replace(/\s*1d/i, "");
-      idleSummaries.push(`${shortName}: 0%`);
+    // Smart Focus: collapse 0% sub-quotas in Antigravity (deduplicated via Set)
+    if (provider === "google-antigravity" && pct === 0 && activeReport.limits.length > 1) {
+      const shortName = name.replace(/\s*(?:1d|5h)/i, "").trim();
+      idleSummariesSet.add(`${shortName}: 0%`);
       continue;
     }
 
@@ -235,8 +273,20 @@ export function buildProviderSparklineString(
 
   const prefix = getProviderPrefix(provider);
   let result = `${prefix}  ${activeBars.join("  ")}`;
+
+  const idleSummaries = Array.from(idleSummariesSet);
   if (idleSummaries.length > 0) {
     result += `  (${idleSummaries.join(" · ")})`;
+  }
+
+  // Multi-Account Pool Capacity Pill
+  const capacityList = usageData.capacity?.[provider];
+  if (capacityList && capacityList.length > 0) {
+    const primaryCap = capacityList.find((c) => /5h/i.test(c.window || "")) || capacityList[0];
+    if (primaryCap && (primaryCap.accounts ?? 0) > 1) {
+      const leftRatio = (primaryCap.remainingAccounts ?? 0).toFixed(2);
+      result += `  [pool: ${primaryCap.accounts} accts · ${leftRatio}× left]`;
+    }
   }
 
   const syncTag = formatSyncTime(fetchedAtMs, now);
@@ -257,6 +307,7 @@ export interface ExtensionContext {
     getSessionFile(): string;
   };
   ui?: {
+    setStatus?(key: string, text: string): void;
     setWidget?(key: string, lines: string[], options?: { placement?: string }): void;
   };
 }
