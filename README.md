@@ -40,9 +40,6 @@ vale sync
 
 ## Quick Setup on a Fresh Machine
 
-> [`docs/SECRETS.md`](docs/SECRETS.md) covers credential setup. Read it before bootstrapping
-> if any MCP server or config needs an API key.
-
 ```bash
 # 1. Clone your backup repository
 git clone https://github.com/ArKaRaShi/ai-custom.git ~/Disk/ai-custom
