@@ -182,7 +182,7 @@ Report only — never delete a skill directory or manifest entry without explici
 
 ### 1. Scoped Category or Target Sync
 
-You can scope operations to a single category (`skills`, `agents`, `rules`, `extensions`, `hooks`, `config`, `tests`) or a specific keyword:
+You can scope operations to a single category (`skills`, `instructions`, `agents`, `rules`, `extensions`, `hooks`, `config`, `tests`) or a specific keyword:
 
 ```bash
 # Only status or sync user skills
@@ -206,6 +206,8 @@ bun ~/.agents/skills/ai-sync/scripts/sync.ts push --include-local
 
 | Category | Local Path (`~`) | Repo Path (`~/Disk/ai-custom`) |
 | --- | --- | --- |
+| **OMP Instructions** | `~/.omp/agent/AGENTS.md` | `.omp/AGENTS.md` |
+| **OMP MCP** | `~/.omp/agent/mcp.json` | `.omp/mcp.json` |
 | **OMP Config** | `~/.omp/agent/config.yml` | `.omp/config.yml` |
 | **OMP Agents** | `~/.omp/agent/agents/` | `.omp/agents/` |
 | **Extensions** | `~/.omp/agent/extensions/` | `.omp/extensions/` |

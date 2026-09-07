@@ -110,6 +110,38 @@
     "writing-omp-agents": {
       "origin": "authored",
       "sync": true
+    },
+    "caveman-help": {
+      "origin": "external",
+      "sync": false,
+      "source": "JuliusBrussee/caveman",
+      "sourceType": "github",
+      "install": "npx skills add JuliusBrussee/caveman -g"
+    },
+    "caveman-review": {
+      "origin": "external",
+      "sync": false,
+      "source": "JuliusBrussee/caveman",
+      "sourceType": "github",
+      "install": "npx skills add JuliusBrussee/caveman -g"
+    },
+    "caveman-compress": {
+      "origin": "external",
+      "sync": false,
+      "source": "JuliusBrussee/caveman",
+      "sourceType": "github",
+      "install": "npx skills add JuliusBrussee/caveman -g"
+    },
+    "caveman-stats": {
+      "origin": "external",
+      "sync": false,
+      "source": "JuliusBrussee/caveman",
+      "sourceType": "github",
+      "install": "npx skills add JuliusBrussee/caveman -g"
+    },
+    "cavecrew": {
+      "origin": "external",
+      "sync": false
     }
   }
 }

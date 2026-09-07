@@ -20,7 +20,7 @@ import {
   TARGET_MAP,
   DEFAULT_REPO,
   SKILLS_DIR,
-} from "./sync";
+} from "../scripts/sync";
 describe("given pattern filter inputs, when evaluating paths and exclusions, then matches and exclusions are correctly applied", () => {
   it("matches exact relative paths and glob-like wildcard exclusions", () => {
     expect(matchesPattern("prototype/SKILL.md", ["prototype"])).toBe(true);
@@ -271,7 +271,7 @@ describe("given untracked local skills, when discovery runs without --write, the
     fs.mkdirSync(skillDir, { recursive: true });
     fs.writeFileSync(path.join(skillDir, "SKILL.md"), "---\nname: scratch\n---\n");
     try {
-      const result = Bun.spawnSync(["bun", path.join(import.meta.dir, "sync.ts"), "discover"], {
+      const result = Bun.spawnSync(["bun", path.join(import.meta.dir, "..", "scripts", "sync.ts"), "discover"], {
         env: { ...process.env, HOME: home, AI_CUSTOM_REPO: repo },
       });
 
@@ -345,7 +345,7 @@ describe("given untracked and orphaned skill records, when status runs, then fla
       JSON.stringify({ version: 1, skills: { retired: { origin: "authored", sync: true } } }),
     );
     try {
-      const result = Bun.spawnSync(["bun", path.join(import.meta.dir, "sync.ts"), "status"], {
+      const result = Bun.spawnSync(["bun", path.join(import.meta.dir, "..", "scripts", "sync.ts"), "status"], {
         env: { ...process.env, HOME: home, AI_CUSTOM_REPO: repo },
       });
 

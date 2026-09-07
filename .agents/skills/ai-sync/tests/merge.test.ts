@@ -8,7 +8,7 @@ import {
   matchesPattern,
   filterItems,
   cmdDiff,
-} from "./sync";
+} from "../scripts/sync";
 
 describe("given two versions of a file and an optional common base, when running plainMergeFiles, then cleanly merges or produces conflict markers", () => {
   let tmpDir: string;
