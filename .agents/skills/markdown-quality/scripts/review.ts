@@ -5,6 +5,8 @@ import { resolve, dirname } from "path";
 import { homedir } from "os";
 import { checkMarkdownLinks, type BrokenLink } from "./link-checker";
 import { analyzeTokenDensity, type TokenDensityReport } from "./token-density";
+import { checkMarkdownSecurity, type SecurityFinding } from "./security-check";
+import { checkMarkdownStructure, type StructureFinding } from "./structure-check";
 
 export interface ReviewOptions {
   glob?: string;
@@ -12,6 +14,8 @@ export interface ReviewOptions {
   minLevel?: "error" | "warning" | "suggestion";
   checkLinks?: boolean;
   checkDensity?: boolean;
+  checkSecurity?: boolean;
+  checkStructure?: boolean;
   userConfig?: string;
   fallbackConfig?: string;
 }
@@ -20,6 +24,8 @@ export interface ReviewResult {
   lintErrors: number;
   valeErrors: number;
   brokenLinksCount: number;
+  securityIssuesCount: number;
+  structureIssuesCount: number;
   totalErrors: number;
   densityReports: Array<{ file: string; report: TokenDensityReport }>;
   verdict: "CLEAN" | "NEEDS_REVIEW";
@@ -62,6 +68,8 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
   const minLevel = options.minLevel || "warning";
   const checkLinks = options.checkLinks ?? true;
   const checkDensity = options.checkDensity ?? true;
+  const checkSecurity = options.checkSecurity ?? true;
+  const checkStructure = options.checkStructure ?? true;
 
   const scriptDir = dirname(dirname(import.meta.path));
   const userConfig = options.userConfig || resolve(homedir(), ".markdownlint-cli2.yaml");
@@ -184,7 +192,7 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
   }
   console.log("");
 
-  // Resolve target files for link checking and token density
+  // Resolve target files for link checking, structure, security, and token density
   const matchedFiles = resolveFiles(targetGlob);
 
   // --- Phase 3: Link Integrity ---
@@ -208,10 +216,62 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
     console.log("");
   }
 
-  // --- Phase 4: Token Density & AI Efficiency ---
+  // --- Phase 4: Document Structure (Depth & Orphans) ---
+  let totalStructureIssues: Array<{ file: string; finding: StructureFinding }> = [];
+  if (checkStructure) {
+    console.log("==> Phase 4: Document Structure (Headings & Math)");
+    for (const f of matchedFiles) {
+      if (existsSync(f) && statSync(f).isFile()) {
+        try {
+          const content = readFileSync(f, "utf-8");
+          const structRes = checkMarkdownStructure(content);
+          for (const finding of structRes.findings) {
+            totalStructureIssues.push({ file: f, finding });
+          }
+        } catch {}
+      }
+    }
+    if (totalStructureIssues.length === 0) {
+      console.log("Status: clean (0 structure/heading issues)");
+    } else {
+      console.log(`Status: ${totalStructureIssues.length} structure issue(s) detected`);
+      for (const { file, finding } of totalStructureIssues) {
+        console.log(`[STRUCT] ${file}:${finding.line} -> ${finding.reason}`);
+      }
+    }
+    console.log("");
+  }
+
+  // --- Phase 5: Security & Credential Scanner ---
+  let totalSecurityIssues: Array<{ file: string; finding: SecurityFinding }> = [];
+  if (checkSecurity) {
+    console.log("==> Phase 5: Security & Secret Leak Scanner");
+    for (const f of matchedFiles) {
+      if (existsSync(f) && statSync(f).isFile()) {
+        try {
+          const content = readFileSync(f, "utf-8");
+          const secRes = checkMarkdownSecurity(content);
+          for (const finding of secRes.findings) {
+            totalSecurityIssues.push({ file: f, finding });
+          }
+        } catch {}
+      }
+    }
+    if (totalSecurityIssues.length === 0) {
+      console.log("Status: clean (0 secret/placeholder leaks)");
+    } else {
+      console.log(`Status: ${totalSecurityIssues.length} security finding(s) detected`);
+      for (const { file, finding } of totalSecurityIssues) {
+        console.log(`[SECURITY] ${file}:${finding.line} -> ${finding.reason} ('${finding.match}')`);
+      }
+    }
+    console.log("");
+  }
+
+  // --- Phase 6: Token Density & Context Efficiency ---
   const densityReports: Array<{ file: string; report: TokenDensityReport }> = [];
   if (checkDensity) {
-    console.log("==> Phase 4: Token Density & AI Context Efficiency");
+    console.log("==> Phase 6: Token Density & AI Context Efficiency");
     for (const f of matchedFiles) {
       if (existsSync(f) && statSync(f).isFile()) {
         try {
@@ -232,6 +292,11 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
             console.log(`  [DENSITY] line ${fm.line}: Filler detected '${fm.phrase}'`);
           }
         }
+        if (report.condescendingMatches.length > 0) {
+          for (const cm of report.condescendingMatches) {
+            console.log(`  [TONE] line ${cm.line}: Presumptuous word '${cm.phrase}'`);
+          }
+        }
       }
     } else {
       console.log("Status: no files analyzed");
@@ -241,30 +306,38 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
 
   // --- Summary & Verdict ---
   const brokenLinksCount = totalBrokenLinks.length;
-  const totalErrors = lintErrors + valeErrors + brokenLinksCount;
+  const securityIssuesCount = totalSecurityIssues.length;
+  const structureIssuesCount = totalStructureIssues.length;
+  const totalErrors = lintErrors + valeErrors + brokenLinksCount + securityIssuesCount + structureIssuesCount;
 
   console.log("==> Summary");
-  console.log(`Standards:     ${lintErrors} issue(s)`);
-  console.log(`Prose/AI:      ${valeErrors} issue(s)`);
-  console.log(`Link Errors:   ${brokenLinksCount} issue(s)`);
+  console.log(`Standards:        ${lintErrors} issue(s)`);
+  console.log(`Prose/AI:         ${valeErrors} issue(s)`);
+  console.log(`Link Errors:      ${brokenLinksCount} issue(s)`);
+  console.log(`Structure Errors: ${structureIssuesCount} issue(s)`);
+  console.log(`Security Leaks:   ${securityIssuesCount} issue(s)`);
 
   if (totalErrors === 0) {
-    console.log("Verdict:       CLEAN");
+    console.log("Verdict:          CLEAN");
     return {
       lintErrors,
       valeErrors,
       brokenLinksCount: 0,
+      securityIssuesCount: 0,
+      structureIssuesCount: 0,
       totalErrors: 0,
       densityReports,
       verdict: "CLEAN",
       exitCode: 0,
     };
   } else {
-    console.log(`Verdict:       NEEDS_REVIEW (${totalErrors} total issues)`);
+    console.log(`Verdict:          NEEDS_REVIEW (${totalErrors} total issues)`);
     return {
       lintErrors,
       valeErrors,
       brokenLinksCount,
+      securityIssuesCount,
+      structureIssuesCount,
       totalErrors,
       densityReports,
       verdict: "NEEDS_REVIEW",
@@ -280,6 +353,8 @@ if (import.meta.main) {
   let minLevel: "error" | "warning" | "suggestion" = "warning";
   let checkLinks = true;
   let checkDensity = true;
+  let checkSecurity = true;
+  let checkStructure = true;
 
   for (const arg of args) {
     if (arg === "--fix") {
@@ -288,6 +363,10 @@ if (import.meta.main) {
       checkLinks = false;
     } else if (arg === "--no-density") {
       checkDensity = false;
+    } else if (arg === "--no-security") {
+      checkSecurity = false;
+    } else if (arg === "--no-structure") {
+      checkStructure = false;
     } else if (arg.startsWith("--min-level=")) {
       const lvl = arg.split("=")[1];
       if (lvl === "error" || lvl === "warning" || lvl === "suggestion") {
@@ -298,6 +377,14 @@ if (import.meta.main) {
     }
   }
 
-  const result = await runReview({ glob, fix, minLevel, checkLinks, checkDensity });
+  const result = await runReview({
+    glob,
+    fix,
+    minLevel,
+    checkLinks,
+    checkDensity,
+    checkSecurity,
+    checkStructure,
+  });
   process.exit(result.exitCode);
 }

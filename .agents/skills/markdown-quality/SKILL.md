@@ -5,7 +5,7 @@ description: Use when creating, editing, formatting, reviewing, or validating Ma
 
 # Markdown Quality & Optimization
 
-Multi-layer quality standard: structural validation/auto-fixing via `markdownlint-cli2`, prose/AI-tells review via `Vale`, link integrity, and token density/bloat analysis.
+Multi-layer quality standard: structural validation/auto-fixing via `markdownlint-cli2`, prose/AI-tells review via `Vale`, link integrity, document structure (heading depth and orphans), security/secret scanning, and token density analysis.
 
 ## When to Use
 
@@ -29,7 +29,7 @@ SKILL_DIR="${SKILL_DIR:-$HOME/.agents/skills/markdown-quality}"
 # 1. Instant structural auto-fix (whitespace, blank lines, headings)
 bun "$SKILL_DIR/scripts/fix.ts" "<file.md>"
 
-# 2. Full QA scorecard (standards + prose + link integrity + token density)
+# 2. Full QA scorecard (standards + prose + links + structure + security + density)
 bun "$SKILL_DIR/scripts/review.ts" "<file.md>"
 
 # 3. Full QA scorecard with automatic structural fixes applied
@@ -38,26 +38,31 @@ bun "$SKILL_DIR/scripts/review.ts" "<file.md>" --fix
 
 ## Quality Standards
 
+Apply these checks across every markdown file:
+
 ### 1. Structural Invariants (Tool-Enforced)
 
 - **Code Fences (`MD040`):** specify explicit language tag (`bash`, `python`, `text`, `json`). Never leave bare.
 - **Spacing (`MD031` / `MD032`):** empty lines before and after code fences and lists.
-- **Headings (`MD018`):** single space after `#` (`## Heading`).
-- **Symbols:** use plain text arrows (`->` or `→`), not raw LaTeX.
+- **Headings (`MD018`):** single space after `#` (`## Heading`). Max recommended depth is H4 (`####`).
+- **Orphan Headings:** never place headings consecutively without body text.
+- **Symbols:** use plain text arrows (`->` or `→`), not unrendered LaTeX in standard docs.
 
 ### 2. Semantic & AI Context Quality
 
 - **Positive Recipes:** state exact concrete rules over vague prohibitions.
 - **Verification Commands:** end technical docs with runnable test/check commands.
 - **Tables Over Narrative:** compact multi-variable descriptions into markdown tables.
+- **Tone & Objectivity:** avoid presumptuous wording in instructions.
 - **Token Density:** remove conversational filler phrases and drop ASCII art banners.
 - **Link Integrity:** verify relative file paths (`./doc.md`) and heading anchors (`#section`).
+- **Security Guardrails:** never commit raw credentials (`sk-...`, `ghp_...`) or unescaped secret tags.
 
 ## Rationalizations & Red Flags
 
 | Excuse | Reality |
 | --- | --- |
-| "It's just documentation, formatting doesn't matter" | Malformed tables and unclosed code blocks break LLM chunking, tool parsers, and IDE previews. |
-| "I'll manually eyeball spacing and headings" | Automated CLI checks catch trailing spaces and list indentations that human eyes miss. |
+| "It's just documentation, formatting doesn't matter" | Malformed tables, unclosed fences, and broken anchors break LLM chunking and IDE previews. |
+| "I'll manually eyeball spacing and headings" | Automated CLI checks catch trailing spaces, orphan headings, and list indentations that human eyes miss. |
 | "The review script takes too long" | `scripts/fix.ts` executes in <0.2s and automatically repairs 90% of formatting errors. |
 | "Running the script in python eval/notebook" | `.ts` scripts are TypeScript CLI executables run with `bun`. Run with `bun "$SKILL_DIR/scripts/fix.ts"`. |
