@@ -21,6 +21,8 @@ If two tasks must share uncommitted files, they are not independent worktrees. C
 
 ## Workflow
 
+Follow these steps when creating an isolated worktree:
+
 ### 1. Preflight
 
 Announce that you are preparing an isolated workspace. Read repository instructions, setup recipes, and runtime documentation before choosing commands.

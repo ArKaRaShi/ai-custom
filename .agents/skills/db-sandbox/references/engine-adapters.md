@@ -38,6 +38,8 @@ Each `.env` file records:
 
 ## Supported Engine Drivers
 
+Details for each supported database engine:
+
 ### 1. PostgreSQL & TimescaleDB (`engines/postgres.ts`)
 
 - **Standard PostgreSQL:** uses native `CREATE DATABASE <target> TEMPLATE <source>`.

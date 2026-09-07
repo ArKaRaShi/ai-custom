@@ -37,6 +37,8 @@ For engine internals and adapter mechanics, see [references/engine-adapters.md](
 
 ## Workflow
 
+Follow these steps to manage database sandboxes:
+
 ### Step 0: Confirm Base Database
 
 - Verify DB server is reachable on `localhost`.

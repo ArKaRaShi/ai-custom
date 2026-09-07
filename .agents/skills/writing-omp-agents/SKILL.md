@@ -27,6 +27,8 @@ If the baseline already holds the desired contract, do not add a skill or more p
 
 ## GREEN: Write the contract
 
+Follow these guidelines to craft the agent contract:
+
 ### Description
 
 Start with `Use when`. List only distinct task triggers, not personality, model, tools, or process.

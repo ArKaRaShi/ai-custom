@@ -180,6 +180,8 @@ Report only. Never delete a skill directory or manifest entry without explicit u
 
 ## Advanced Options
 
+Execute these targeted commands when needed:
+
 ### 1. Scoped Category or Target Sync
 
 You can scope operations to one category (`skills`, `instructions`, `agents`, `rules`, `extensions`, `hooks`, `config`, `tests`) or a specific keyword:
