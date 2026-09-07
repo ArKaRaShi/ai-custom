@@ -7,7 +7,8 @@ import {
   getProviderPrefix,
   buildProviderSparklineString,
   getLatestModelFromSession,
-  type UsagePayload,
+  setQuotaWidget,
+  normalizeModelSelector,
 } from "../../extensions/quota-status";
 import * as fs from "fs";
 import * as path from "path";
@@ -235,6 +236,26 @@ describe("given quota-status extension, when rendering usage sparklines and form
 
     expect(latestModel).toBe("openai-codex/gpt-5.6-terra");
   });
+  it("getLatestModelFromSession preserves a separate provider on runtime model objects", async () => {
+    const tmpSession = path.join(os.tmpdir(), `test-session-provider-${Date.now()}.jsonl`);
+    fs.writeFileSync(
+      tmpSession,
+      JSON.stringify({
+        type: "model_change",
+        model: { provider: "openai-codex", id: "gpt-5.6-luna" },
+      }),
+    );
+
+    const latestModel = await getLatestModelFromSession(tmpSession);
+    fs.unlinkSync(tmpSession);
+
+    expect(latestModel).toBe("openai-codex/gpt-5.6-luna");
+  });
+  it("normalizeModelSelector keeps provider from runtime model objects", () => {
+    expect(normalizeModelSelector({ provider: "openai-codex", id: "gpt-5.6-luna" })).toBe(
+      "openai-codex/gpt-5.6-luna",
+    );
+  });
 
   it("render12Bar handles boundary fractions (negative, zero, 100%, and >100% overflow)", () => {
     // Negative fraction clamped to 0%
@@ -338,5 +359,26 @@ describe("given quota-status extension, when rendering usage sparklines and form
     const output = buildProviderSparklineString("google-antigravity", mockUsage, fixedNow);
     expect(output).toContain("󰀪 [gemini 1d: 100% 󰥔 3h0m @15:00]");
     expect(output).toContain("openai 1d [");
+  });
+  it("setQuotaWidget places quota output below the editor", () => {
+    const calls: Array<{ key: string; content: string[]; options: { placement: string } }> = [];
+    setQuotaWidget(
+      {
+        ui: {
+          setWidget(key, content, options) {
+            calls.push({ key, content, options });
+          },
+        },
+      },
+      "󰚩 codex 5h 42%",
+    );
+
+    expect(calls).toEqual([
+      {
+        key: "quota_status",
+        content: ["󰚩 codex 5h 42%"],
+        options: { placement: "belowEditor" },
+      },
+    ]);
   });
 });

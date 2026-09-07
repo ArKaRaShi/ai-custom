@@ -5,7 +5,7 @@ description: Use when creating an isolated Git worktree for feature development,
 
 # Isolated Worktree
 
-Create and bootstrap one or more isolated sibling worktrees for independent feature development, experimentation, or subagent tasks. The parent checkout stays unchanged; integration is a later, explicit user choice.
+Create and bootstrap isolated sibling worktrees for independent feature development, experimentation, or subagent tasks. The parent checkout stays unchanged. Integration is an explicit user choice.
 
 ## Invariants
 
@@ -17,15 +17,16 @@ Create and bootstrap one or more isolated sibling worktrees for independent feat
 - Never merge back into the parent branch automatically.
 - Never remove a worktree or branch unless the user explicitly asks.
 
-If two tasks must share uncommitted files, they are not independent worktrees; commit a shared base or use a different workflow.
+If two tasks must share uncommitted files, they are not independent worktrees. Commit a shared base or use a different workflow.
 
 ## Workflow
 
 ### 1. Preflight
 
-Announce that an isolated workspace is being prepared. Read repository instructions, setup recipes, and runtime documentation before choosing commands.
+Announce that you are preparing an isolated workspace. Read repository instructions, setup recipes, and runtime documentation before choosing commands.
 
 Detect the current repository and isolation with:
+
 ```bash
 git worktree list --porcelain
 git rev-parse --git-dir
@@ -35,22 +36,22 @@ git branch --show-current
 
 Treat a linked worktree as a starting point, not permission to nest another worktree inside it. Choose and state the base worktree and base ref explicitly.
 
-If the base worktree is dirty, leave it exactly as-is. Branch new worktrees from its current `HEAD`, and state that uncommitted changes are excluded. Ask before using any WIP as a shared base.
+If the base worktree is dirty, leave it exactly as-is. Branch new worktrees from its current `HEAD`, and state that uncommitted changes stay excluded. Ask before using any WIP as a shared base.
 
 ### 2. Plan the Worktree
 
 Determine:
 
 | Field | Rule |
-|---|---|
+| --- | --- |
 | Feature / Slug | User-provided slug or concise derived name |
-| Branch | Unique branch; follow repository convention |
+| Branch | Unique branch following repository convention |
 | Path | Sibling of the base worktree by default (e.g. `../repo-slug/`), never nested |
 | Base | Explicit ref (e.g. `HEAD` or default branch) |
 | Setup | Repository-provided command or recipe (npm, cargo, poetry, etc.) |
 | Resources | Worktree-scoped env, ports, DB, cache, and services |
 
-Check existing worktree paths and branches before creating anything. Reuse an existing matching worktree only when the user asks for reuse; never overwrite or silently repoint it.
+Check existing worktree paths and branches before creating anything. Reuse an existing matching worktree only when the user asks for reuse. Never overwrite or repoint it.
 
 ### 3. Create Worktree
 
@@ -69,14 +70,15 @@ cd <sibling-path>
 # Run detected project setup (e.g., bun install / npm install / pip install)
 ```
 
-Each worktree must have its own mutable state where concurrent execution is needed:
-- **Environment/config:** separate files or namespaces; never symlink mutable env files.
-- **Ports:** distinct values for every server and sidecar.
-- **Database:** separate database/schema/container or a safe sandbox (e.g. `db-sandbox`).
-- **Caches/build outputs:** separate unless demonstrably read-only.
-- **Containers/networks:** distinct project/container/network names.
+Each worktree must have its own mutable state when running concurrent execution:
 
-If the repository gives no safe resource-isolation rule, create the worktree but report that concurrent service execution requires manual port/db configuration.
+- **Environment/config:** separate files or namespaces (never symlink mutable env files).
+- **Ports:** distinct values for every server and sidecar.
+- **Database:** separate database, schema, container, or a safe sandbox (e.g. `db-sandbox`).
+- **Caches/build outputs:** separate unless demonstrably read-only.
+- **Containers/networks:** distinct project, container, and network names.
+
+If the repository lacks a clear resource-isolation rule, create the worktree and report that concurrent service execution requires manual port/database configuration.
 
 ### 5. Handoff
 
@@ -93,20 +95,20 @@ Push/PR performed: no
 
 ### 6. Failure and Teardown
 
-- If setup fails, report the failed step. Do not automatically roll back or delete.
-- Teardown is explicit and ordered: stop project processes, remove per-worktree resources, check for uncommitted changes, then run `git worktree remove <path>`.
+- If setup fails, report the failed step without rolling back or deleting.
+- For teardown, stop project processes and delete per-worktree resources before running `git worktree remove <path>`.
 - Never delete branches automatically.
 
 ## Common Rationalizations
 
 | Excuse | Reality |
-|---|---|
-| "Clean the parent first." | Do not stash, commit, or reset user work; branch from `HEAD` and report excluded WIP. |
-| "Use the current worktree as the parent." | Inspect all worktrees and choose a base explicitly; never nest. |
-| "Merge back after finishing." | Never merge or rebase automatically; integration is an explicit user choice. |
-| "The services can share ports or a DB." | Prove safe namespacing first; otherwise do not run them concurrently. |
-| "Copy the parent `.env`." | Only a project recipe may copy secrets; mutable config must remain worktree-scoped. |
-| "Delete the worktree when done." | Preserve all work; require explicit user instruction to tear down. |
+| --- | --- |
+| "Clean the parent first." | Do not stash, commit, or reset user work. Branch from `HEAD` and report excluded WIP. |
+| "Use the current worktree as the parent." | Inspect all worktrees and choose a base explicitly. Never nest. |
+| "Merge back after finishing." | Never merge or rebase automatically. Integration is an explicit user choice. |
+| "The services can share ports or a DB." | Prove safe namespacing first. Otherwise do not run them concurrently. |
+| "Copy the parent `.env`." | Only a project recipe may copy secrets. Mutable config must remain worktree-scoped. |
+| "Delete the worktree when done." | Preserve all work. Require explicit user instruction to tear down. |
 
 ## Output Contract
 

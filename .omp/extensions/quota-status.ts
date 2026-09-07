@@ -261,16 +261,36 @@ export function isSubagent(ctx?: ExtensionContext): boolean {
 }
 
 export interface ExtensionContext {
-  model?: string | { id?: string; name?: string };
+  model?: string | { id?: string; name?: string; provider?: string };
   models?: {
-    current?: () => string | { id?: string; name?: string } | undefined;
+    current?: () => string | { id?: string; name?: string; provider?: string } | undefined;
   };
   sessionManager?: {
     getSessionFile(): string;
   };
   ui?: {
-    setStatus(key: string, text: string): void;
+    setStatus?(key: string, text: string): void;
+    setWidget?(
+      key: string,
+      content: string[],
+      options?: { placement?: "aboveEditor" | "belowEditor" },
+    ): void;
   };
+}
+export function normalizeModelSelector(model: unknown): string {
+  if (typeof model === "string") return model;
+  if (typeof model !== "object" || model === null) return "";
+
+  const value = model as { id?: unknown; name?: unknown; provider?: unknown };
+  const modelId = typeof value.id === "string"
+    ? value.id
+    : typeof value.name === "string"
+      ? value.name
+      : "";
+  const provider = typeof value.provider === "string" ? value.provider.trim() : "";
+  return provider && modelId && !modelId.includes("/")
+    ? `${provider}/${modelId}`
+    : modelId;
 }
 
 export async function getLatestModelFromSession(sessionFile?: string): Promise<string | undefined> {
@@ -282,34 +302,34 @@ export async function getLatestModelFromSession(sessionFile?: string): Promise<s
     try {
       const rec = JSON.parse(line);
       if (rec.type === "model_change" && rec.model) {
-        const m = rec.model;
-        lastModel = typeof m === "string" ? m : (typeof m === "object" && m !== null ? (m.id || m.name || "") : "");
+        lastModel = normalizeModelSelector(rec.model);
       }
     } catch {}
   }
   return lastModel;
 }
-
+export function setQuotaWidget(ctx: ExtensionContext, text: string): void {
+  ctx.ui?.setWidget?.("quota_status", [text], { placement: "belowEditor" });
+}
 export default function (pi: ExtensionAPI) {
   async function syncStatus(ctx?: ExtensionContext, force = false) {
     if (isSubagent(ctx)) return;
     if (ctx) lastCtx = ctx;
     const c = ctx || lastCtx;
-    if (!c?.ui?.setStatus) return;
+    if (!c?.ui?.setWidget) return;
 
     const data = await fetchUsage(force);
     if (!data) return;
     const sessionFile = c?.sessionManager?.getSessionFile();
     const sessionModel = await getLatestModelFromSession(sessionFile);
     const rawModel = sessionModel || (c?.models?.current ? c.models.current() : (c?.model || "google-antigravity/gemini-3.7-flash"));
-    const modelStr = (typeof rawModel === "string" ? rawModel : (typeof rawModel === "object" && rawModel !== null ? (rawModel.id || rawModel.name || "") : "")) || "google-antigravity/gemini-3.7-flash";
+    const modelStr = normalizeModelSelector(rawModel) || "google-antigravity/gemini-3.7-flash";
 
     // Strictly extract the exact provider prefix before the first slash
     const slashIdx = modelStr.indexOf("/");
     const provider = slashIdx > 0 ? modelStr.slice(0, slashIdx).toLowerCase() : modelStr.toLowerCase();
-
     const sparklines = buildProviderSparklineString(provider, data, Date.now(), lastFetchTime);
-    c.ui.setStatus("quota_status", sparklines);
+    setQuotaWidget(c, sparklines);
   }
 
   // 1. OMP launch / session start: live initial fetch

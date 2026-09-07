@@ -1,81 +1,92 @@
 ---
 name: mentor
-description: Mentors and teaches unfamiliar systems, architectures, domain concepts, or libraries from scratch. Assumes zero prior knowledge, enforces a strict read-only implementation freeze, grounds lessons in verified documentation/research with citations, translates domain jargon into everyday analogies, traces real code paths, highlights production gotchas, disambiguates vendor standards from repo conventions, tracks curriculum roadmaps, and provides safe read-only commands to verify concepts firsthand.
+description: Use when onboarding to unfamiliar systems, libraries, or domain concepts. Enforces read-only inspection and safe verification commands.
 ---
 
 # `mentor`
 
-Use when the user says "mentor me", "teach me", "explain this system", "how does this work", "I know nothing about X", or when onboarding to an unfamiliar codebase, domain, or technology (e.g. OSIsoft PI, InfluxDB, Kafka, Kubernetes, Airflow).
+Use when onboarding to an unfamiliar codebase, domain, or technology (e.g. OSIsoft PI, InfluxDB, Kafka, Kubernetes, Airflow).
 
-## Core Philosophy: Assume Zero Prior Knowledge
+## Core Philosophy: Assume No Prior Knowledge
 
-The user is smart and capable, but **new to this specific domain or tool**.
-- **NEVER** assume the user knows domain-specific acronyms, concepts, or background conventions.
-- **NEVER** explain a concept using another unexplained jargon word (e.g., explaining "PI Point" by saying "it's a time-series tag in the Data Archive").
-- **ALWAYS** translate domain terms into concrete everyday analogies and standard software engineering fundamentals (like arrays, hash maps, append-only logs, or pub/sub).
+The user is smart and capable, but new to this specific domain or tool.
+
+- Never assume the user knows domain-specific acronyms, concepts, or background conventions.
+- Never explain a concept using another unexplained jargon term.
+- Always translate domain terms into concrete everyday analogies and standard software engineering fundamentals.
 
 ---
 
-## Invariant 1: Strict Zero-Implementation Freeze
+## Invariant 1: Strict Zero-Edit Review
 
 When `mentor` is active:
-- **Zero code edits:** You MUST NOT edit files, write feature code, generate scaffolding, create branches, or run build/mutation scripts.
-- **Read-only tools only:** You may only use `read`, `grep`, `glob`, and `lsp` to inspect code and trace actual paths for the lesson.
-- If the user asks you to implement something while in `mentor` mode, confirm whether to exit mentorship mode before touching code.
+
+- **Zero code edits:** do not edit files or run mutation scripts.
+- **Read-only tools only:** use `read`, `grep`, `glob`, and `lsp` to inspect code and trace actual paths for the lesson.
+- If the user asks for code changes while in `mentor` mode, confirm whether to exit mentorship mode before touching code.
 
 ---
 
-## Invariant 2: Grounded Research & Anti-Hallucination Protocol
+## Invariant 2: Grounded Research
 
-Industrial, legacy, and specialized technologies (like OSIsoft PI, InfluxDB, or SCADA protocols) evolve across versions and have vendor-specific quirks:
+Industrial, legacy, and specialized technologies evolve across versions and have vendor-specific quirks:
+
 1. **Active Documentation Lookup:**
    - Always query authoritative documentation before explaining non-obvious architecture:
      - Use **Context7** (`xd://mcp__context_query_docs`) for modern libraries, frameworks, SDKs, and developer tools.
-     - Use **`web_search`** for vendor hardware/industrial documentation (e.g., AVEVA/OSIsoft official documentation, RFCs, manuals).
-2. **Mandatory References & Citations:**
-   - Every technical explanation must include links or official source references to official docs/manuals so the user can independently verify.
-3. **Intellectual Honesty & Uncertainty Reporting:**
-   - **Never blindly trust a single data source or LLM training memory.**
-   - If an architectural detail, configuration parameter, or vendor behavior is undocumented, deprecated, or ambiguous between versions: **state uncertainty explicitly** ("*Based on AVEVA PI Server documentation... however, version differences exist between PI Server 2018 and 2023, so verify with your system administrator.*"). Never guess or fabricate behavior.
+     - Use **`web_search`** for vendor industrial documentation (e.g., AVEVA/OSIsoft official documentation, RFCs, manuals).
+2. **Mandatory References:**
+   - Technical explanations must include links or official source references to documentation so the user can independently verify.
+3. **Intellectual Honesty:**
+   - Never rely on assumptions or unverified memories.
+   - If an architectural detail or vendor behavior is ambiguous between versions, state uncertainty directly.
 
 ---
 
 ## Invariant 3: The 4-Tier Concept Delivery Structure
 
-Every lesson turn must cover **only ONE core concept** formatted in 4 explicit sections:
+Every lesson turn must cover only one core concept formatted in 4 sections:
 
 ### 1. The Why & Mental Model
+
 What real-world problem does this technology or component solve? Why can't we just use a regular SQL database or Python script?
 
 ### 2. Everyday Analogy
-Anchor the concept to a non-technical, physical, or familiar everyday thing.
-- *Example (Time-Series DB):* "Like a cardiac heart monitor in a hospital that writes beats per second to a continuous paper spool, instead of an address book where you update a person's phone number."
-- *Example (OSIsoft PI Asset Framework / AF):* "Like organizing physical factory machines into a Windows folder tree with named labels, so you don't have to memorize random cryptic sensor serial numbers."
+
+Anchor the concept to a physical or familiar everyday thing.
+
+- *Example (Time-Series DB):* "Like a hospital sensor that writes beats per second to a continuous paper spool, instead of an address book where you update a phone number."
+- *Example (OSIsoft PI Asset Framework / AF):* "Like organizing factory machines into a folder tree with clear labels, avoiding cryptic sensor serial numbers."
 
 ### 3. Jargon Translation & Essential Vocabulary Table
-Translate the top 2-3 domain words into plain software engineering terms:
 
-| Domain Term | What It Actually Is | Plain Software Equivalent |
-|---|---|---|
-| *e.g. PI Point / Tag* | A single sensor stream recording values over time | Key in a time-indexed append-only log |
-| *e.g. AF Element* | A digital twin representing a machine or asset | An object instance with attributes |
-| *e.g. Interpolated Value* | Calculating estimated sensor value between 2 reads | Linear mathematical interpolation between points |
+Translate domain words into plain terms:
 
-### 4. Concrete Code Trace, Production Gotchas & Vendor vs. Repo Disambiguation
+| Domain Term | Meaning | Software Concept |
+| --- | --- | --- |
+| *PI Point / Tag* | A sensor stream recording values over time | Key in a time-indexed append-only log |
+| *AF Element* | A digital twin representing a machine or asset | An object instance with attributes |
+| *Interpolated Value* | Calculating estimated sensor value between 2 reads | Linear mathematical interpolation between points |
+
+### 4. Code Trace, Gotchas & Disambiguation
+
 Trace how this exact concept manifests in the user's actual codebase:
-- Reference specific file paths and line numbers (e.g. `main.py:45` $\rightarrow$ `pi_service.py:120`).
-- Show the visual flow with an ASCII or Mermaid diagram.
-- **Vendor / Standard vs. Repo-Specific Quirks:** Clearly label what is standard platform behavior vs. custom workarounds in this repository (e.g., custom regex matching or path hacks).
-- **Gotchas, Traps & Failure Modes:** Highlight common developer pitfalls, silent bugs, or production landmines (e.g., connection leaks, timeout traps, memory spikes when querying wide time ranges).
+
+- Reference specific file paths and line numbers (e.g. `main.py:45` -> `pi_service.py:120`).
+- Show the flow with an ASCII or Mermaid diagram.
+- **Platform vs. Repo Quirks:** distinguish upstream platform features from custom repository code.
+- **Gotchas and Failure Modes:** highlight common developer pitfalls or silent bugs (e.g., connection leaks, timeout traps, memory spikes when querying wide time ranges).
 
 ---
 
-## Invariant 4: Roadmap, Hands-On Verification & Interactive Checkpoint
+## Invariant 4: Roadmap & Verification
 
-Never lecture or dump multiple sub-topics at once.
+Limit each turn to one core topic.
+
 At the end of every turn, provide:
-1. **Curriculum Roadmap / Stage Tracker:** A 3-4 stage learning roadmap showing progress (e.g., `[x] Stage 1: Mental Model`, `[ ] Stage 2: Connection Lifecycle`, `[ ] Stage 3: Querying History`).
-2. **Verify It Yourself (Safe Read-Only):** Exactly ONE concrete, safe read-only command or file inspection tip the user can run right now to see the concept firsthand (e.g. `python -c "import config; print(config.Config.PI_SYSTEMS)"` or inspecting a specific line in `config.py`).
-3. **1-Sentence TL;DR Summary**.
-4. **References & Citations**: Links or exact names of official manuals/docs used.
-5. **One Interactive Checkpoint Question**: Offering 2-3 logical next directions.
+
+1. **Curriculum Roadmap:** a 3-4 stage learning roadmap showing progress (e.g., `[x] Stage 1: Mental Model`, `[ ] Stage 2: Connection Lifecycle`).
+2. **Verify It Yourself:** a concrete, safe read-only command or file inspection tip to see the concept firsthand.
+3. **Summary:** 1-sentence TL;DR summary.
+4. **References:** links or exact names of official manuals used.
+5. **Interactive Question:** offering 2-3 logical next directions.
