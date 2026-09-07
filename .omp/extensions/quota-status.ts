@@ -203,14 +203,14 @@ export function buildProviderSparklineString(
   });
 
   for (const l of sortedLimits) {
-    let name = (l.window?.label || l.label || l.id || "").trim();
+    let name = (l.id || l.window?.label || l.label || "").trim();
     if (/Usage \(Google\)/i.test(l.label || "")) name = "gemini 1d";
     else if (/Usage \(OpenAI\)/i.test(l.label || "")) name = "openai 1d";
     else if (/Usage \(Anthropic\)/i.test(l.label || "")) name = "claude 1d";
-    else if (/5\s*h/i.test(name)) name = "5h";
-    else if (/7\s*d|total\s*quota/i.test(name) || /7d/i.test(l.id || "")) name = "7d";
-    else if (/daily|1\s*d/i.test(name)) name = "1d";
-    else if (/month|30\s*d/i.test(name)) name = "30d";
+    else if (/5\s*h|5-hour/i.test(name) || l.id === "5h") name = "5h";
+    else if (/7\s*d|7-day|total\s*quota/i.test(name) || l.id === "7d") name = "7d";
+    else if (/daily|1\s*d/i.test(name) || l.id === "1d") name = "1d";
+    else if (/month|30\s*d/i.test(name) || l.id === "30d") name = "30d";
 
     const fraction = l.amount.usedFraction;
     const pct = Math.round(fraction * 100);
