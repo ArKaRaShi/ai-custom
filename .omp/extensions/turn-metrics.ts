@@ -2,7 +2,6 @@ import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
-import * as readline from "readline";
 
 const LOG_FILE = path.join(os.homedir(), ".omp", "agent", "turn-metrics.log");
 
@@ -17,22 +16,34 @@ export interface UsageSummary {
   cacheReadTokens: number;
 }
 
+/**
+ * Parses assistant message usage from the session JSONL file.
+ * Reads efficiently using Bun.file or Node fs.
+ */
 export async function getTotalUsage(sessionFile: string): Promise<UsageSummary> {
   const sum: UsageSummary = { outputTokens: 0, inputTokens: 0, cacheReadTokens: 0 };
   if (!fs.existsSync(sessionFile)) return sum;
 
-  const rl = readline.createInterface({ input: fs.createReadStream(sessionFile) });
-  for await (const line of rl) {
-    if (!line) continue;
-    try {
-      const rec = JSON.parse(line);
-      if (rec.type === "message" && rec.message?.role === "assistant" && rec.message?.usage) {
-        sum.outputTokens += Number(rec.message.usage.output) || 0;
-        sum.inputTokens += Number(rec.message.usage.input) || 0;
-        sum.cacheReadTokens += Number(rec.message.usage.cacheRead) || 0;
-      }
-    } catch {}
-  }
+  try {
+    const content = typeof Bun !== "undefined"
+      ? await Bun.file(sessionFile).text()
+      : fs.readFileSync(sessionFile, "utf-8");
+
+    const lines = content.split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      try {
+        const rec = JSON.parse(line);
+        if (rec.type === "message" && rec.message?.role === "assistant" && rec.message?.usage) {
+          sum.outputTokens += Number(rec.message.usage.output) || 0;
+          sum.inputTokens += Number(rec.message.usage.input) || 0;
+          sum.cacheReadTokens += Number(rec.message.usage.cacheRead) || 0;
+        }
+      } catch {}
+    }
+  } catch {}
+
   return sum;
 }
 
@@ -49,22 +60,19 @@ export function formatTurnMetrics(dur: string, dOut: number, dIn: number, dCache
 }
 
 export function formatTokens(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}m`;
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  if (n >= 1_000_000) {
+    const val = (n / 1_000_000).toFixed(1);
+    return `${val.replace(/\.0$/, "")}m`;
+  }
+  if (n >= 1000) {
+    const val = (n / 1000).toFixed(1);
+    return `${val.replace(/\.0$/, "")}k`;
+  }
   return `${n}`;
-}
-export function isSubagent(ctx?: ExtensionContext): boolean {
-  if (!ctx) return false;
-  if ((ctx as Record<string, unknown>).isSubagent === true) return true;
-  const sessionFile = ctx?.sessionManager?.getSessionFile?.() || "";
-  if (!sessionFile) return false;
-  const baseName = sessionFile.split("/").pop() || "";
-  // Root session files start with ISO timestamp (e.g. 2026-08-19T...)
-  // Subagent session files are named after the agent (e.g. TestSonic.jsonl)
-  return !/^\d{4}-\d{2}-\d{2}T/.test(baseName);
 }
 
 export interface ExtensionContext {
+  isSubagent?: boolean;
   sessionManager?: {
     getSessionFile(): string;
   };
@@ -72,6 +80,17 @@ export interface ExtensionContext {
   ui?: {
     notify(msg: string, level?: "info" | "warning" | "error"): void;
   };
+}
+
+export function isSubagent(ctx?: ExtensionContext): boolean {
+  if (!ctx) return false;
+  if (ctx.isSubagent === true) return true;
+  const sessionFile = ctx.sessionManager?.getSessionFile?.() || "";
+  if (!sessionFile) return false;
+  const baseName = sessionFile.split("/").pop() || "";
+  // Root session files start with ISO timestamp (e.g. 2026-08-19T...)
+  // Subagent session files are named after the agent (e.g. TestSonic.jsonl)
+  return !/^\d{4}-\d{2}-\d{2}T/.test(baseName);
 }
 
 export default function (pi: ExtensionAPI) {

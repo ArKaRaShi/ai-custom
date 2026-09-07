@@ -2,66 +2,61 @@ import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
 import { exec } from "child_process";
 import { promisify } from "util";
 import * as fs from "fs";
-import * as readline from "readline";
 
 const execAsync = promisify(exec);
 
 export interface QuotaLimitScope {
-  provider?: string;
-  windowId?: string;
-  shared?: boolean;
-  accountId?: string;
-  projectId?: string;
+  user?: boolean;
+  model?: string;
+  family?: string;
 }
 
 export interface QuotaLimitWindow {
-  id?: string;
-  label?: string;
+  duration?: string;
   durationMs?: number;
+  label?: string;
+  sliding?: boolean;
   resetsAt?: number;
 }
 
 export interface QuotaLimitAmount {
-  unit?: string;
   limit?: number;
   used?: number;
-  remaining?: number;
   usedFraction: number;
-  remainingFraction?: number;
+  remaining?: number;
+  percent?: number;
+  unit?: string;
 }
 
 export interface QuotaLimit {
   id?: string;
   label?: string;
+  kind?: "sliding" | "calendar" | "session";
   scope?: QuotaLimitScope;
   window?: QuotaLimitWindow;
   amount: QuotaLimitAmount;
-  status?: string;
 }
 
 export interface ProviderReportMetadata {
-  accountId?: string;
-  email?: string;
-  orgId?: string;
-  orgName?: string;
-  endpoint?: string;
-  projectId?: string;
-  planType?: string;
-  [key: string]: unknown;
+  provider: string;
+  source?: "upstream" | "cached" | "offline";
+  fetchedAt?: number;
+  status?: "ok" | "stale" | "error" | "unsupported";
+  error?: string;
+  account?: string;
+  plan?: string;
 }
 
 export interface ProviderReport {
   provider: string;
-  fetchedAt?: number;
-  limits?: QuotaLimit[];
+  limits: QuotaLimit[];
   metadata?: ProviderReportMetadata;
 }
 
 export interface UsagePayload {
-  generatedAt?: number;
-  reports?: ProviderReport[];
-  accountsWithoutUsage?: unknown[];
-  disabledCredentials?: unknown[];
+  version?: number;
+  timestamp?: number;
+  reports: ProviderReport[];
   capacity?: Record<string, unknown>;
 }
 
@@ -79,10 +74,10 @@ export async function fetchUsage(forceRefresh = false): Promise<UsagePayload | n
   try {
     if (forceRefresh) {
       try {
-        await execAsync("omp usage invalidate");
+        await execAsync("omp usage invalidate", { timeout: 3000 });
       } catch {}
     }
-    const { stdout } = await execAsync("omp usage --json");
+    const { stdout } = await execAsync("omp usage --json", { timeout: 5000 });
     cachedUsage = JSON.parse(stdout) as UsagePayload;
     lastFetchTime = now;
     return cachedUsage;
@@ -114,6 +109,7 @@ export function formatReset(resetsAtMs?: number, now = Date.now()): string {
   if (hours > 0) return `${hours}h${mins}m @${timeStr}`;
   return `${mins}m @${timeStr}`;
 }
+
 export function formatSyncTime(fetchedAtMs?: number, now = Date.now()): string {
   if (!fetchedAtMs) return "";
   const d = new Date(fetchedAtMs);
@@ -251,16 +247,8 @@ export function buildProviderSparklineString(
   return result;
 }
 
-export function isSubagent(ctx?: ExtensionContext): boolean {
-  if (!ctx) return false;
-  if ((ctx as Record<string, unknown>).isSubagent === true) return true;
-  const sessionFile = ctx?.sessionManager?.getSessionFile?.() || "";
-  if (!sessionFile) return false;
-  const baseName = sessionFile.split("/").pop() || "";
-  return !/^\d{4}-\d{2}-\d{2}T/.test(baseName);
-}
-
 export interface ExtensionContext {
+  isSubagent?: boolean;
   model?: string | { id?: string; name?: string; provider?: string };
   models?: {
     current?: () => string | { id?: string; name?: string; provider?: string } | undefined;
@@ -269,14 +257,19 @@ export interface ExtensionContext {
     getSessionFile(): string;
   };
   ui?: {
-    setStatus?(key: string, text: string): void;
-    setWidget?(
-      key: string,
-      content: string[],
-      options?: { placement?: "aboveEditor" | "belowEditor" },
-    ): void;
+    setWidget?(key: string, lines: string[], options?: { placement?: string }): void;
   };
 }
+
+export function isSubagent(ctx?: ExtensionContext): boolean {
+  if (!ctx) return false;
+  if (ctx.isSubagent === true) return true;
+  const sessionFile = ctx.sessionManager?.getSessionFile?.() || "";
+  if (!sessionFile) return false;
+  const baseName = sessionFile.split("/").pop() || "";
+  return !/^\d{4}-\d{2}-\d{2}T/.test(baseName);
+}
+
 export function normalizeModelSelector(model: unknown): string {
   if (typeof model === "string") return model;
   if (typeof model !== "object" || model === null) return "";
@@ -295,61 +288,89 @@ export function normalizeModelSelector(model: unknown): string {
 
 export async function getLatestModelFromSession(sessionFile?: string): Promise<string | undefined> {
   if (!sessionFile || !fs.existsSync(sessionFile)) return undefined;
-  let lastModel: string | undefined;
-  const rl = readline.createInterface({ input: fs.createReadStream(sessionFile) });
-  for await (const line of rl) {
-    if (!line) continue;
-    try {
-      const rec = JSON.parse(line);
-      if (rec.type === "model_change" && rec.model) {
-        lastModel = normalizeModelSelector(rec.model);
-      }
-    } catch {}
+  try {
+    const content = typeof Bun !== "undefined"
+      ? await Bun.file(sessionFile).text()
+      : fs.readFileSync(sessionFile, "utf-8");
+
+    const lines = content.split("\n");
+    let lastModel: string | undefined;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      try {
+        const rec = JSON.parse(line);
+        if (rec.type === "model_change" && rec.model) {
+          lastModel = normalizeModelSelector(rec.model);
+        }
+      } catch {}
+    }
+    return lastModel;
+  } catch {
+    return undefined;
   }
-  return lastModel;
 }
+
+export function setQuotaStatus(ctx: ExtensionContext, text: string): void {
+  if (ctx.ui?.setStatus) {
+    ctx.ui.setStatus("quota_status", text);
+  } else if (ctx.ui?.setWidget) {
+    ctx.ui.setWidget("quota_status", [text], { placement: "belowEditor" });
+  }
+}
+
 export function setQuotaWidget(ctx: ExtensionContext, text: string): void {
-  ctx.ui?.setWidget?.("quota_status", [text], { placement: "belowEditor" });
+  if (ctx.ui?.setWidget) {
+    ctx.ui.setWidget("quota_status", [text], { placement: "belowEditor" });
+  } else if (ctx.ui?.setStatus) {
+    ctx.ui.setStatus("quota_status", text);
+  }
 }
+
 export default function (pi: ExtensionAPI) {
   async function syncStatus(ctx?: ExtensionContext, force = false) {
     if (isSubagent(ctx)) return;
     if (ctx) lastCtx = ctx;
-    const c = ctx || lastCtx;
-    if (!c?.ui?.setWidget) return;
+    const effectiveCtx = ctx || lastCtx;
+    if (!effectiveCtx) return;
 
     const data = await fetchUsage(force);
-    if (!data) return;
-    const sessionFile = c?.sessionManager?.getSessionFile();
-    const sessionModel = await getLatestModelFromSession(sessionFile);
-    const rawModel = sessionModel || (c?.models?.current ? c.models.current() : (c?.model || "google-antigravity/gemini-3.7-flash"));
-    const modelStr = normalizeModelSelector(rawModel) || "google-antigravity/gemini-3.7-flash";
+    if (!data || !data.reports) return;
 
-    // Strictly extract the exact provider prefix before the first slash
-    const slashIdx = modelStr.indexOf("/");
-    const provider = slashIdx > 0 ? modelStr.slice(0, slashIdx).toLowerCase() : modelStr.toLowerCase();
-    const sparklines = buildProviderSparklineString(provider, data, Date.now(), lastFetchTime);
-    setQuotaWidget(c, sparklines);
+    let modelName = "";
+    if (effectiveCtx.models?.current) {
+      modelName = normalizeModelSelector(effectiveCtx.models.current());
+    }
+    if (!modelName && effectiveCtx.model) {
+      modelName = normalizeModelSelector(effectiveCtx.model);
+    }
+    if (!modelName && effectiveCtx.sessionManager) {
+      modelName = (await getLatestModelFromSession(effectiveCtx.sessionManager.getSessionFile())) || "";
+    }
+
+    const providerKey = modelName.split("/")[0] || data.reports[0]?.provider || "";
+    if (!providerKey) return;
+
+    const statusText = buildProviderSparklineString(
+      providerKey,
+      data,
+      Date.now(),
+      data.reports.find((r) => r.provider === providerKey)?.metadata?.fetchedAt,
+    );
+    if (statusText) {
+      setQuotaWidget(effectiveCtx, statusText);
+    }
   }
 
-  // 1. OMP launch / session start: live initial fetch
-  pi.on("session_start", async (_event: unknown, ctx: ExtensionContext) => {
-    await syncStatus(ctx, true);
-  });
-
-  // 2. Turn start: instant provider sync before prompt starts
   pi.on("agent_start", async (_event: unknown, ctx: ExtensionContext) => {
     await syncStatus(ctx, false);
   });
 
-  // 3. Turn end: refresh with 10s cooldown
   pi.on("agent_end", async (_event: unknown, ctx: ExtensionContext) => {
     await syncStatus(ctx, false);
   });
-  pi.registerCommand("quota-refresh", {
-    description: "Force live refresh of provider quota usage",
-    handler: async (_args, ctx) => {
-      await syncStatus(ctx, true);
-    },
+
+  pi.on("session_resume", async (_event: unknown, ctx: ExtensionContext) => {
+    await syncStatus(ctx, true);
   });
 }
