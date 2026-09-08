@@ -60,12 +60,6 @@
       "description": "PR drafting and review conventional tool",
       "detectionReason": "matched in repo"
     },
-    "graphify": {
-      "origin": "external",
-      "sync": false,
-      "description": "GraphRAG knowledge graph builder for codebases",
-      "detectionReason": "external manifest"
-    },
     "grill-me": {
       "origin": "external",
       "sync": false,
@@ -142,6 +136,18 @@
     "cavecrew": {
       "origin": "external",
       "sync": false
+    },
+    "obsidian-distill": {
+      "origin": "authored",
+      "sync": true,
+      "description": "Distill operational session discoveries, runbooks, and gotchas into an Obsidian vault",
+      "detectionReason": "authored"
+    },
+    "grounded-discussion": {
+      "origin": "authored",
+      "sync": true,
+      "description": "Anchors open-ended technical discussions and evaluations in verifiable repo facts and primary docs with provenance tags",
+      "detectionReason": "authored"
     }
   }
 }
