@@ -22,6 +22,37 @@ Every data-fetching component, form action, or dashboard surface requires visual
 | **3. Empty** | Injected empty array (`[]`) | Informative placeholder with call-to-action, not blank space |
 | **4. Settled** | Normal successful response | Final data cleanly formatted, interactive states responsive |
 
+## Flow of Operations (Step-by-Step)
+
+Follow this verification sequence before marking any async UI feature complete:
+
+1. **Identify the target action and route:** locate the async trigger (such as a form submit or table search) and its underlying API endpoint.
+
+2. **Pick a latency injection method:**
+   - Choose **Method A (OMP Browser Relay)** for zero-code browser testing.
+   - Choose **Method B (Dev Query Interceptor)** for URL-driven testing (`?__delay=3000`).
+
+3. **Capture the in-flight loading state:**
+   - Inject 3000ms delay.
+   - Trigger the action by clicking the button or loading the page.
+   - Capture a screenshot during the in-flight window.
+   - Verify the trigger button stays disabled and the skeleton loader matches the final dimensions with zero layout shift.
+
+4. **Capture the error state:**
+   - Inject an HTTP 500 status or offline condition.
+   - Trigger the action and capture a screenshot.
+   - Verify a user-facing error message appears with a working retry button, with no blank screens or unhandled console errors.
+
+5. **Capture the empty state:**
+   - Return an empty data array (`[]`) or null payload.
+   - Capture a screenshot.
+   - Verify a helpful empty placeholder and call-to-action appear.
+
+6. **Verify settled success:**
+   - Remove latency and error overrides.
+   - Capture a screenshot of the completed view.
+   - Confirm final data renders cleanly without layout shifts.
+
 ---
 
 ## Execution Methods
