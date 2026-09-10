@@ -21,11 +21,12 @@ describe("given obsidian-distill skill specification, when validating contracts 
     expect(content).toMatch(/Golden Path/i);
   });
 
-  it("enforces vault discovery protocol without hardcoded folder assumptions", () => {
+  it("enforces generic vault discovery protocol without hardcoded path assumptions", () => {
     const content = fs.readFileSync(SKILL_PATH, "utf8");
-    expect(content).toMatch(/Vault Discovery Protocol/i);
-    expect(content).toMatch(/Existing Folder Ontology/i);
-    expect(content).toMatch(/Discover Reusable Templates/i);
+    expect(content).toMatch(/references\/vault-discovery\.md/i);
+    expect(content).not.toMatch(/default to ~\//i);
+    const vaultRef = path.join(path.dirname(SKILL_PATH), "references/vault-discovery.md");
+    expect(fs.existsSync(vaultRef)).toBe(true);
   });
 
   it("classifies knowledge into semantic archetypes", () => {
@@ -54,5 +55,33 @@ describe("given obsidian-distill skill specification, when validating contracts 
     const content = fs.readFileSync(SKILL_PATH, "utf8");
     expect(content).toMatch(/markdown-quality/);
     expect(content).toMatch(/CLEAN/);
+  });
+
+  it("requires a topic hub before deep-dive notes", () => {
+    const content = fs.readFileSync(SKILL_PATH, "utf8");
+    expect(content).toMatch(/Topic Hub|MOC|Map of Content/i);
+    expect(content).toMatch(/context node|middle node/i);
+    expect(content).toMatch(/deep-dive/i);
+  });
+
+  it("requires graph hierarchy through wikilinks while keeping folders shallow", () => {
+    const content = fs.readFileSync(SKILL_PATH, "utf8");
+    expect(content).toMatch(/topic.*hub.*before.*deep/i);
+    expect(content).toMatch(/wikilinks/i);
+    expect(content).toMatch(/shallow/i);
+    expect(content).toMatch(/parent.*link|link.*parent/i);
+  });
+
+  it("requires parent-first creation and grouped proposal paths", () => {
+    const content = fs.readFileSync(SKILL_PATH, "utf8");
+    expect(content).toMatch(/create.*hub.*first|hub.*first.*create/i);
+    expect(content).toMatch(/group.*topic/i);
+    expect(content).toMatch(/child.*note|deep.*note/i);
+  });
+
+  it("adheres to token efficiency (SKILL.md word count < 500 words)", () => {
+    const content = fs.readFileSync(SKILL_PATH, "utf8");
+    const words = content.trim().split(/\s+/).length;
+    expect(words).toBeLessThan(500);
   });
 });

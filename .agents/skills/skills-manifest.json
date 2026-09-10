@@ -143,6 +143,12 @@
       "description": "Distill operational session discoveries, runbooks, and gotchas into an Obsidian vault",
       "detectionReason": "authored"
     },
+    "obsidian-consult": {
+      "origin": "authored",
+      "sync": true,
+      "description": "Consult and navigate the curated Obsidian knowledge vault before guessing commands or parameters",
+      "detectionReason": "authored"
+    },
     "grounded-discussion": {
       "origin": "authored",
       "sync": true,

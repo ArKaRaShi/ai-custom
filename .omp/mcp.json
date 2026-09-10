@@ -7,6 +7,10 @@
     },
     "tableplus": {
       "command": "/Applications/TablePlus.app/Contents/MacOS/tableplus-mcp"
+    },
+    "openrouter": {
+      "type": "http",
+      "url": "https://mcp.openrouter.ai/mcp"
     }
   }
 }
