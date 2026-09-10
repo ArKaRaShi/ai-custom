@@ -161,6 +161,13 @@
       "source": "anthropics/skills",
       "sourceType": "github",
       "install": "npx skills add anthropics/skills -g"
+    },
+    "web-design-guidelines": {
+      "origin": "external",
+      "sync": false,
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "install": "npx skills add vercel-labs/agent-skills -g"
     }
   }
 }
