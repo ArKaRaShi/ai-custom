@@ -154,6 +154,13 @@
       "sync": true,
       "description": "Anchors open-ended technical discussions and evaluations in verifiable repo facts and primary docs with provenance tags",
       "detectionReason": "authored"
+    },
+    "frontend-design": {
+      "origin": "external",
+      "sync": false,
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "install": "npx skills add anthropics/skills -g"
     }
   }
 }
