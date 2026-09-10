@@ -168,6 +168,10 @@
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
       "install": "npx skills add vercel-labs/agent-skills -g"
+    },
+    "async-ui-testing": {
+      "origin": "authored",
+      "sync": true
     }
   }
 }
