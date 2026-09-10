@@ -14,6 +14,7 @@ Repository-local instructions and PR templates override this global fallback.
 - Revising an existing PR body without losing screenshots, motivation, checklists, or reviewer notes.
 - Preparing a multi-part PR description with independently reviewable sections.
 - Checking whether a PR description contains unsupported claims or fake links.
+- Grounding descriptions on the effective 3-dot diff (`<base>...HEAD`) rather than unmerged branch churn.
 
 Use `caveman-commit` for commit-message-only requests.
 

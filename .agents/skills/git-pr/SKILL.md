@@ -10,7 +10,7 @@ Draft accurate, repo-aware pull request titles and descriptions. Scale with the 
 ## Core Rules
 
 1. **Local rules win.** Read repository instructions, PR templates, and documented conventions before applying these defaults.
-2. **Ground every claim.** Inspect the relevant diff, commits, issue/spec, and existing PR body when available. Never invent issue IDs, test results, commit SHAs, URLs, reviewers, motivations, or speculative reviewer concerns.
+2. **Ground every claim on net diff against base.** Always inspect the effective 3-dot diff (`<base>...HEAD`), not session memory, unstaged diff alone, or commit-by-commit churn. Never invent issue IDs, test results, commit SHAs, URLs, reviewers, motivations, or speculative reviewer concerns.
 3. **Separate why from what.** Put motivation in `## Summary`. Put code changes in `## What's included` or concise bullets beneath the summary.
 4. **Proportional shape.** A 20-line bug fix needs only a few bullets. A large architectural PR needs subsystem groupings and operational runbooks.
 5. **Use real links only.** A source link needs a known repository remote, path, and commit SHA. Do not use branch names as permanent permalinks or emit placeholder URLs.
@@ -20,6 +20,43 @@ Draft accurate, repo-aware pull request titles and descriptions. Scale with the 
 9. **Avoid local leakage.** Use repository-relative paths. Do not include absolute machine paths, credentials, private URLs, or confidential names.
 10. **No side effects by default.** Drafting returns text only in a markdown code block. Run `gh` or another PR API only when the user explicitly asks to create or update a PR.
 11. **Assignee handling.** When creating or updating PRs via `gh` or API upon explicit request, add the current user as an assignee (`--add-assignee "@me"` or `--assignee "@me"` on creation). Do not remove existing assignees; append the user instead.
+
+## Effective Diff & Base Branch Resolution (REQUIRED FLOW)
+
+A pull request represents **only the net diff merged into the base branch (`<base>...HEAD`)**, not session history or experimental branch commits.
+
+### 1. Resolve Target Base Branch
+
+Determine the base branch to compare against:
+
+1. Explicit branch specified by the user (e.g. `release/v2`, `develop`).
+2. Existing PR target branch (`gh pr view --json baseRefName -q .baseRefName`).
+3. Default repository integration branch (`origin/develop`, `origin/main`, `develop`, `main`).
+
+**Ambiguity gate:** when competing base branches exist (such as `main` alongside `develop`), prompt the user to pick the target branch before drafting.
+
+### 2. Inspect Net 3-Dot Diff
+
+Inspect the net changes between the base merge-base and the branch tip:
+
+```bash
+git diff $(git merge-base <base> HEAD) HEAD
+# or: git diff <base>...HEAD
+```
+
+And inspect net commits:
+
+```bash
+git log --oneline $(git merge-base <base> HEAD)..HEAD
+```
+
+Do not rely on session memory or uncommitted working-tree edits alone. The 3-dot diff is the ground truth for what this branch actually introduces.
+
+### 3. Filter Branch-Internal Churn
+
+- **Scratchpad additions and deletions:** when a commit introduces and later deletes a file, helper, or dependency within this branch (net diff = 0), omit it entirely.
+- **Internal refactors:** when earlier commits in this branch add code and later commits refactor it, describe only the final state as an addition or change against `<base>`. Never say "Refactored X to Y" if X never existed in `<base>`.
+- **Internal bug fixes:** when you fix a bug or typo introduced earlier in this unmerged branch, do not list it as a bugfix. Describe the working feature in its final state as a new capability.
 
 ---
 
@@ -92,3 +129,5 @@ Every PR description MUST have:
 - Fabricating benchmark numbers or calling unrun test suites "passing".
 - Deleting existing screenshots, reviewer notes, or checklists when editing an existing PR.
 - Running `gh pr create` or `git push` without explicit user instruction.
+- Describing branch-internal churn (e.g. "Refactored X", "Fixed bug in new helper", "Removed temporary file") when X was never in the base branch.
+- Drafting without verifying the base branch or running `git diff <base>...HEAD`.
