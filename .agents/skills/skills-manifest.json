@@ -172,6 +172,26 @@
     "async-ui-testing": {
       "origin": "authored",
       "sync": true
+    },
+    "data-closure": {
+      "origin": "authored",
+      "sync": true
+    },
+    "plannotator-review": {
+      "origin": "external",
+      "sync": false
+    },
+    "plannotator": {
+      "origin": "external",
+      "sync": false
+    },
+    "plannotator-last": {
+      "origin": "external",
+      "sync": false
+    },
+    "plannotator-annotate": {
+      "origin": "external",
+      "sync": false
     }
   }
 }

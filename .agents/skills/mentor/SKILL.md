@@ -1,6 +1,6 @@
 ---
 name: mentor
-description: Use when onboarding to unfamiliar systems, libraries, or domain concepts. Enforces read-only inspection and safe verification commands.
+description: Use when the user explicitly asks for a lesson, explanation, or guided walkthrough of an unfamiliar codebase, system, technical domain, or technology.
 ---
 
 # `mentor`
