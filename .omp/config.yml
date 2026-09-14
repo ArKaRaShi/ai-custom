@@ -14,7 +14,7 @@ modelRoles:
 retry:
   fallbackChains:
     smol:
-      - openrouter/minimax/minimax-m3:auto
+      - openrouter/z-ai/glm-5.3-flash:auto
       - kimi-code/k3:low
       - litellm/vertex_ai/zai-org/glm-5-maas
       - openai-codex/gpt-5.6-luna:low
