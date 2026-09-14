@@ -30,12 +30,6 @@
       "description": "Skill discovery tool for agent ecosystems",
       "detectionReason": "external manifest"
     },
-    "git-emoji-commit": {
-      "origin": "authored",
-      "sync": true,
-      "description": "Git commit messages with emoji standards",
-      "detectionReason": "matched in repo"
-    },
     "git-pr": {
       "origin": "authored",
       "sync": true,
@@ -146,6 +140,10 @@
     "plannotator-annotate": {
       "origin": "external",
       "sync": false
+    },
+    "git-commit": {
+      "origin": "authored",
+      "sync": true
     }
   }
 }
