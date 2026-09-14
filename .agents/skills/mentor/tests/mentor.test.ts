@@ -17,13 +17,13 @@ describe("given mentor skill specification, when validating contracts and invari
 
   it("strictly prohibits implementation, editing, and code generation", () => {
     const content = fs.readFileSync(SKILL_PATH, "utf8");
-    expect(content).toMatch(/zero[\s-]implementation/i);
+    expect(content).toMatch(/zero[\s-]edit|zero\s+code\s+edits/i);
     expect(content).toMatch(/no\s+code\s+edits|read-only/i);
   });
 
   it("enforces zero-assumption baseline with domain vocabulary translation", () => {
     const content = fs.readFileSync(SKILL_PATH, "utf8");
-    expect(content).toMatch(/assume\s+zero\s+prior\s+knowledge|know\s+nothing/i);
+    expect(content).toMatch(/assume\s+no\s+prior\s+knowledge|never\s+assume/i);
     expect(content).toMatch(/analogy|everyday\s+thing/i);
     expect(content).toMatch(/vocabulary|jargon\s+translation/i);
   });
@@ -42,7 +42,7 @@ describe("given mentor skill specification, when validating contracts and invari
 
   it("mandates intellectual honesty: do not blind trust sources, state uncertainty explicitly", () => {
     const content = fs.readFileSync(SKILL_PATH, "utf8");
-    expect(content).toMatch(/never\s+blindly\s+trust|do\s+not\s+blind\s+trust/i);
+    expect(content).toMatch(/never\s+rely\s+on\s+assumptions|unverified\s+memories/i);
     expect(content).toMatch(/uncertain|state\s+uncertainty|if\s+unsure/i);
   });
 
@@ -58,7 +58,7 @@ describe("given mentor skill specification, when validating contracts and invari
 
   it("disambiguates vendor/standard conventions from repo-specific quirks", () => {
     const content = fs.readFileSync(SKILL_PATH, "utf8");
-    expect(content).toMatch(/vendor.*standard|standard.*vs.*repo|repo-specific/i);
+    expect(content).toMatch(/vendor-specific|repo\s+quirks/i);
   });
 
   it("provides safe, read-only runnable inspection prompts or commands for active verification", () => {

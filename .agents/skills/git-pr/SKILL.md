@@ -131,3 +131,7 @@ Every PR description MUST have:
 - Running `gh pr create` or `git push` without explicit user instruction.
 - Describing branch-internal churn (e.g. "Refactored X", "Fixed bug in new helper", "Removed temporary file") when X was never in the base branch.
 - Drafting without verifying the base branch or running `git diff <base>...HEAD`.
+
+## Examples
+
+Fallback template and sample bodies: `examples/sample-pr.md` (`skill://git-pr/examples/sample-pr.md`).
