@@ -1,5 +1,5 @@
 modelRoles:
-  smol: google-antigravity/gemini-3.8-flash:auto
+  smol: openrouter/qwen/qwen3.8-flash:auto
   lite: litellm/gemini-2.5-flash
   slow: openai-codex/gpt-5.6-terra:high
   vision: anthropic/claude-sonnet-5:auto
@@ -7,39 +7,39 @@ modelRoles:
   designer: anthropic/claude-sonnet-5:auto
   commit: openai-codex/gpt-5.6-luna:auto
   task: kimi-code/k3:off
-  advisor: google-antigravity/gemini-3.7-flash:auto
   default: anthropic/claude-sonnet-5:xhigh
+  advisor: openai-codex/gpt-5.6-luna:auto
   free: openrouter/thinkingmachines/inkling-small:free:high
-  boilerplate: openrouter/z-ai/glm-5.3-flash:auto
+  boilerplate: openrouter/qwen/qwen3.8-flash:auto
 retry:
   fallbackChains:
     smol:
+      - openrouter/minimax/minimax-m3:auto
       - kimi-code/k3:low
       - litellm/vertex_ai/zai-org/glm-5-maas
       - openai-codex/gpt-5.6-luna:low
-      - google-antigravity/claude-sonnet-4-6:medium
       - anthropic/claude-sonnet-5:low
-    commit:
-      - google-antigravity/gemini-3.7-flash:auto
     task:
       - openai-codex/gpt-5.6-luna:high
       - anthropic/claude-sonnet-5:auto
       - openai-codex/gpt-5.6-terra:auto
+    commit:
+      - openai-codex/gpt-5.6-luna:auto
+    boilerplate:
+      - openrouter/minimax/minimax-m3:auto
+      - openrouter/z-ai/glm-5.3-flash:auto
     free:
+      - openrouter/inclusionai/ling-3.0-flash-vl:free
+      - openrouter/thinkingmachines/inkling-small:free
       - openrouter/thinkingmachines/inkling:free:high
-      - openrouter/poolside/laguna-s-2.1:free
       - openrouter/nvidia/nemotron-3-ultra-550b-a55b:free:high
-      - openrouter/nex-agi/nex-n2.5-pro:free:high
       - openrouter/google/gemma-4-31b-it:free
+      - openrouter/poolside/laguna-s-2.1:free
+      - openrouter/nex-agi/nex-n2.5-pro:free:high
       - openrouter/google/gemma-4-26b-a4b-it:free
-      - openrouter/poolside/laguna-xs-2.1:free
-      - openrouter/nvidia/nemotron-3-super-120b-a12b:free:medium
-      - openrouter/cohere/north-mini-code:free
-      - openrouter/nvidia/nemotron-3.5-lightning:free
-      - openrouter/nex-agi/nex-n2.5-mini:free:high
 symbolPreset: nerd
 theme:
-  dark: dark-catppuccin
+  dark: dark-rose-pine
 setupVersion: 2
 statusLine:
   preset: custom
@@ -84,7 +84,7 @@ task:
 disabledExtensions:
   []
 providers:
-  tinyModel: lfm2-700m
+  tinyModel: lfm2.5-230m
   tinyModelDevice: default
   tinyModelDtype: default
   memoryModel: online

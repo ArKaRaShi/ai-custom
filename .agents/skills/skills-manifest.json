@@ -12,24 +12,6 @@
       "sync": true,
       "detectionReason": "matched in repo"
     },
-    "caveman": {
-      "origin": "external",
-      "sync": false,
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/caveman/SKILL.md",
-      "install": "npx skills add JuliusBrussee/caveman -g",
-      "detectionReason": "pointer (JuliusBrussee/caveman)"
-    },
-    "caveman-commit": {
-      "origin": "external",
-      "sync": false,
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/caveman-commit/SKILL.md",
-      "install": "npx skills add JuliusBrussee/caveman -g",
-      "detectionReason": "pointer (JuliusBrussee/caveman)"
-    },
     "db-sandbox": {
       "origin": "authored",
       "sync": true,
@@ -104,34 +86,6 @@
     "writing-omp-agents": {
       "origin": "authored",
       "sync": true
-    },
-    "caveman-help": {
-      "origin": "external",
-      "sync": false,
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "install": "npx skills add JuliusBrussee/caveman -g"
-    },
-    "caveman-review": {
-      "origin": "external",
-      "sync": false,
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "install": "npx skills add JuliusBrussee/caveman -g"
-    },
-    "caveman-compress": {
-      "origin": "external",
-      "sync": false,
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "install": "npx skills add JuliusBrussee/caveman -g"
-    },
-    "caveman-stats": {
-      "origin": "external",
-      "sync": false,
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "install": "npx skills add JuliusBrussee/caveman -g"
     },
     "cavecrew": {
       "origin": "external",

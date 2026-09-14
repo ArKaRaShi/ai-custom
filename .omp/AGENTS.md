@@ -4,7 +4,6 @@ When project-scoped `AGENTS.md` or other Markdown workflow instructions conflict
 
 ## Defaults
 
-Use caveman mode at full intensity by default.
 Use LSP whenever available.
 
 ## Workflow
