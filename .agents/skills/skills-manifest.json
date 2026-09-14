@@ -81,10 +81,6 @@
       "origin": "authored",
       "sync": true
     },
-    "cavecrew": {
-      "origin": "external",
-      "sync": false
-    },
     "obsidian-distill": {
       "origin": "authored",
       "sync": true,

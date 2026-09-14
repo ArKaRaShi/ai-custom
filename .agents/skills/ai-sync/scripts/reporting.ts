@@ -16,11 +16,19 @@ export function printSyncSummary(manifest: SkillsManifest): void {
     : [];
 
   const rows: Array<[string, string, string]> = [];
+  const informational: string[] = [];
   for (const n of localSkillDirs.filter((n) => !manifest.skills[n])) {
     rows.push([`skills/${n}/`, "local only", "not in manifest → remove dir or `sync.ts track`"]);
   }
   for (const n of Object.keys(manifest.skills).filter((n) => !localSkillDirs.includes(n))) {
-    rows.push([`manifest: ${n}`, "manifest only", "no local files → `sync.ts prune-manifest` after review"]);
+    const entry = manifest.skills[n];
+    if (entry.origin === "external" && entry.sync === false) {
+      informational.push(n);
+    } else if (entry.origin === "authored" && entry.sync === false) {
+      rows.push([`manifest: ${n}`, "manifest only", "private entry missing locally → `sync.ts prune --apply` after review"]);
+    } else {
+      rows.push([`manifest: ${n}`, "manifest only", "no local files → restore with `sync.ts pull`"]);
+    }
   }
   for (const [n, e] of Object.entries(manifest.skills)) {
     if (e.sync === false && e.origin === "authored" && localSkillDirs.includes(n)) {
@@ -28,6 +36,9 @@ export function printSyncSummary(manifest: SkillsManifest): void {
     }
   }
 
+  if (informational.length > 0) {
+    console.log(`ℹ️  Remote external skills not installed locally: ${informational.join(", ")}`);
+  }
   if (rows.length === 0) return;
   console.log(`⚠️  Needs your decision:`);
   const w = Math.max(...rows.map(([item]) => item.length));
