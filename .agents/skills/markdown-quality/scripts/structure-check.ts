@@ -1,3 +1,5 @@
+import { existsSync, readFileSync, statSync } from "fs";
+
 export interface StructureFinding {
   line: number;
   type: "deep-heading" | "orphan-heading" | "unrendered-latex";
@@ -80,4 +82,80 @@ export function checkMarkdownStructure(content: string): StructureCheckResult {
     totalFindings: findings.length,
     findings,
   };
+}
+
+function resolveFiles(pattern: string): string[] {
+  if (existsSync(pattern) && statSync(pattern).isFile()) {
+    return [pattern];
+  }
+  try {
+    const glob = new Bun.Glob(pattern);
+    const files: string[] = [];
+    for (const file of glob.scanSync({
+      cwd: process.cwd(),
+      onlyFiles: true,
+      throwErrorOnBrokenSymbolicLink: false,
+    })) {
+      if (
+        !file.startsWith("node_modules/") &&
+        !file.startsWith(".git/") &&
+        !file.startsWith("dist/") &&
+        !file.startsWith("build/")
+      ) {
+        files.push(file);
+      }
+    }
+    return files.length > 0 ? files : [pattern];
+  } catch {
+    return [pattern];
+  }
+}
+
+if (import.meta.main) {
+  const args = process.argv.slice(2);
+  let target = "**/*.md";
+
+  for (const arg of args) {
+    if (arg === "-h" || arg === "--help") {
+      console.log(`Usage: structure-check.ts [options] [glob-or-file]
+
+Validates Markdown heading hierarchy (caps at H4, detects orphan headings, flags unrendered LaTeX).
+
+Arguments:
+  [glob-or-file]     Target file or glob pattern (default: "**/*.md")
+
+Options:
+  -h, --help         Show this help message and exit
+
+Examples:
+  bun structure-check.ts README.md
+  bun structure-check.ts "docs/**/*.md"`);
+      process.exit(0);
+    } else if (!arg.startsWith("-")) {
+      target = arg;
+    }
+  }
+
+  const files = resolveFiles(target);
+  let totalIssues = 0;
+  for (const f of files) {
+    if (existsSync(f) && statSync(f).isFile()) {
+      try {
+        const content = readFileSync(f, "utf-8");
+        const res = checkMarkdownStructure(content);
+        for (const finding of res.findings) {
+          console.log(`[STRUCT] ${f}:${finding.line} -> ${finding.reason}`);
+        }
+        totalIssues += res.findings.length;
+      } catch {}
+    }
+  }
+
+  if (totalIssues > 0) {
+    console.log(`\nFound ${totalIssues} structure finding(s).`);
+    process.exit(1);
+  } else {
+    console.log("Clean: 0 structure issues detected.");
+    process.exit(0);
+  }
 }

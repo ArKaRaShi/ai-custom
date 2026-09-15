@@ -95,7 +95,31 @@ export async function runFix(options: FixOptions = {}): Promise<FixResult> {
 }
 
 if (import.meta.main) {
-  const target = process.argv[2] || "**/*.md";
+  const args = process.argv.slice(2);
+  let target = "**/*.md";
+
+  for (const arg of args) {
+    if (arg === "-h" || arg === "--help") {
+      console.log(`Usage: fix.ts [options] [glob-or-file]
+
+Auto-fixes structural Markdown issues (whitespace, blank lines, headings, code fences) using markdownlint-cli2.
+
+Arguments:
+  [glob-or-file]     Target file or glob pattern (default: "**/*.md")
+
+Options:
+  -h, --help         Show this help message and exit
+
+Examples:
+  bun fix.ts
+  bun fix.ts README.md
+  bun fix.ts "docs/**/*.md"`);
+      process.exit(0);
+    } else if (!arg.startsWith("-")) {
+      target = arg;
+    }
+  }
+
   const result = await runFix({ target });
   process.exit(result.exitCode);
 }

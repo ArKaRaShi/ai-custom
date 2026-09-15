@@ -1,3 +1,5 @@
+import { existsSync, readFileSync, statSync } from "fs";
+
 export interface SecurityFinding {
   line: number;
   type: "leaked-secret" | "placeholder-token" | "dummy-ip";
@@ -64,4 +66,80 @@ export function checkMarkdownSecurity(content: string): SecurityCheckResult {
     totalFindings: findings.length,
     findings,
   };
+}
+
+function resolveFiles(pattern: string): string[] {
+  if (existsSync(pattern) && statSync(pattern).isFile()) {
+    return [pattern];
+  }
+  try {
+    const glob = new Bun.Glob(pattern);
+    const files: string[] = [];
+    for (const file of glob.scanSync({
+      cwd: process.cwd(),
+      onlyFiles: true,
+      throwErrorOnBrokenSymbolicLink: false,
+    })) {
+      if (
+        !file.startsWith("node_modules/") &&
+        !file.startsWith(".git/") &&
+        !file.startsWith("dist/") &&
+        !file.startsWith("build/")
+      ) {
+        files.push(file);
+      }
+    }
+    return files.length > 0 ? files : [pattern];
+  } catch {
+    return [pattern];
+  }
+}
+
+if (import.meta.main) {
+  const args = process.argv.slice(2);
+  let target = "**/*.md";
+
+  for (const arg of args) {
+    if (arg === "-h" || arg === "--help") {
+      console.log(`Usage: security-check.ts [options] [glob-or-file]
+
+Scans Markdown files for leaked credentials, placeholder tokens, and dummy IPs.
+
+Arguments:
+  [glob-or-file]     Target file or glob pattern (default: "**/*.md")
+
+Options:
+  -h, --help         Show this help message and exit
+
+Examples:
+  bun security-check.ts README.md
+  bun security-check.ts "docs/**/*.md"`);
+      process.exit(0);
+    } else if (!arg.startsWith("-")) {
+      target = arg;
+    }
+  }
+
+  const files = resolveFiles(target);
+  let totalIssues = 0;
+  for (const f of files) {
+    if (existsSync(f) && statSync(f).isFile()) {
+      try {
+        const content = readFileSync(f, "utf-8");
+        const res = checkMarkdownSecurity(content);
+        for (const finding of res.findings) {
+          console.log(`[SECURITY] ${f}:${finding.line} -> ${finding.reason} ('${finding.match}')`);
+        }
+        totalIssues += res.findings.length;
+      } catch {}
+    }
+  }
+
+  if (totalIssues > 0) {
+    console.log(`\nFound ${totalIssues} security finding(s).`);
+    process.exit(1);
+  } else {
+    console.log("Clean: 0 security issues detected.");
+    process.exit(0);
+  }
 }

@@ -187,4 +187,27 @@ Formula with $\\alpha$ inline.
     expect(result.densityReports.length).toBeGreaterThan(0);
     expect(["CLEAN", "NEEDS_REVIEW"]).toContain(result.verdict);
   });
+
+  it("all scripts support --help and -h flags", () => {
+    const scripts = [
+      "review.ts",
+      "fix.ts",
+      "link-checker.ts",
+      "security-check.ts",
+      "structure-check.ts",
+      "token-density.ts",
+    ];
+
+    for (const script of scripts) {
+      const scriptPath = resolve(import.meta.dir, "../scripts", script);
+
+      const helpProc = Bun.spawnSync(["bun", scriptPath, "--help"]);
+      expect(helpProc.exitCode).toBe(0);
+      expect(helpProc.stdout.toString()).toContain("Usage:");
+
+      const shortHelpProc = Bun.spawnSync(["bun", scriptPath, "-h"]);
+      expect(shortHelpProc.exitCode).toBe(0);
+      expect(shortHelpProc.stdout.toString()).toContain("Usage:");
+    }
+  });
 });

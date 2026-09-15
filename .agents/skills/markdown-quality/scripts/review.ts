@@ -357,7 +357,30 @@ if (import.meta.main) {
   let checkStructure = true;
 
   for (const arg of args) {
-    if (arg === "--fix") {
+    if (arg === "-h" || arg === "--help") {
+      console.log(`Usage: review.ts [options] [glob-or-file]
+
+Comprehensive QA review for Markdown documentation, agent instructions, and guides.
+
+Arguments:
+  [glob-or-file]           Target file or glob pattern (default: "**/*.md")
+
+Options:
+  --fix                    Apply automatic structural fixes via markdownlint-cli2 before review
+  --min-level=<level>      Vale minimum alert level: error, warning, suggestion (default: warning)
+  --no-links               Skip Phase 3: link integrity check
+  --no-structure           Skip Phase 4: document structure check (heading depth, orphans, latex)
+  --no-security            Skip Phase 5: security & credential leak scanner
+  --no-density             Skip Phase 6: token density & AI context efficiency check
+  -h, --help               Show this help message and exit
+
+Examples:
+  bun review.ts
+  bun review.ts README.md
+  bun review.ts "docs/**/*.md" --fix
+  bun review.ts README.md --min-level=error --no-links`);
+      process.exit(0);
+    } else if (arg === "--fix") {
       fix = true;
     } else if (arg === "--no-links") {
       checkLinks = false;

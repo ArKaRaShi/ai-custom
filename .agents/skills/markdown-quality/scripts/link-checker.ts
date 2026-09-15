@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync, statSync } from "fs";
 import { resolve, dirname } from "path";
 
 export interface BrokenLink {
@@ -145,4 +145,77 @@ export function checkMarkdownLinks(filePath: string, fileContent?: string): Link
   }
 
   return { totalLinks, brokenLinks };
+}
+
+function resolveFiles(pattern: string): string[] {
+  if (existsSync(pattern) && statSync(pattern).isFile()) {
+    return [pattern];
+  }
+  try {
+    const glob = new Bun.Glob(pattern);
+    const files: string[] = [];
+    for (const file of glob.scanSync({
+      cwd: process.cwd(),
+      onlyFiles: true,
+      throwErrorOnBrokenSymbolicLink: false,
+    })) {
+      if (
+        !file.startsWith("node_modules/") &&
+        !file.startsWith(".git/") &&
+        !file.startsWith("dist/") &&
+        !file.startsWith("build/")
+      ) {
+        files.push(file);
+      }
+    }
+    return files.length > 0 ? files : [pattern];
+  } catch {
+    return [pattern];
+  }
+}
+
+if (import.meta.main) {
+  const args = process.argv.slice(2);
+  let target = "**/*.md";
+
+  for (const arg of args) {
+    if (arg === "-h" || arg === "--help") {
+      console.log(`Usage: link-checker.ts [options] [glob-or-file]
+
+Validates links inside Markdown files (relative paths, anchors, URL syntax).
+
+Arguments:
+  [glob-or-file]     Target file or glob pattern (default: "**/*.md")
+
+Options:
+  -h, --help         Show this help message and exit
+
+Examples:
+  bun link-checker.ts README.md
+  bun link-checker.ts "docs/**/*.md"`);
+      process.exit(0);
+    } else if (!arg.startsWith("-")) {
+      target = arg;
+    }
+  }
+
+  const files = resolveFiles(target);
+  let totalBroken = 0;
+  for (const f of files) {
+    if (existsSync(f) && statSync(f).isFile()) {
+      const res = checkMarkdownLinks(f);
+      for (const b of res.brokenLinks) {
+        console.log(`[LINK] ${b.file}:${b.line} -> '${b.rawTarget}' (${b.reason})`);
+      }
+      totalBroken += res.brokenLinks.length;
+    }
+  }
+
+  if (totalBroken > 0) {
+    console.log(`\nFound ${totalBroken} broken link(s).`);
+    process.exit(1);
+  } else {
+    console.log("All links valid (0 broken links).");
+    process.exit(0);
+  }
 }

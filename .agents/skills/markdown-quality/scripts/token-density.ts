@@ -1,3 +1,5 @@
+import { existsSync, readFileSync, statSync } from "fs";
+
 export interface TokenDensityReport {
   wordCount: number;
   estimatedTokens: number;
@@ -98,4 +100,77 @@ export function analyzeTokenDensity(content: string): TokenDensityReport {
     condescendingMatches,
     densityRating,
   };
+}
+
+function resolveFiles(pattern: string): string[] {
+  if (existsSync(pattern) && statSync(pattern).isFile()) {
+    return [pattern];
+  }
+  try {
+    const glob = new Bun.Glob(pattern);
+    const files: string[] = [];
+    for (const file of glob.scanSync({
+      cwd: process.cwd(),
+      onlyFiles: true,
+      throwErrorOnBrokenSymbolicLink: false,
+    })) {
+      if (
+        !file.startsWith("node_modules/") &&
+        !file.startsWith(".git/") &&
+        !file.startsWith("dist/") &&
+        !file.startsWith("build/")
+      ) {
+        files.push(file);
+      }
+    }
+    return files.length > 0 ? files : [pattern];
+  } catch {
+    return [pattern];
+  }
+}
+
+if (import.meta.main) {
+  const args = process.argv.slice(2);
+  let target = "**/*.md";
+
+  for (const arg of args) {
+    if (arg === "-h" || arg === "--help") {
+      console.log(`Usage: token-density.ts [options] [glob-or-file]
+
+Analyzes Markdown token density, word count, conversational fillers, and condescending words.
+
+Arguments:
+  [glob-or-file]     Target file or glob pattern (default: "**/*.md")
+
+Options:
+  -h, --help         Show this help message and exit
+
+Examples:
+  bun token-density.ts README.md
+  bun token-density.ts "docs/**/*.md"`);
+      process.exit(0);
+    } else if (!arg.startsWith("-")) {
+      target = arg;
+    }
+  }
+
+  const files = resolveFiles(target);
+  for (const f of files) {
+    if (existsSync(f) && statSync(f).isFile()) {
+      try {
+        const content = readFileSync(f, "utf-8");
+        const report = analyzeTokenDensity(content);
+        console.log(
+          `• ${f}: ~${report.estimatedTokens} tokens (${report.wordCount} words) · Rating: ${report.densityRating}`,
+        );
+        for (const fm of report.fillerMatches) {
+          console.log(`  [DENSITY] line ${fm.line}: Filler detected '${fm.phrase}'`);
+        }
+        for (const cm of report.condescendingMatches) {
+          console.log(`  [TONE] line ${cm.line}: Presumptuous word '${cm.phrase}'`);
+        }
+      } catch {}
+    }
+  }
+  process.exit(0);
 }

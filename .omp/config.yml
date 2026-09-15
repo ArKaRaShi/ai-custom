@@ -6,16 +6,15 @@ modelRoles:
   plan: anthropic/claude-sonnet-5:xhigh
   designer: anthropic/claude-sonnet-5:auto
   commit: openai-codex/gpt-5.6-luna:auto
-  task: kimi-code/k3:off
   default: anthropic/claude-sonnet-5:xhigh
   advisor: openai-codex/gpt-5.6-luna:auto
   free: openrouter/thinkingmachines/inkling-small:free:high
-  boilerplate: openrouter/qwen/qwen3.8-flash:auto
+  boilerplate: openrouter/z-ai/glm-5.3-flash:auto
 retry:
   fallbackChains:
     smol:
       - openrouter/z-ai/glm-5.3-flash:auto
-      - kimi-code/k3:low
+      - openrouter/minimax/minimax-m3:auto
       - litellm/vertex_ai/zai-org/glm-5-maas
       - openai-codex/gpt-5.6-luna:low
       - anthropic/claude-sonnet-5:low
@@ -26,8 +25,8 @@ retry:
     commit:
       - openai-codex/gpt-5.6-luna:auto
     boilerplate:
+      - openrouter/qwen/qwen3.8-flash:auto
       - openrouter/minimax/minimax-m3:auto
-      - openrouter/z-ai/glm-5.3-flash:auto
     free:
       - openrouter/inclusionai/ling-3.0-flash-vl:free
       - openrouter/thinkingmachines/inkling-small:free
@@ -39,7 +38,7 @@ retry:
       - openrouter/google/gemma-4-26b-a4b-it:free
 symbolPreset: nerd
 theme:
-  dark: dark-rose-pine
+  dark: dark-github
 setupVersion: 2
 statusLine:
   preset: custom
