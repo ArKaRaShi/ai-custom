@@ -1,6 +1,5 @@
 modelRoles:
-  smol: openrouter/qwen/qwen3.8-flash:auto
-  lite: litellm/gemini-2.5-flash
+  smol: litellm/gemini-3.8-flash:auto
   slow: openai-codex/gpt-5.6-terra:high
   vision: anthropic/claude-sonnet-5:auto
   plan: anthropic/claude-sonnet-5:xhigh
@@ -13,8 +12,8 @@ modelRoles:
 retry:
   fallbackChains:
     smol:
+      - openrouter/qwen/qwen3.8-flash:auto
       - openrouter/z-ai/glm-5.3-flash:auto
-      - openrouter/minimax/minimax-m3:auto
       - litellm/vertex_ai/zai-org/glm-5-maas
       - openai-codex/gpt-5.6-luna:low
       - anthropic/claude-sonnet-5:low
@@ -26,7 +25,7 @@ retry:
       - openai-codex/gpt-5.6-luna:auto
     boilerplate:
       - openrouter/qwen/qwen3.8-flash:auto
-      - openrouter/minimax/minimax-m3:auto
+      - openrouter/z-ai/glm-5.3-flash:auto
     free:
       - openrouter/inclusionai/ling-3.0-flash-vl:free
       - openrouter/thinkingmachines/inkling-small:free
