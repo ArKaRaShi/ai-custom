@@ -49,3 +49,7 @@ For delegation decisions, apply this precedence from highest to lowest:
 Use `scout` agents for read-only investigation and task agents for self-contained work slices.
 Use an available configured agent model appropriate to the task. Do not assume a specific model is available.
 The main agent retains scope, integration, and verification responsibility. It need not perform delegated slices itself.
+
+### Markdown review
+
+Do not use `skill://markdown-quality` for files produced by `skill://writing-plans`, unless the user explicitly requests Markdown quality review.
