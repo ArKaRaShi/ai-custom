@@ -157,8 +157,9 @@ export function formatTurnMetrics(
   details?: TurnMetricsDetails
 ): string {
   const durLabel = dur.endsWith("s") || dur.startsWith("⊘") ? dur : `${dur}s`;
+  const hasTokens = dOut > 0 || dIn > 0 || dCache > 0;
   const timePart =
-    details?.ttftMs && details.ttftMs > 0
+    details?.ttftMs && details.ttftMs > 0 && hasTokens
       ? ` ${durLabel} (${formatTtft(details.ttftMs)})`
       : ` ${durLabel}`;
 
@@ -250,14 +251,18 @@ export default function (pi: ExtensionAPI) {
     } catch {}
   });
 
-  pi.on("agent_end", async (_event: unknown, ctx: ExtensionContext) => {
+  pi.on("agent_end", async (event: unknown, ctx: ExtensionContext) => {
     if (isSubagent(ctx)) return;
+    const ev = event as { aborted?: boolean; cancelled?: boolean; interrupted?: boolean } | null;
+    const isEventAborted = Boolean(ev?.aborted || ev?.cancelled || ev?.interrupted);
+
     let dur: string;
     if (agentStartTime <= 0) {
       dur = "⊘ aborted";
     } else {
       const elapsed = (Date.now() - agentStartTime) / 1000;
-      dur = elapsed < 0.05 ? "<0.1s" : `${elapsed.toFixed(1)}s`;
+      const durSec = elapsed < 0.05 ? "<0.1s" : `${elapsed.toFixed(1)}s`;
+      dur = isEventAborted ? `⊘ aborted (after ${durSec})` : durSec;
     }
     let dOut = 0;
     let dIn = 0;
@@ -277,7 +282,8 @@ export default function (pi: ExtensionAPI) {
         dThinking = Math.max(0, u.thinkingTokens - lastThinking);
         dCost = Math.max(0, u.costTotal - lastCostTotal);
         dSaved = Math.max(0, u.costSaved - lastCostSaved);
-        ttftMs = u.lastTtftMs;
+        const hasNewTokens = dOut > 0 || dIn > 0 || dCache > 0;
+        ttftMs = hasNewTokens ? u.lastTtftMs : 0;
 
         lastOut = u.outputTokens;
         lastIn = u.inputTokens;

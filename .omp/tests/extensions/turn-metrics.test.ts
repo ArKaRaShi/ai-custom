@@ -51,6 +51,17 @@ describe("given turn-metrics extension, when formatting tokens or detecting suba
     expect(formatTurnMetrics("<0.1s", 50, 1200, 0)).toBe(" <0.1s · 󰆍 50 out · 󱐋 1.2k in");
     // Aborted turns
     expect(formatTurnMetrics("⊘ aborted", 203, 11200, 146900)).toBe(" ⊘ aborted · 󰆍 203 out · 󱐋 92.9% (146.9k cached · 11.2k new)");
+    // Zero-token abort: ignores stale TTFT and retains zero token metrics
+    expect(formatTurnMetrics("⊘ aborted", 0, 0, 0, { ttftMs: 2000 })).toBe(" ⊘ aborted · 󰆍 0 out · 󱐋 0 in");
+    // Zero-token abort with elapsed time: retains elapsed description and zero metrics without stale TTFT
+    expect(formatTurnMetrics("⊘ aborted (after 2.0s)", 0, 0, 0, { ttftMs: 2000 })).toBe(" ⊘ aborted (after 2.0s) · 󰆍 0 out · 󱐋 0 in");
+    // Mid-stream abort with partial tokens: genuine TTFT and thinking/act breakdown are displayed
+    expect(
+      formatTurnMetrics("⊘ aborted", 165, 2400, 319000, {
+        ttftMs: 1800,
+        dThinking: 120,
+      })
+    ).toBe(" ⊘ aborted (1.8s ttft) · 󰧑 120 think · 󰆍 45 act (165 out) · 󱐋 99.3% (319k cached · 2.4k new)");
   });
 
   it("formatTurnMetrics handles cost without savings and thinking without tools", () => {
