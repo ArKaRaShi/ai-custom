@@ -18,6 +18,8 @@ export interface ReviewOptions {
   checkStructure?: boolean;
   userConfig?: string;
   fallbackConfig?: string;
+  valeUserConfig?: string;
+  valeFallbackConfig?: string;
 }
 
 export interface ReviewResult {
@@ -95,7 +97,8 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
   }
 
   // Config Resolution for Vale
-  const userVale = resolve(homedir(), "Library/Application Support/vale/.vale.ini");
+  const userVale = options.valeUserConfig || resolve(homedir(), "Library/Application Support/vale/.vale.ini");
+  const fallbackVale = options.valeFallbackConfig || resolve(scriptDir, "assets/.vale.ini");
   let valeConfigSource = "disabled";
   let valeConfigArg: string[] = [];
   let valeStyles = "unknown";
@@ -113,6 +116,14 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
     valeConfigArg = ["--config", userVale];
     try {
       const content = readFileSync(userVale, "utf-8");
+      const m = content.match(/BasedOnStyles\s*=\s*(.+)/);
+      if (m) valeStyles = m[1].trim();
+    } catch {}
+  } else if (existsSync(fallbackVale)) {
+    valeConfigSource = `bundled-asset (${fallbackVale})`;
+    valeConfigArg = ["--config", fallbackVale];
+    try {
+      const content = readFileSync(fallbackVale, "utf-8");
       const m = content.match(/BasedOnStyles\s*=\s*(.+)/);
       if (m) valeStyles = m[1].trim();
     } catch {}

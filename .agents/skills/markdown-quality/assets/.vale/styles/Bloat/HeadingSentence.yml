@@ -1,0 +1,7 @@
+extends: existence
+message: "Heading appears to contain a full sentence (>12 words); prefer a tighter title."
+level: suggestion
+scope: heading
+nonword: true
+tokens:
+  - '^(?:\S+\s+){12,}\S+\s*$'

@@ -1,0 +1,7 @@
+extends: existence
+message: "Paragraph exceeds 120 words; consider splitting or tightening."
+level: warning
+scope: paragraph
+nonword: true
+tokens:
+  - '(?:\S+\s+){120,}\S+'

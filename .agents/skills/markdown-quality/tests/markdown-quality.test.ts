@@ -6,7 +6,7 @@ import { checkMarkdownLinks } from "../scripts/link-checker";
 import { analyzeTokenDensity } from "../scripts/token-density";
 import { checkMarkdownSecurity } from "../scripts/security-check";
 import { checkMarkdownStructure } from "../scripts/structure-check";
-import { writeFileSync, unlinkSync, existsSync } from "fs";
+import { writeFileSync, unlinkSync, existsSync, mkdirSync, rmSync } from "fs";
 import { resolve } from "path";
 import { tmpdir } from "os";
 
@@ -186,6 +186,37 @@ Formula with $\\alpha$ inline.
     expect(typeof result.structureIssuesCount).toBe("number");
     expect(result.densityReports.length).toBeGreaterThan(0);
     expect(["CLEAN", "NEEDS_REVIEW"]).toContain(result.verdict);
+  });
+
+  it("runReview resolves vale config in project-local, user-global, bundled-asset priority order", () => {
+    const scriptPath = resolve(import.meta.dir, "../scripts/review.ts");
+    const bundledVale = resolve(import.meta.dir, "../assets/.vale.ini");
+    const isolatedCwd = resolve(tmpdir(), `mq-vale-isolated-${Date.now()}`);
+    const isolatedHome = resolve(tmpdir(), `mq-vale-home-${Date.now()}`);
+    mkdirSync(isolatedCwd, { recursive: true });
+    mkdirSync(isolatedHome, { recursive: true });
+    writeFileSync(resolve(isolatedCwd, "sample.md"), "# Sample\n\nPlain content.\n");
+
+    try {
+      // Neither project-local nor user-global vale.ini exists -> bundled skill asset is used
+      const fallbackProc = Bun.spawnSync(["bun", scriptPath, "sample.md"], {
+        cwd: isolatedCwd,
+        env: { ...process.env, HOME: isolatedHome },
+      });
+      const fallbackOut = fallbackProc.stdout.toString();
+      expect(fallbackOut).toContain(`Config: bundled-asset (${bundledVale})`);
+
+      // A project-local .vale.ini takes priority over the bundled fallback
+      writeFileSync(resolve(isolatedCwd, ".vale.ini"), "StylesPath = .vale/styles\n[*.md]\nBasedOnStyles = Vale\n");
+      const localProc = Bun.spawnSync(["bun", scriptPath, "sample.md"], {
+        cwd: isolatedCwd,
+        env: { ...process.env, HOME: isolatedHome },
+      });
+      expect(localProc.stdout.toString()).toContain("Config: project-local (.vale.ini)");
+    } finally {
+      rmSync(isolatedCwd, { recursive: true, force: true });
+      rmSync(isolatedHome, { recursive: true, force: true });
+    }
   });
 
   it("all scripts support --help and -h flags", () => {

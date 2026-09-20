@@ -1,0 +1,7 @@
+[Rr]epo
+[Rr]epos
+[Rr]epo's
+deps
+READMEs
+unrendered
+unescaped

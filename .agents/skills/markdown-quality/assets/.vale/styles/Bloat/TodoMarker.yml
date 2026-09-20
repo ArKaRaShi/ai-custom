@@ -1,0 +1,7 @@
+extends: existence
+message: "TODO/FIXME marker left in published doc."
+level: error
+scope: raw
+nonword: false
+tokens:
+  - '\b(?:TODO|FIXME|XXX|HACK)\b'

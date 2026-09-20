@@ -8,3 +8,8 @@
 # Node / Bun
 node_modules/
 bun.lockb
+
+# Vale synced style packages (reproducible via `vale sync`); keep only authored rules/config
+.agents/skills/markdown-quality/assets/.vale/styles/write-good/
+.agents/skills/markdown-quality/assets/.vale/styles/proselint/
+.agents/skills/markdown-quality/assets/.vale/styles/ai-tells/
