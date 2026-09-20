@@ -1,12 +1,19 @@
 ---
 name: git-commit
 description: >
-  Use when generating, drafting, or writing a git commit message — Conventional
+  Use when generating, drafting, or writing a git commit message. Covers Conventional
   Commits with or without emoji/unicode symbols, adaptive body, or when asked for
   an emoji commit, a plain conventional commit, or just "write a commit".
 ---
 
 Write terse, exact Conventional Commits. Pick a subject **Style** (emoji or plain), then a body **Depth** (zero, prose, or bulleted). Style and Depth are independent.
+
+## Repo Attribution Check (do first)
+
+Before drafting, check the repo's own instructions (AGENTS.md, CLAUDE.md, CONTRIBUTING.md) for a mandated commit trailer.
+
+- Repo specifies one (e.g. `Co-Authored-By: Claude <noreply@anthropic.com>`) → include it verbatim as the last line, every time, regardless of Style or Depth.
+- Repo specifies nothing → omit AI attribution trailers by default (see Exclusions).
 
 ## Subject Style
 
@@ -43,7 +50,7 @@ Once known:
 ## Body Depth
 
 - **Zero:** atomic/trivial change. No body that restates the subject.
-- **Prose (1-2 sentences):** an architectural tradeoff or non-obvious *why*. Wrap at 72.
+- **Prose (1-2 sentences):** an architectural tradeoff or a *why* the diff alone doesn't explain. Wrap at 72.
 - **Bulleted (2-4 `-` bullets):** 2-4 discrete changes. 5+ → split the commit.
 
 ## Auto-Clarity
@@ -55,9 +62,9 @@ A Zero body is never acceptable for breaking changes (`!` in type or a `BREAKING
 - 5+ bullets: split the commit instead.
 - Bullets that merely restate the subject line.
 - "This commit does X", "I", "we", "now", "currently".
-- AI attribution trailers ("Generated with…", a `Co-Authored-By` AI line).
+- AI attribution trailers ("Generated with…", a `Co-Authored-By` AI line): default only. See Repo Attribution Check above.
 - Asterisks (`*`) for bullets: always use `-`.
 
 ## Boundary
 
-Generates the message only. Does not stage files or run `git commit`. Output the message in one markdown code block, ready to paste.
+Generates the message only. Does not stage files or run `git commit`. Output the message in one Markdown code block, ready to paste.

@@ -1,5 +1,7 @@
 # CI / Pre-commit Integration
 
+Wire the two-phase QA pipeline into pre-commit hooks and CI so the checks run before a doc merges.
+
 ## Pre-commit hook (`.pre-commit-config.yaml`)
 
 ```yaml

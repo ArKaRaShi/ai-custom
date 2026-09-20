@@ -49,7 +49,7 @@ Every lesson turn must cover only one core concept formatted in 4 sections:
 
 ### 1. The Why & Mental Model
 
-What real-world problem does this technology or component solve? Why can't we just use a regular SQL database or Python script?
+What real-world problem does this technology or component solve? Why not a regular SQL database or a Python script?
 
 ### 2. Everyday Analogy
 
