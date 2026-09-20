@@ -13,3 +13,4 @@ bun.lockb
 .agents/skills/markdown-quality/assets/.vale/styles/write-good/
 .agents/skills/markdown-quality/assets/.vale/styles/proselint/
 .agents/skills/markdown-quality/assets/.vale/styles/ai-tells/
+.worktrees/
