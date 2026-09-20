@@ -37,6 +37,32 @@ export function getAllFiles(dir: string): string[] {
   return files;
 }
 
+// Paths ignored by the repo's own .gitignore are intentionally excluded (e.g.
+// `vale sync`-downloaded packages) — reuse git itself rather than reimplementing
+// gitignore glob semantics.
+export function getGitIgnoredSet(repoBase: string, relPaths: string[]): Set<string> {
+  const ignored = new Set<string>();
+  if (relPaths.length === 0 || !fs.existsSync(path.join(repoBase, ".git"))) return ignored;
+  try {
+    const out = execSync("git check-ignore --stdin", {
+      cwd: repoBase,
+      input: relPaths.join("\n"),
+      stdio: ["pipe", "pipe", "ignore"],
+    }).toString();
+    for (const line of out.split("\n")) {
+      if (line) ignored.add(line);
+    }
+  } catch (err: any) {
+    // check-ignore exits 1 when nothing matches; only surface real failures.
+    if (err?.stdout) {
+      for (const line of err.stdout.toString().split("\n")) {
+        if (line) ignored.add(line);
+      }
+    }
+  }
+  return ignored;
+}
+
 export interface DiffReport {
   missingInRepo: string[];
   missingInLocal: string[];
@@ -94,11 +120,20 @@ export function compare(repoBase = DEFAULT_REPO, opts: SyncOptions = {}): DiffRe
       repoRelMap.set(rel, rf);
     }
 
+    // Files only on the machine that the repo's own .gitignore excludes
+    // (e.g. `vale sync`-downloaded packages) are intentional, not drift.
+    const candidateRels = [...localRelMap.keys()].filter((rel) => !repoRelMap.has(rel));
+    const candidateRepoRels = candidateRels.map((rel) =>
+      path.relative(repoBase, path.join(adjustedRepo, rel))
+    );
+    const ignoredSet = getGitIgnoredSet(repoBase, candidateRepoRels);
+
     // Check local files against repo
     for (const [rel, localPath] of localRelMap) {
       const repoPath = repoRelMap.get(rel);
       if (!repoPath) {
-        report.missingInRepo.push(localPath);
+        const repoRel = path.relative(repoBase, path.join(adjustedRepo, rel));
+        if (!ignoredSet.has(repoRel)) report.missingInRepo.push(localPath);
       } else if (sha256(localPath) !== sha256(repoPath)) {
         report.modified.push(localPath);
       } else {
