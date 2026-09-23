@@ -1,28 +1,26 @@
 modelRoles:
   smol: litellm/gemini-3.8-flash:auto
-  slow: openai-codex/gpt-5.6-terra:high
+  slow: openai-codex/gpt-6-sol:high
   vision: anthropic/claude-sonnet-5:auto
   plan: anthropic/claude-sonnet-5:xhigh
   designer: anthropic/claude-sonnet-5:auto
-  commit: openai-codex/gpt-5.6-luna:auto
-  advisor: openai-codex/gpt-5.6-luna:auto
+  commit: openai-codex/gpt-6-luna:auto
+  advisor: openai-codex/gpt-6-luna:auto
   free: openrouter/thinkingmachines/inkling-small:free:high
   boilerplate: openrouter/z-ai/glm-5.3-flash:auto
   default: anthropic/claude-sonnet-5
+  tiny: local/lfm2.5-230m
 retry:
   fallbackChains:
     smol:
-      - openrouter/qwen/qwen3.8-flash:auto
-      - openrouter/z-ai/glm-5.3-flash:auto
-      - litellm/vertex_ai/zai-org/glm-5-maas
-      - openai-codex/gpt-5.6-luna:low
+      - openai-codex/gpt-6-luna:low
       - anthropic/claude-sonnet-5:low
     task:
-      - openai-codex/gpt-5.6-luna:high
+      - openai-codex/gpt-6-luna:high
       - anthropic/claude-sonnet-5:auto
-      - openai-codex/gpt-5.6-terra:auto
+      - openai-codex/gpt-6-sol:auto
     commit:
-      - openai-codex/gpt-5.6-luna:auto
+      - openai-codex/gpt-6-luna:auto
     boilerplate:
       - openrouter/qwen/qwen3.8-flash:auto
       - openrouter/z-ai/glm-5.3-flash:auto
@@ -37,7 +35,7 @@ retry:
       - openrouter/google/gemma-4-26b-a4b-it:free
 symbolPreset: nerd
 theme:
-  dark: dark-sakura
+  dark: dark-catppuccin
 setupVersion: 2
 statusLine:
   preset: custom
@@ -82,11 +80,8 @@ task:
 disabledExtensions:
   []
 providers:
-  tinyModel: lfm2.5-230m
   tinyModelDevice: default
   tinyModelDtype: default
-  memoryModel: online
-  webSearchOrder: auto
 composer:
   shape: rule
   tokenRate: true
@@ -99,7 +94,6 @@ colorBlindMode: false
 codexResets:
   autoRedeem: "no"
 disabledProviders:
-  - claude-plugins
   - claude
   - codex
   - opencode
