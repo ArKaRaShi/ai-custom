@@ -1,26 +1,31 @@
 ---
-name: standard-skill-layout
+name: skill-layout
 description: >
-  Use when creating or renaming a skill and choosing its directory and file
-  names, when mirroring the layout of an existing skill, or when auditing a
-  skill folder for naming and structure drift. The canonical layout standard
-  for authored skills under ~/.agents/skills/.
+  Canonical layout standard for authored skills within skill-framework.
+  Use when creating, renaming, or auditing a skill folder, choosing file
+  names, or mirroring an existing skill's directory structure. Paths use
+  <skills-root>/<skill-name>/ rather than a machine-specific root.
 ---
 
-# Standard Skill Layout
+# Skill Layout Reference
 
-Canonical directory and naming standard for authored skills. Apply it without
-consulting another skill's files.
+Canonical directory and naming standard for authored skills. Apply it
+without consulting another skill's files.
 
-**Why:** SKILL.md loads into context on every use; subdirectories load only
-when the agent reads a path inside them. Keeping heavy docs and executable code out of
-SKILL.md keeps the always-loaded prompt small.
+**Why:** `SKILL.md` loads into context on every use; subdirectories load
+only when the agent reads a path inside them. Keeping heavy docs and
+executable code out of `SKILL.md` keeps the always-loaded prompt small.
+
+This reference lives inside `skill-framework` (see `references/skill-layout.md`)
+and applies to all authored skills placed under `<skills-root>/<skill-name>/`.
+The framework's other guidance and examples are self-contained and generic;
+only `skill://writing-skills` may be referenced externally.
 
 ## Tree
 
 ```text
-~/.agents/skills/
-  skills-manifest.json          # only file allowed at this root
+<skills-root>/
+  skills-manifest.json         # permitted at skills root; allowed but not required
   <skill-name>/
     SKILL.md                    # required; the only required file
     scripts/                    # executable tools the agent runs
@@ -29,10 +34,11 @@ SKILL.md keeps the always-loaded prompt small.
     tests/                      # checks for scripts/
     examples/                   # sample inputs/outputs to imitate
     LICENSE                     # license text for vendored content
-```
 
-Allowed subdirs are exactly: scripts, references, tests, assets, examples.
-A correct minimal skill is SKILL.md alone (flat, and complete).
+Allowed subdirs are exactly: `scripts`, `references`, `tests`, `assets`, `examples`.
+A correct minimal skill is `SKILL.md` alone (flat, and complete). There is no
+root `README.md`; `SKILL.md` is the entry point.
+The permitted `skills-manifest.json` at `<skills-root>/` is allowed but not required; it is not drift.
 
 ## Directories
 
@@ -45,8 +51,14 @@ A correct minimal skill is SKILL.md alone (flat, and complete).
 | `tests/` | `*.test.*` covering `scripts/` | any |
 | `examples/` | sample input/output showing expected shape | any |
 
-If content fits SKILL.md without pushing past ~400 words, keep it inline.
+If content fits `SKILL.md` without pushing past ~400 words, keep it inline.
 Create a subdir only when it has real content, never speculatively.
+
+**References threshold (normal preference):** Deep docs belong in
+`references/` only when they exceed ~100 lines (the normal preference for
+long reference material). A narrow allowance exists for short,
+independently routed references that a skill's own contract explicitly
+requires; do not pad docs to reach the threshold.
 
 ## Naming
 
@@ -69,7 +81,7 @@ Route a new file by kind:
 - sample data -> `examples/`
 - anything else: only `SKILL.md` or `LICENSE` may sit at the skill root
 
-Never: a second `README.md` (SKILL.md is the entry point); `*.test.*` at the
+Never: a second `README.md` (`SKILL.md` is the entry point); `*.test.*` at the
 skill root; package manifests or `node_modules` in an authored skill, because
 scripts run through `bun`.
 
@@ -107,10 +119,11 @@ upstream layout untouched. Reinstalls would revert any restructuring.
 
 ## Creating a skill
 
-1. `mkdir ~/.agents/skills/<kebab-name>/`
+1. `mkdir <skills-root>/<kebab-name>/`
 2. Write `SKILL.md` with `name:` equal to the directory.
 3. Add subdirs only when content demands (see Placement).
-4. Register as authored and back up to the sync repo.
+4. Register as authored and back up to the sync repo within `skill-framework`
+   (see `.ai-sync/manifest.json` workflow; do not hand-edit the manifest).
 
 ## Mirror checklist
 
@@ -118,6 +131,19 @@ Auditing or cloning an existing skill:
 
 1. dir == `name:` == kebab, no forbidden suffix
 2. exactly one `SKILL.md`, no `README.md`
-3. no loose files at skills root or skill root
+3. no loose files at skills root or skill root except the permitted `skills-manifest.json` (allowed, not required)
 4. heavy docs in `references/`, code in `scripts/`, tests in `tests/`
 5. no package manifest or `node_modules`
+
+## Framework integration rules
+
+- Apply this layout guidance to all authored skills, whether or not they contain
+  executable tools.
+- Consuming skills bundle copied primitives and import no code from
+  `skill-framework` at runtime.
+- The framework references only `skill://writing-skills` externally; all other
+  guidance and examples must be self-contained and generic.
+- No root `README.md`, no shared runtime package, and no code-distribution
+  generator are added to the framework.
+- Repository policy edits stay within the existing `.ai-sync/manifest.json`
+  workflow.

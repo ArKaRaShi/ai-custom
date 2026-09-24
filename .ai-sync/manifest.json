@@ -264,20 +264,20 @@
     {
       "kind": "skill",
       "root": "agents",
-      "path": "standard-skill-layout",
-      "sync": true,
-      "skill": {
-        "origin": "authored"
-      }
-    },
-    {
-      "kind": "skill",
-      "root": "agents",
       "path": "ai-sync",
       "sync": true,
       "skill": {
         "origin": "authored",
         "description": "Cross-machine sync harness for OMP rules, hooks, configs, and skills"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "skill-framework",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
       }
     }
   ]
