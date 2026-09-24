@@ -4,12 +4,15 @@ import * as path from "path";
 import * as os from "os";
 import { createHash } from "crypto";
 import { execSync } from "child_process";
-import type { SkillManifestEntry } from "./manifest";
-import { DEFAULT_REPO, HOME, TARGET_MAP, SyncOptions, matchesPattern } from "./targets";
-import { LOCAL_MANIFEST_FILE, loadManifest, withOriginFilter, SkillOrigin } from "./manifest";
-import { checkGitRemoteStatus } from "./git";
-import { createPathMatcher, loadPathManifest } from "./path-manifest";
-import { printSyncSummary } from "./reporting";
+import { DEFAULT_REPO, HOME, SyncOptions, matchesPattern } from "./targets";
+import {
+  loadLocations,
+  loadUnifiedManifest,
+  pathRuleMatches,
+  resolveRootPaths,
+  type ResolvedRoot,
+  type SyncEntry,
+} from "./unified-manifest";
 
 export function sha256(filePath: string): string {
   try {
@@ -63,6 +66,46 @@ export function getGitIgnoredSet(repoBase: string, relPaths: string[]): Set<stri
   }
   return ignored;
 }
+interface ResolvedSyncTarget {
+  local: string;
+  repo: string;
+  name: string;
+  category: string;
+  rootId: string;
+  entries: SyncEntry[];
+}
+
+function getSyncTargets(repoBase: string): ResolvedSyncTarget[] {
+  const manifest = loadUnifiedManifest(repoBase);
+  const roots: ResolvedRoot[] = resolveRootPaths(manifest, loadLocations(), repoBase);
+  const targets: ResolvedSyncTarget[] = [];
+  for (const root of roots) {
+    const entries = manifest.entries.filter((entry) => entry.root === root.id);
+    if (root.kind === "path") {
+      targets.push({ ...root, name: root.id, category: root.id, rootId: root.id, entries });
+    } else {
+      for (const entry of entries) {
+        if (entry.kind === "skill" && entry.sync) {
+          targets.push({
+            local: path.join(root.local, entry.path), repo: path.join(root.repo, entry.path),
+            name: entry.path, category: "skills", rootId: root.id, entries: [entry],
+          });
+        }
+      }
+    }
+  }
+  return targets;
+}
+
+
+function targetForPath(targets: ResolvedSyncTarget[], value: string, side: "local" | "repo"): { target: ResolvedSyncTarget; relative: string } | undefined {
+  for (const target of targets) {
+    const base = target[side];
+    const relative = path.relative(base, value);
+    if (relative !== "" && relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative)) return { target, relative };
+  }
+  return undefined;
+}
 
 export interface DiffReport {
   missingInRepo: string[];
@@ -79,25 +122,25 @@ export function compare(repoBase = DEFAULT_REPO, opts: SyncOptions = {}): DiffRe
     inSync: 0,
   };
 
-  const targets = opts.target
-    ? TARGET_MAP.filter((item) =>
-        item.category.includes(opts.target!.toLowerCase()) ||
-        item.name.toLowerCase().includes(opts.target!.toLowerCase())
-      )
-    : TARGET_MAP;
-  const shouldSyncPath = createPathMatcher(loadPathManifest(repoBase));
+  const targets = getSyncTargets(repoBase).filter((item) =>
+    !opts.target || item.category.toLowerCase().includes(opts.target.toLowerCase()) ||
+    item.name.toLowerCase().includes(opts.target.toLowerCase()),
+  );
 
   for (const item of targets) {
-    const adjustedRepo = item.repo.replace(DEFAULT_REPO, repoBase);
-    const policyAllows = (relativePath: string): boolean =>
-      item.category === "skills" ||
-      shouldSyncPath(path.relative(repoBase, path.join(adjustedRepo, relativePath)));
+    const adjustedRepo = item.repo;
+    const policyAllows = (relativePath: string): boolean => {
+      if (item.category === "skills") return true;
+      let allowed = false;
+      for (const entry of item.entries) {
+        if (entry.kind === "path" && pathRuleMatches(entry, relativePath)) allowed = entry.sync;
+      }
+      return allowed;
+    };
 
-    // Single file comparison
     if (fs.existsSync(item.local) && fs.statSync(item.local).isFile()) {
       const rel = path.basename(item.local);
-      if (opts.exclude && matchesPattern(rel, opts.exclude)) continue;
-      if (!shouldSyncPath(path.relative(repoBase, adjustedRepo).replace(/\\/g, "/"))) continue;
+      if (!policyAllows(rel) || opts.exclude && matchesPattern(rel, opts.exclude)) continue;
 
       if (!fs.existsSync(adjustedRepo)) {
         report.missingInRepo.push(item.local);
@@ -219,291 +262,127 @@ export function cmdDiff(fileA: string, fileB: string): string {
   }
 }
 
-export function cmdStatus(repoBase = DEFAULT_REPO, opts: SyncOptions = {}) {
-  console.log(`\n🔍 Scanning AI Custom Harness & Skills:`);
+export function cmdStatus(repoBase = DEFAULT_REPO, opts: SyncOptions = {}): void {
+  console.log(`\n🔍 ai-sync status`);
   console.log(`   Machine Home : ${HOME}`);
   console.log(`   Repo Root    : ${repoBase}`);
   if (opts.target) console.log(`   Target Scope : ${opts.target}`);
-  if (opts.exclude && opts.exclude.length > 0) console.log(`   Excluding    : ${opts.exclude.join(", ")}`);
-  console.log();
 
-  // Git status check
-  const gitInfo = checkGitRemoteStatus(repoBase);
-  if (gitInfo.isGit) {
-    const icon = gitInfo.behind > 0 ? "⚠️ " : gitInfo.ahead > 0 ? "⬆️ " : "🌐";
-    console.log(`Git Status (${path.basename(repoBase)}):`);
-    console.log(`   ${icon} ${gitInfo.message}\n`);
+  const manifest = loadUnifiedManifest(repoBase);
+  const locations = loadLocations();
+  const missing = Object.keys(manifest.roots).filter((id) => !locations.roots[id]);
+  for (const [id, root] of Object.entries(manifest.roots)) {
+    console.log(`   ${id} (${root.kind}): ${root.repoRoot}${locations.roots[id] ? ` -> ${locations.roots[id]}` : " -> UNBOUND"}`);
+  }
+  for (const entry of manifest.entries) {
+    console.log(`   ${entry.sync ? "sync" : "local"} ${entry.root}:${entry.path}`);
+  }
+  if (missing.length) {
+    console.log(`Missing local bindings: ${missing.join(", ")}. Run 'root bind' for each root.`);
+    return;
   }
 
-  // Skill provenance: external and ignored skills stay off the shared git backup
-  const manifest = loadManifest(LOCAL_MANIFEST_FILE);
-  const skillsDir = path.join(HOME, ".agents", "skills");
-  const localSkillDirs = fs.existsSync(skillsDir)
-    ? fs.readdirSync(skillsDir, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name)
-    : [];
-  const untracked = localSkillDirs.filter((n) => !manifest.skills[n]);
-  if (localSkillDirs.length > 0) {
-    const filterSkills = (origin: SkillOrigin, sync: boolean) =>
-      Object.entries(manifest.skills).filter(
-        ([n, e]) => e.origin === origin && e.sync === sync && localSkillDirs.includes(n),
-      );
-    const fmt = (entries: Array<[string, SkillManifestEntry]>) =>
-      entries.map(([n, e]) => (e.source ? `${n} (${e.source}${e.version ? "@" + e.version : ""})` : n)).join(", ") || "—";
-
-    console.log(`📋 Skill Manifest (${LOCAL_MANIFEST_FILE.replace(HOME, "~")}):`);
-    console.log(`   ✍️  authored (sync: true)  : ${fmt(filterSkills("authored", true))}`);
-    console.log(`   🏠 authored (sync: false) : ${fmt(filterSkills("authored", false))} — local only, excluded from git`);
-    console.log(`   🌐 external (sync: false) : ${fmt(filterSkills("external", false))} — pointer only, excluded from git`);
-    const externalSynced = filterSkills("external", true);
-    if (externalSynced.length > 0) {
-      console.log(`   📦 external (sync: true)  : ${fmt(externalSynced)} — vendored full source into git`);
-    }
-    if (untracked.length > 0) {
-      console.log(`   ❓ untracked              : ${untracked.join(", ")} — run 'sync.ts track <name> <authored|external> [--sync|--no-sync]'`);
-    }
-    console.log();
-  }
-  const pathManifest = loadPathManifest(repoBase);
-  const pathIsSynced = createPathMatcher(pathManifest);
-  console.log(`📋 Non-skill path policy (${path.join(repoBase, ".ai-sync/manifest.json")}):`);
-  for (const rule of pathManifest.rules) console.log(`   ${rule.sync ? "include" : "exclude"} ${rule.pattern}`);
-  let candidateCount = 0;
-  for (const target of TARGET_MAP.filter((item) => item.category !== "skills")) {
-    const repoRoot = target.repo.replace(DEFAULT_REPO, repoBase);
-    for (const localFile of getAllFiles(target.local)) {
-      const rel = path.relative(target.local, localFile);
-      const repoRel = path.relative(repoBase, path.join(repoRoot, rel)).replace(/\\/g, "/");
-      if (!pathIsSynced(repoRel) && !fs.existsSync(path.join(repoRoot, rel))) {
-        console.log(`   Candidate (local only): ${repoRel}`);
-        candidateCount++;
-      }
-    }
-  }
-  if (!candidateCount) console.log("   No local-only candidates");
-  console.log();
-
-  const report = compare(repoBase, withOriginFilter(opts, manifest));
-
-  console.log(`📊 Status Overview:`);
-  console.log(`   ✨ In Sync   : ${report.inSync} files`);
-  console.log(`   🟡 New Local : ${report.missingInRepo.length} files (not backed up)`);
-  console.log(`   🔴 New Repo  : ${report.missingInLocal.length} files (missing on machine)`);
-  console.log(`   🔵 Modified  : ${report.modified.length} files (diff detected)\n`);
-
-  if (report.missingInRepo.length > 0) {
-    console.log(`🟡 Files on Machine needing backup to repo (run 'ai-sync push'):`);
-    for (const f of report.missingInRepo) console.log(`   + ${path.relative(HOME, f)}`);
-    console.log();
-  }
-
-  if (report.missingInLocal.length > 0) {
-    console.log(`🔴 Files in Repo needing sync to Machine (run 'ai-sync pull'):`);
-    for (const f of report.missingInLocal) console.log(`   + ${path.relative(repoBase, f)}`);
-    console.log();
-  }
-
-  if (report.modified.length > 0) {
-    console.log(`🔵 Modified Files (content mismatch):`);
-    for (const f of report.modified) console.log(`   ~ ${path.relative(HOME, f)}`);
-    console.log();
-  }
-
-  if (report.missingInRepo.length === 0 && report.missingInLocal.length === 0 && report.modified.length === 0) {
-    console.log(`✅ 100% In Sync! All extensions, TTSR rules, hooks, and skills match perfectly.\n`);
-  }
-  printSyncSummary(manifest);
+  const report = compare(repoBase, opts);
+  console.log(`\n📊 Status Overview:`);
+  console.log(`   In Sync   : ${report.inSync} files`);
+  console.log(`   New Local : ${report.missingInRepo.length} files`);
+  console.log(`   New Repo  : ${report.missingInLocal.length} files`);
+  console.log(`   Modified  : ${report.modified.length} files`);
 }
 
-export function cmdPull(repoBase = DEFAULT_REPO, opts: SyncOptions = {}) {
-  console.log(`\n⬇️  Pulling custom OMP & Skills from ${repoBase} into local machine...`);
-  if (opts.target) console.log(`   Target Scope : ${opts.target}`);
-  if (opts.exclude && opts.exclude.length > 0) console.log(`   Excluding    : ${opts.exclude.join(", ")}`);
-
-  const report = compare(repoBase, withOriginFilter(opts));
+export function cmdPull(repoBase = DEFAULT_REPO, opts: SyncOptions = {}): void {
+  console.log(`\n⬇️  Pulling files from ${repoBase} into local roots...`);
+  const report = compare(repoBase, opts);
+  const targets = getSyncTargets(repoBase);
   let updated = 0;
-
-  for (const rf of report.missingInLocal) {
-    for (const item of TARGET_MAP) {
-      const adjustedRepo = item.repo.replace(DEFAULT_REPO, repoBase);
-      if (rf.startsWith(adjustedRepo)) {
-        const rel = path.relative(adjustedRepo, rf);
-        const targetLocal = path.join(item.local, rel);
-        copyFileSafe(rf, targetLocal);
-        console.log(`   [+] Synced: ${rel}`);
-        updated++;
-        break;
-      }
-    }
+  for (const rf of [...report.missingInLocal, ...report.modified.map((local) => {
+    const pair = targetForPath(targets, local, "local");
+    return pair ? path.join(pair.target.repo, pair.relative) : "";
+  }).filter(Boolean)]) {
+    const pair = targetForPath(targets, rf, "repo");
+    if (!pair) continue;
+    const destination = path.join(pair.target.local, pair.relative);
+    copyFileSafe(rf, destination);
+    console.log(`   [+] Synced: ${pair.relative}`);
+    updated++;
   }
-
-  for (const lf of report.modified) {
-    for (const item of TARGET_MAP) {
-      if (lf.startsWith(item.local)) {
-        const rel = path.relative(item.local, lf);
-        const adjustedRepo = item.repo.replace(DEFAULT_REPO, repoBase);
-        const repoPath = path.join(adjustedRepo, rel);
-        if (fs.existsSync(repoPath)) {
-          copyFileSafe(repoPath, lf);
-          console.log(`   [~] Updated: ${rel}`);
-          updated++;
-        }
-        break;
-      }
-    }
-  }
-
   console.log(`\n✅ Pull complete: ${updated} files updated on this machine.\n`);
-  printSyncSummary(loadManifest(LOCAL_MANIFEST_FILE));
 }
 
-export function cmdPush(repoBase = DEFAULT_REPO, opts: SyncOptions = {}) {
-  console.log(`\n⬆️  Backing up local machine OMP & Skills into ${repoBase}...`);
-  if (opts.target) console.log(`   Target Scope : ${opts.target}`);
-  if (opts.exclude && opts.exclude.length > 0) console.log(`   Excluding    : ${opts.exclude.join(", ")}`);
-
-  const report = compare(repoBase, withOriginFilter(opts));
+export function cmdPush(repoBase = DEFAULT_REPO, opts: SyncOptions = {}): void {
+  console.log(`\n⬆️  Backing up local roots into ${repoBase}...`);
+  const report = compare(repoBase, opts);
+  const targets = getSyncTargets(repoBase);
   let updated = 0;
-
-  for (const lf of report.missingInRepo) {
-    for (const item of TARGET_MAP) {
-      if (lf.startsWith(item.local)) {
-        const rel = path.relative(item.local, lf);
-        const adjustedRepo = item.repo.replace(DEFAULT_REPO, repoBase);
-        const targetRepo = path.join(adjustedRepo, rel);
-        copyFileSafe(lf, targetRepo);
-        console.log(`   [+] Exported: ${rel}`);
-        updated++;
-        break;
-      }
-    }
+  for (const lf of [...report.missingInRepo, ...report.modified]) {
+    const pair = targetForPath(targets, lf, "local");
+    if (!pair) continue;
+    const destination = path.join(pair.target.repo, pair.relative);
+    copyFileSafe(lf, destination);
+    console.log(`   [+] Exported: ${pair.relative}`);
+    updated++;
   }
-
-  for (const lf of report.modified) {
-    for (const item of TARGET_MAP) {
-      if (lf.startsWith(item.local)) {
-        const rel = path.relative(item.local, lf);
-        const adjustedRepo = item.repo.replace(DEFAULT_REPO, repoBase);
-        const targetRepo = path.join(adjustedRepo, rel);
-        copyFileSafe(lf, targetRepo);
-        console.log(`   [~] Overwrote: ${rel}`);
-        updated++;
-        break;
-      }
-    }
-  }
-
   console.log(`\n✅ Backup complete: ${updated} files backed up to ${repoBase}.\n`);
-  printSyncSummary(loadManifest(LOCAL_MANIFEST_FILE));
 }
 
-export function cmdViewDiff(repoBase = DEFAULT_REPO, opts: SyncOptions = {}) {
+
+export function cmdViewDiff(repoBase = DEFAULT_REPO, opts: SyncOptions = {}): void {
   console.log(`\n🔍 Inspecting diffs between local machine and ${repoBase}...\n`);
-  const report = compare(repoBase, withOriginFilter(opts));
+  const report = compare(repoBase, opts);
+  const targets = getSyncTargets(repoBase);
   if (report.modified.length === 0) {
     console.log(`✨ No content differences found between matching files.\n`);
     return;
   }
-
   for (const localFile of report.modified) {
-    for (const item of TARGET_MAP) {
-      if (localFile.startsWith(item.local)) {
-        const rel = path.relative(item.local, localFile);
-        const adjustedRepo = item.repo.replace(DEFAULT_REPO, repoBase);
-        const repoFile = path.join(adjustedRepo, rel);
-        console.log(`══════════════════════════════════════════════════════════════`);
-        console.log(`File: ${rel}`);
-        console.log(`Local: ${localFile}`);
-        console.log(`Repo : ${repoFile}`);
-        console.log(`══════════════════════════════════════════════════════════════`);
-        const diffText = cmdDiff(localFile, repoFile);
-        console.log(diffText || "(binary or identical)");
-        console.log();
-        break;
-      }
-    }
+    const pair = targetForPath(targets, localFile, "local");
+    if (!pair) continue;
+    const repoFile = path.join(pair.target.repo, pair.relative);
+    console.log(`══════════════════════════════════════════════════════════════`);
+    console.log(`File: ${pair.relative}`);
+    console.log(`Local: ${localFile}`);
+    console.log(`Repo : ${repoFile}`);
+    console.log(`══════════════════════════════════════════════════════════════`);
+    console.log(cmdDiff(localFile, repoFile) || "(binary or identical)");
+    console.log();
   }
 }
 
-export function cmdResolve(repoBase = DEFAULT_REPO, opts: SyncOptions = {}, mode: "interactive" | "merge-all" = "interactive") {
+export function cmdResolve(repoBase = DEFAULT_REPO, opts: SyncOptions = {}, mode: "interactive" | "merge-all" = "interactive"): void {
   console.log(`\n🔄 Resolving divergent files between Local (ours) and Repo (theirs)...\n`);
-  const report = compare(repoBase, withOriginFilter(opts));
+  const report = compare(repoBase, opts);
+  const targets = getSyncTargets(repoBase);
   if (report.modified.length === 0) {
     console.log(`✨ No content differences found between matching files.\n`);
     return;
   }
-
   let resolved = 0;
   for (const localFile of report.modified) {
-    for (const item of TARGET_MAP) {
-      if (localFile.startsWith(item.local)) {
-        const rel = path.relative(item.local, localFile);
-        const adjustedRepo = item.repo.replace(DEFAULT_REPO, repoBase);
-        const repoFile = path.join(adjustedRepo, rel);
-
-        console.log(`══════════════════════════════════════════════════════════════`);
-        console.log(`Conflict / Divergence: ${rel}`);
-        console.log(`Local (ours)  : ${localFile}`);
-        console.log(`Repo (theirs) : ${repoFile}`);
-        console.log(`══════════════════════════════════════════════════════════════`);
-
-        if (mode === "merge-all") {
-          const mergeRes = plainMergeFiles(localFile, repoFile);
-          fs.writeFileSync(localFile, mergeRes.content, "utf8");
-          fs.writeFileSync(repoFile, mergeRes.content, "utf8");
-          if (mergeRes.hasConflicts) {
-            console.log(`⚠️  Merged with conflict markers in both local and repo.`);
-            console.log(`👉 Notice for AI agent: Inspect conflict markers (<<<<<<< / >>>>>>>) and suggest rephrased synthesis.`);
-          } else {
-            console.log(`✅ Cleanly combined changes from both local and repo!`);
-          }
-          resolved++;
-          break;
-        }
-
-        // Non-interactive or script fallback if no TTY
-        console.log(`Options:`);
-        console.log(`  [d] View diff`);
-        console.log(`  [1] Keep ours (Local) -> overwrites Repo`);
-        console.log(`  [2] Accept theirs (Repo) -> overwrites Local`);
-        console.log(`  [3] Combine (Plain 3-way merge)`);
-        console.log(`  [s] Skip`);
-
-        let choice = "3"; // default to combine in non-interactive / agent mode
-        if (process.stdin.isTTY) {
-          const prompt = require("readline-sync");
-          choice = prompt.question("Choice [d/1/2/3/s] (default: 3): ").trim() || "3";
-        } else {
-          console.log(`Running in non-interactive / agent environment: defaulting to [3] Combine.`);
-        }
-
-        if (choice === "d") {
-          console.log(cmdDiff(localFile, repoFile));
-          continue;
-        } else if (choice === "1") {
-          copyFileSafe(localFile, repoFile);
-          console.log(`[~] Kept ours (Local): overwrote repo.`);
-          resolved++;
-        } else if (choice === "2") {
-          copyFileSafe(repoFile, localFile);
-          console.log(`[~] Accepted theirs (Repo): overwrote local.`);
-          resolved++;
-        } else if (choice === "3") {
-          const mergeRes = plainMergeFiles(localFile, repoFile);
-          fs.writeFileSync(localFile, mergeRes.content, "utf8");
-          fs.writeFileSync(repoFile, mergeRes.content, "utf8");
-          if (mergeRes.hasConflicts) {
-            console.log(`⚠️  Merged with conflict markers in both local and repo.`);
-            console.log(`👉 Action: Review conflict markers (<<<<<<< / >>>>>>>) and rephrase combined section.`);
-          } else {
-            console.log(`✅ Cleanly combined changes from both local and repo!`);
-          }
-          resolved++;
-        } else {
-          console.log(`[s] Skipped.`);
-        }
-        console.log();
-        break;
-      }
+    const pair = targetForPath(targets, localFile, "local");
+    if (!pair) continue;
+    const repoFile = path.join(pair.target.repo, pair.relative);
+    console.log(`Conflict / Divergence: ${pair.relative}`);
+    if (mode === "merge-all") {
+      const mergeRes = plainMergeFiles(localFile, repoFile);
+      fs.writeFileSync(localFile, mergeRes.content, "utf8");
+      fs.writeFileSync(repoFile, mergeRes.content, "utf8");
+      console.log(mergeRes.hasConflicts ? "Merged with conflict markers; review before keeping." : "Cleanly combined changes from both copies.");
+      resolved++;
+      continue;
+    }
+    let choice = "3";
+    if (process.stdin.isTTY) {
+      const prompt = require("readline-sync");
+      choice = prompt.question("Choice [d/1/2/3/s] (default: 3): ").trim() || "3";
+    }
+    if (choice === "d") console.log(cmdDiff(localFile, repoFile));
+    else if (choice === "1") { copyFileSafe(localFile, repoFile); resolved++; }
+    else if (choice === "2") { copyFileSafe(repoFile, localFile); resolved++; }
+    else if (choice === "3") {
+      const mergeRes = plainMergeFiles(localFile, repoFile);
+      fs.writeFileSync(localFile, mergeRes.content, "utf8");
+      fs.writeFileSync(repoFile, mergeRes.content, "utf8");
+      resolved++;
     }
   }
   console.log(`\n🎉 Resolve finished: ${resolved} file(s) updated.\n`);

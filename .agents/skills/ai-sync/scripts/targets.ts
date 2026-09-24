@@ -6,79 +6,14 @@ export const HOME = os.homedir();
 export const DEFAULT_REPO = process.env.AI_CUSTOM_REPO || path.join(HOME, "Disk", "ai-custom");
 export const SKILLS_DIR = process.env.AGENTS_SKILLS_DIR || path.join(HOME, ".agents", "skills");
 
-export interface SyncTarget {
-  local: string;
-  repo: string;
-  name: string;
-  category: string;
-}
-
-export const TARGET_MAP: Array<SyncTarget> = [
-  {
-    name: "OMP Config",
-    category: "config",
-    local: path.join(HOME, ".omp", "agent", "config.yml"),
-    repo: path.join(DEFAULT_REPO, ".omp", "config.yml"),
-  },
-  {
-    name: "OMP MCP",
-    category: "mcp",
-    local: path.join(HOME, ".omp", "agent", "mcp.json"),
-    repo: path.join(DEFAULT_REPO, ".omp", "mcp.json"),
-  },
-  {
-    name: "OMP Instructions",
-    category: "instructions",
-    local: path.join(HOME, ".omp", "agent", "AGENTS.md"),
-    repo: path.join(DEFAULT_REPO, ".omp", "AGENTS.md"),
-  },
-  {
-    name: "OMP Agents",
-    category: "agents",
-    local: path.join(HOME, ".omp", "agent", "agents"),
-    repo: path.join(DEFAULT_REPO, ".omp", "agents"),
-  },
-  {
-    name: "OMP Extensions",
-    category: "extensions",
-    local: path.join(HOME, ".omp", "agent", "extensions"),
-    repo: path.join(DEFAULT_REPO, ".omp", "extensions"),
-  },
-  {
-    name: "OMP Rules",
-    category: "rules",
-    local: path.join(HOME, ".omp", "agent", "rules"),
-    repo: path.join(DEFAULT_REPO, ".omp", "rules"),
-  },
-  {
-    name: "OMP Hooks",
-    category: "hooks",
-    local: path.join(HOME, ".omp", "agent", "hooks"),
-    repo: path.join(DEFAULT_REPO, ".omp", "hooks"),
-  },
-  {
-    name: "OMP Tests",
-    category: "tests",
-    local: path.join(HOME, ".omp", "agent", "tests"),
-    repo: path.join(DEFAULT_REPO, ".omp", "tests"),
-  },
-  {
-    name: "User Skills",
-    category: "skills",
-    local: SKILLS_DIR,
-    repo: path.join(DEFAULT_REPO, ".agents", "skills"),
-  },
-];
 
 export interface SyncOptions {
   target?: string;
   exclude?: string[];
-  /** bypass origin filtering: include external/local skills in sync ops */
+  /** retained only to ensure this flag cannot alter manifest policy */
   includeLocal?: boolean;
-  /** persist auto-detected manifest entries during discovery */
+  /** persist detected entries during discovery */
   write?: boolean;
-  /** apply a manifest cleanup after printing its candidates */
-  apply?: boolean;
 }
 
 export function matchesPattern(relPath: string, patterns: string[]): boolean {
