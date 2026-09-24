@@ -352,6 +352,36 @@ async function testEnvFileDatabaseUrlPrecedence(): Promise<void> {
     rmSync(tmp, { recursive: true, force: true });
   }
 }
+async function testHelpFlags(): Promise<void> {
+  // Top-level --help and -h
+  let res = await runCli("--help");
+  if (res.exitCode !== 0 || !res.stdout.includes("Usage:")) {
+    throw new Error(`expected --help to exit 0 with usage text, got code=${res.exitCode}, out=${res.stdout}, err=${res.stderr}`);
+  }
+  res = await runCli("-h");
+  if (res.exitCode !== 0 || !res.stdout.includes("Usage:")) {
+    throw new Error(`expected -h to exit 0 with usage text, got code=${res.exitCode}`);
+  }
+
+  // Engine level help: e.g. mysql --help
+  res = await runCli("mysql", "--help");
+  if (res.exitCode !== 0 || !res.stdout.includes("Usage:")) {
+    throw new Error(`expected engine --help to exit 0 with usage text, got code=${res.exitCode}`);
+  }
+
+  // Subcommand level help: e.g. mysql drop --help
+  res = await runCli("mysql", "drop", "--help");
+  if (res.exitCode !== 0 || !res.stdout.includes("Usage:")) {
+    throw new Error(`expected 'mysql drop --help' to exit 0 with usage text, got code=${res.exitCode}`);
+  }
+
+  // Subcommand with identifier then help: e.g. sqlite create feature-x --help
+  res = await runCli("sqlite", "create", "feature-x", "--help");
+  if (res.exitCode !== 0 || !res.stdout.includes("Usage:")) {
+    throw new Error(`expected 'sqlite create feature-x --help' to exit 0 with usage, got code=${res.exitCode}`);
+  }
+}
+
 
 async function demo(): Promise<void> {
   const tests: [string, () => void | Promise<void>][] = [
@@ -368,8 +398,10 @@ async function demo(): Promise<void> {
     ["testSymlinkedBasePathAliasing", testSymlinkedBasePathAliasing],
     ["testParseDbUrl", testParseDbUrl],
     ["testEnvFileDatabaseUrlPrecedence", testEnvFileDatabaseUrlPrecedence],
+    ["testHelpFlags", testHelpFlags],
   ];
   for (const [name, fn] of tests) {
+    await fn();
     console.log(`ok: ${name}`);
   }
   console.log("all checks passed");

@@ -58,13 +58,33 @@ function parseArgs(argv: string[]): { positional: string[]; flags: Flags } {
   const flags: Flags = {};
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg.startsWith("--")) {
-      flags[arg.slice(2)] = argv[++i];
+    if (arg === "-h") {
+      flags.h = "true";
+    } else if (arg.startsWith("--")) {
+      const value = argv[i + 1];
+      if (value !== undefined && !value.startsWith("-")) {
+        flags[arg.slice(2)] = value;
+        i++;
+      } else {
+        flags[arg.slice(2)] = "true";
+      }
     } else {
       positional.push(arg);
     }
   }
   return { positional, flags };
+}
+
+function printHelp(): void {
+  console.log(`Usage:
+  sandbox.ts list
+  sandbox.ts <postgres|mysql|sqlite> list
+  sandbox.ts <engine> create <identifier> --base <base-db-or-path> [--tier bare]
+  sandbox.ts <engine> drop <identifier> --base <base-db-or-path> --confirm DROP
+
+Connection options: --env-file <path>, --host <host>, --port <port>, --user <user>, --password <password>
+Other options: --registry <path>, --force true (drop only), --tier bare|full (create only)
+Use --help after any command or -h for this help.`);
 }
 
 /** Resolve connection + base db name/path from --flags, --env-file, then ambient env. */
@@ -214,6 +234,12 @@ function cmdList(flags: Flags): void {
 
 async function main(): Promise<void> {
   const { positional, flags } = parseArgs(process.argv.slice(2));
+  if (flags.help === "true" || flags.h === "true") {
+    printHelp();
+    return;
+  }
+
+
 
   // `list` is the only command that works without picking an engine first -
   // it's the whole-machine view across every engine, sharing one registry.
@@ -227,6 +253,10 @@ async function main(): Promise<void> {
     throw new Error(`engine must be one of: ${Object.keys(REGISTRY).join(", ")}`);
   }
   const engineName = engineArg as EngineName;
+  if (!command && flags.help === "true") {
+    printHelp();
+    return;
+  }
 
   if (command === "create") {
     if (!identifier) throw new Error("create requires an identifier");
