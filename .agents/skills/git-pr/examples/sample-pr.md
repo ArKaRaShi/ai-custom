@@ -29,8 +29,35 @@ fix(orders): retry transient API failures
 Transient API failures could fail an otherwise recoverable orders task. Add bounded retry handling and cover the behavior with tests.
 
 ## Testing
-- `pytest tests/test_orders.py` (passed)
+Ran `pytest tests/test_orders.py` (3 passed)
+
+**Test cases:**
+- `added`: `test_retry_on_transient_503` — verifies automatic backoff on server error
+- `added`: `test_fail_fast_on_400` — confirms immediate rejection without retrying
 ```
+
+## Multi-piece change with test suite refactoring
+
+```markdown
+feat(auth): add session revocation and modernize auth tests
+
+## Summary
+Adds server-side session revocation endpoint and migrates auth test suites to modern test runner conventions.
+
+## What's included
+- **Revocation API**: Adds `DELETE /api/v1/sessions/:id` endpoint.
+- **Token invalidation**: Invalidates refresh tokens on revocation.
+
+## Testing
+Ran `npm test -- test/auth/` (24 passed)
+
+**Test cases (compact delta):**
+- `added`: `test_revoke_active_session` — verifies 204 status and token invalidation
+- `updated`: `test_expired_token_rejected` — reflects updated 401 error envelope format
+
+**Test suite refactoring:**
+- Migrated 22 legacy test cases to modern runner conventions with shared fixtures.
+- Preserved all assertion invariants with zero behavioral regressions.
 
 ## Existing PR edit
 

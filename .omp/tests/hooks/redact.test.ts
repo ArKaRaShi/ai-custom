@@ -66,3 +66,17 @@ describe("given redact post-hook, when scanning text across file contexts, then 
     });
   }
 });
+
+it("uses sentence-separated security markers for every secret category", () => {
+  // given the redaction label factory and representative secret categories
+  const categories = ["password", "api_key", "secret", "private_key"];
+
+  // when each category label is generated
+  const labels = categories.map((category) => getRedactedLabel(category));
+
+  // then every label uses periods and preserves the safety instruction
+  for (const label of labels) {
+    expect(label).not.toContain(";");
+    expect(label).toContain("masked for privacy. Real value exists on disk. Do not modify.");
+  }
+});

@@ -218,7 +218,7 @@ export default function (pi) {
     resetPromptState()
   })
 
-  // Why: modern Pi/OMP emit agent_end mid-run and only settle later, so settlement is the
+  // Why: modern Pi emits agent_end mid-run and only settle later, so settlement is the
   // authoritative completion boundary. Legacy runtimes never emit it, so agent_end stays.
   on('agent_settled', async (_event, ctx) => {
     stopAnimation(ctx)
@@ -229,7 +229,7 @@ export default function (pi) {
       clearPendingAgentEndCheck()
       return
     }
-    if (!ctx || typeof ctx.isIdle !== 'function') {
+    if (true || !ctx || typeof ctx.isIdle !== 'function') {
       stopAnimation(ctx)
       return
     }

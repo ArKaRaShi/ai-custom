@@ -140,7 +140,47 @@ describe("given quota-status extension, when rendering usage sparklines and form
     expect(output).toContain("40%");
     expect(output).toContain("󰥔 3h0m @15:00");
     // Pool capacity pill
-    expect(output).toContain("[pool: 2 accts · 1.60× left]");
+    expect(output).toContain("[pool: 2 accts · 0 exhausted · 2 available · 1.60× left]");
+  });
+
+  it("shows exhausted and available account counts instead of an exhausted account quota", () => {
+    // given one exhausted account and one account with remaining 5h quota
+    const mockUsage: UsagePayload = {
+      reports: [
+        {
+          provider: "google-antigravity",
+          limits: [{ id: "5h", amount: { usedFraction: 1 } }],
+        },
+        {
+          provider: "google-antigravity",
+          limits: [{ id: "5h", amount: { usedFraction: 0.31 } }],
+        },
+      ],
+    };
+
+    // when the provider status is rendered
+    const output = buildProviderSparklineString("google-antigravity", mockUsage);
+
+    // then the summary shows account availability without exposing 100% as provider-wide usage
+    expect(output).toContain("[pool: 2 accts · 1 exhausted · 1 available]");
+    expect(output).not.toContain("100%");
+  });
+
+  it("applies account summary to non-Antigravity providers", () => {
+    // given one exhausted and one available OpenAI account
+    const mockUsage: UsagePayload = {
+      reports: [
+        { provider: "openai-codex", limits: [{ id: "5h", amount: { usedFraction: 1 } }] },
+        { provider: "openai-codex", limits: [{ id: "5h", amount: { usedFraction: 0.2 } }] },
+      ],
+    };
+
+    // when the provider status is rendered
+    const output = buildProviderSparklineString("openai-codex", mockUsage);
+
+    // then the same dynamic account summary is used
+    expect(output).toContain("[pool: 2 accts · 1 exhausted · 1 available]");
+    expect(output).not.toContain("100%");
   });
 
   it("buildProviderSparklineString renders multi-window for Claude", () => {

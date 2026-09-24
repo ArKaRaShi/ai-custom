@@ -6,65 +6,36 @@ description: >
   an emoji commit, a plain conventional commit, or just "write a commit".
 ---
 
-Write terse, exact Conventional Commits. Pick a subject **Style** (emoji or plain), then a body **Depth** (zero, prose, or bulleted). Style and Depth are independent.
+Draft concise Conventional Commit messages for each proposed change group.
 
 ## Repo Attribution Check (do first)
 
 Before drafting, check the repo's own instructions (AGENTS.md, CLAUDE.md, CONTRIBUTING.md) for a mandated commit trailer.
 
 - Repo specifies one (e.g. `Co-Authored-By: Claude <noreply@anthropic.com>`) → include it verbatim as the last line, every time, regardless of Style or Depth.
-- Repo specifies nothing → omit AI attribution trailers by default (see Exclusions).
+- Repo specifies nothing → omit AI attribution trailers.
 
-## Subject Style
 
-Determine style from the request's signal words:
+## Change Scope and Commit Groups
 
-- **Emoji**: "emoji", "icon", a literal symbol (✨), "make it fun"
-- **Plain**: "conventional", "no emoji", "standard", "professional"
+Inspect the complete working tree before proposing commit messages, even when the index is empty. Run `git status --short`, `git diff --cached`, and `git diff`. Review files Git does not track when needed. Include staged, unstaged, and mixed changes.
 
-**Neither signal present → ask one question before writing the message:** "Emoji or plain conventional commit?" Never guess when ambiguous.
+Group related changes by intent, proposing one commit group and message for each coherent unit and listing its files or changes. When diffs leave intent unclear, keep changes separate and ask whether the user wants to include them, since an empty staging area does not block this workflow.
 
-Once known:
+Do not stage or commit. If the user later stages a group, check its message against that staged diff.
 
-- **Emoji**: one symbol after the colon, `<type>(<scope>): ✨ <summary>`
-- **Plain**: no symbol, `<type>(<scope>): <summary>`
+Do not infer a message from `base...HEAD` or session memory. Describe final behavior, not branch-internal churn.
 
-`<scope>` optional (`<type>: ✨ <summary>`). Imperative mood ("add", "fix", "remove", not "added"/"adds"). ≤50 chars ideal, hard cap 72.
+## Message Style
 
-### Type-to-Icon (Emoji style only)
+Follow explicit user style instructions first. Otherwise, inspect recent repository commit subjects and follow their consistent plain or emoji style. When recent commits use both styles or fail to establish a pattern, ask the user to choose before drafting.
 
-| Type | Emoji | Unicode | Purpose |
-| --- | --- | --- | --- |
-| `feat` | ✨ | ✦ | New feature |
-| `fix` | 🐛 | ✖ | Bug fix |
-| `refactor` | ♻️ | ↺ | Restructure, same behavior |
-| `perf` | ⚡ | ⚡ | Performance |
-| `docs` | 📝 | ✎ | Documentation |
-| `test` | 🧪 | ✓ | Tests |
-| `chore` | 🔧 | ⚙ | Tooling, deps, maintenance |
-| `ci` | 🤖 | ⚑ | CI/CD |
-| `build` | 📦 | ▤ | Build, packaging |
-| `style` | 🎨 | ❖ | Formatting |
-| `revert` | ⏪ | ↶ | Revert |
+After choosing a style, read only its reference: [emoji](references/emoji-style.md) or [plain](references/plain-style.md).
 
-## Body Depth
+Keep subjects imperative, under 50 characters when practical, and never over 72. The scope is optional.
 
-- **Zero:** atomic/trivial change. No body that restates the subject.
-- **Prose (1-2 sentences):** an architectural tradeoff or a *why* the diff alone doesn't explain. Wrap at 72.
-- **Bulleted (2-4 `-` bullets):** 2-4 discrete changes. 5+ → split the commit.
-
-## Auto-Clarity
-
-A Zero body is never acceptable for breaking changes (`!` in type or a `BREAKING CHANGE:` footer), security patches, database migrations, or reverts.
-
-## Exclusions
-
-- 5+ bullets: split the commit instead.
-- Bullets that merely restate the subject line.
-- "This commit does X", "I", "we", "now", "currently".
-- AI attribution trailers ("Generated with…", a `Co-Authored-By` AI line): default only. See Repo Attribution Check above.
-- Asterisks (`*`) for bullets: always use `-`.
+Choose body depth independently. Omit it for atomic changes. Use one or two rationale sentences or two to four bullets for distinct changes. Include a body for breaking changes, security fixes, migrations, and reverts. Split groups that need five or more bullets.
 
 ## Boundary
 
-Generates the message only. Does not stage files or run `git commit`. Output the message in one Markdown code block, ready to paste.
+Present each proposed message in its own Markdown code block.

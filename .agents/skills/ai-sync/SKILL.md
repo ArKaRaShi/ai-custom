@@ -71,6 +71,22 @@ bun "$SKILL_DIR/scripts/sync.ts" migrate-manifest --apply
 bun "$SKILL_DIR/scripts/sync.ts" bootstrap
 ```
 
+## Non-Skill Path Policy
+
+Non-skill files default to local-only. Initialize the policy in an existing backup repo; `init` does not initialize Git, transfer files, or overwrite an existing policy:
+
+```bash
+bun "$SKILL_DIR/scripts/sync.ts" init "$HOME/Disk/ai-custom"
+bun "$SKILL_DIR/scripts/sync.ts" track .omp/extensions
+bun "$SKILL_DIR/scripts/sync.ts" untrack .omp/extensions/orca-agent-status.ts
+```
+
+Rules live in `.ai-sync/manifest.json`. Later rules win. Track `.omp/extensions` to include descendants, then add a later exclusion for `.omp/extensions/orca-agent-status.ts`. That keeps the file local. The `untrack` command preserves both copies and stops future `ai-sync` transfers. It does not delete files or change Git state. `status` lists effective rules and local-only candidates.
+
+The policy format has an explicit version and fails closed. Invalid JSON, unsupported versions, or paths outside configured non-skill targets stop transfers. The CLI does not migrate older policy formats or provide compatibility shims.
+
+On a new Mac, clone the backup, run `bun install` in `.agents/skills/ai-sync/`, then run `bootstrap <repo-path>` from that checkout. If using the copied skill under `~/.agents/skills/ai-sync/`, run `bun install` there too.
+
 ## Conflict Resolution & Merge Protocol
 
 When local and repository files differ, `ours` means the local copy and `theirs` means the repository copy:
@@ -106,7 +122,7 @@ To prevent git repo pollution from massive third-party installations (like `arch
 | --- | --- | --- | --- | --- |
 | **`authored`** | `sync: true` (default) | Custom skills authored by you | ✅ Full source code | Backed up & pulled across all machines |
 | **`authored`** | `sync: false` (`--no-sync`) | Scratchpad, machine-specific test | ❌ Excluded | Never touches shared backup |
-| **`external`** | `sync: false` (default) | Upstream tools (Archify, Caveman, Graphify) | ❌ Only metadata pointer in manifest | Source excluded from git; restored via upstream install |
+| **`external`** | `sync: false` (default) | Upstream tools (Archify, Caveman, Graphify) | Metadata pointer; an old backup source may remain | Future transfers stop; bootstrap installs from upstream |
 | **`external`** | `sync: true` (`--sync`) | Third-party skill you heavily customized | ✅ Full source code | Vendored into your git repo |
 
 ### Manifest File Locations
@@ -131,6 +147,8 @@ bun ~/.agents/skills/ai-sync/scripts/sync.ts track archify external --from tt-a1
 bun ~/.agents/skills/ai-sync/scripts/sync.ts track prototype authored --no-sync
 bun ~/.agents/skills/ai-sync/scripts/sync.ts track my-fork external --sync
 ```
+
+When `track <skill> external --no-sync` changes a skill from syncing to not syncing, the CLI reports any existing backup copy and does not delete it. Ask the user before cleanup. After approval, remove only `.agents/skills/<skill>/` from the backup repo, preserve the manifest pointer, and leave the deletion uncommitted unless asked to commit.
 
 ### Manifest Lifecycle
 

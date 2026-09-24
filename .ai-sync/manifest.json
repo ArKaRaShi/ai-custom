@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "rules": [
+    { "pattern": ".omp/extensions/orca-*", "sync": false }
+  ]
+}

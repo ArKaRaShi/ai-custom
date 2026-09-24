@@ -6,7 +6,7 @@ import type { HookAPI } from "@oh-my-pi/pi-coding-agent/extensibility/hooks";
 // 2. The real value exists on disk and must not be overwritten or modified.
 
 export function getRedactedLabel(category = "credential"): string {
-  return `[OMP_SECURITY_HOOK: ${category} masked for privacy; real value exists on disk, do not modify]`;
+  return `[OMP_SECURITY_HOOK: ${category} masked for privacy. Real value exists on disk. Do not modify.]`;
 }
 
 // Harmless value allowlist: true secrets are never language primitives or protocol keywords

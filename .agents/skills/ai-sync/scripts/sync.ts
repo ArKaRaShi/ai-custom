@@ -2,6 +2,13 @@
 import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
+import {
+  loadPathManifest,
+  normalizePolicyPattern,
+  PATH_MANIFEST_RELATIVE,
+  savePathManifest,
+  setPathRule,
+} from "./path-manifest";
 import { DEFAULT_REPO, SKILLS_DIR, HOME, SyncOptions, TARGET_MAP } from "./targets";
 import {
   autoDetectSkill,
@@ -75,6 +82,66 @@ export {
 } from "./sync-files";
 export type { DiffReport } from "./sync-files";
 
+export { createPathMatcher, isPathSynced, loadPathManifest, normalizePolicyPattern, PATH_MANIFEST_RELATIVE } from "./path-manifest";
+export type { PathManifest, PathRule } from "./path-manifest";
+
+export function cmdInit(repoBase = DEFAULT_REPO): void {
+  const file = path.join(repoBase, PATH_MANIFEST_RELATIVE);
+  if (fs.existsSync(file)) {
+    const manifest = loadPathManifest(repoBase);
+    console.log(`Path policy already exists: ${file}`);
+    for (const rule of manifest.rules) console.log(`   ${rule.sync ? "include" : "exclude"} ${rule.pattern}`);
+    return;
+  }
+  savePathManifest(repoBase, { version: 1, rules: [] });
+  console.log(`Initialized empty path policy: ${file}`);
+  for (const target of TARGET_MAP.filter((item) => item.category !== "skills")) {
+    const repoRoot = target.repo.replace(DEFAULT_REPO, repoBase);
+    const localFiles = getAllFiles(target.local);
+    const repoFiles = getAllFiles(repoRoot);
+    const localRels = new Set(localFiles.map((f) => path.relative(target.local, f)));
+    const repoRels = new Set(repoFiles.map((f) => path.relative(repoRoot, f)));
+    for (const rel of localRels) {
+      if (!repoRels.has(rel)) console.log(`Candidate (local only): ${path.relative(repoBase, path.join(repoRoot, rel))}`);
+    }
+    for (const rel of repoRels) {
+      if (!localRels.has(rel)) console.log(`Candidate (repo only): ${path.relative(repoBase, path.join(repoRoot, rel))}`);
+    }
+  }
+}
+
+export function cmdTrackPath(pattern: string, sync: boolean, repoBase = DEFAULT_REPO): void {
+  const normalized = normalizePolicyPattern(pattern, repoBase);
+  const target = TARGET_MAP.find((item) => {
+    if (item.category === "skills") return false;
+    const root = path.relative(repoBase, item.repo.replace(DEFAULT_REPO, repoBase)).replace(/\\/g, "/");
+    return normalized === root || normalized.startsWith(`${root}/`);
+  });
+  const root = target
+    ? path.relative(repoBase, target.repo.replace(DEFAULT_REPO, repoBase)).replace(/\\/g, "/")
+    : "";
+  const localPath = target && normalized === root
+    ? target.local
+    : target && path.join(target.local, path.relative(root, normalized));
+  const singleFileTarget = target && (
+    ["config", "mcp", "instructions"].includes(target.category) ||
+    (localPath && fs.existsSync(localPath) && fs.statSync(localPath).isFile())
+  );
+  const rulePattern = normalized.endsWith("/**") || singleFileTarget
+    ? normalized
+    : `${normalized.replace(/\/$/, "")}/**`;
+  const manifest = loadPathManifest(repoBase);
+  savePathManifest(repoBase, setPathRule(manifest, rulePattern, sync));
+  console.log(`${sync ? "Tracking" : "Excluding"} ${normalized}`);
+}
+export function cmdUntrackPath(pattern: string, repoBase = DEFAULT_REPO): void {
+  cmdTrackPath(pattern, false, repoBase);
+}
+
+
+function isPathPolicyArgument(value: string): boolean {
+  return value.startsWith(".omp/");
+}
 export function cmdTrack(
   skill: string,
   origin: SkillOrigin,
@@ -89,6 +156,9 @@ export function cmdTrack(
   const sync = meta.sync !== undefined ? meta.sync : origin === "authored";
 
   const manifest = loadManifest(LOCAL_MANIFEST_FILE);
+  const repoManifestFile = repoManifestPath(repoBase);
+  const repoManifest = loadManifest(repoManifestFile);
+  const wasSynced = manifest.skills[skill]?.sync === true || repoManifest.skills[skill]?.sync === true;
   manifest.skills[skill] = {
     origin,
     sync,
@@ -98,12 +168,16 @@ export function cmdTrack(
   saveManifest(LOCAL_MANIFEST_FILE, manifest);
   console.log(`📋 Tracked '${skill}' as ${origin} (sync: ${sync})${meta.from ? ` (${meta.from}${meta.version ? "@" + meta.version : ""})` : ""} in ${LOCAL_MANIFEST_FILE.replace(HOME, "~")}`);
 
-  // All skills (whether synced or pointer-only) update the shared repo manifest
-  const repoManifestFile = repoManifestPath(repoBase);
-  const repoManifest = loadManifest(repoManifestFile);
   repoManifest.skills[skill] = manifest.skills[skill];
   saveManifest(repoManifestFile, repoManifest);
   console.log(`   🌐 Repo manifest updated: ${repoManifestFile.replace(HOME, "~")} (commit with your next push)`);
+  if (wasSynced && !sync) {
+    const repoSkillPath = path.join(repoBase, ".agents", "skills", skill);
+    if (fs.existsSync(repoSkillPath)) {
+      console.log(`⚠️ Sync disabled for '${skill}'. Future transfers will skip it.`);
+      console.log(`   Existing backup copy remains at ${path.relative(repoBase, repoSkillPath)}; no files were deleted. Ask the user before removing it from the backup.`);
+    }
+  }
 }
 
 export function cmdUntrack(skill: string, repoBase = DEFAULT_REPO): void {
@@ -114,7 +188,6 @@ export function cmdUntrack(skill: string, repoBase = DEFAULT_REPO): void {
   }
   console.log(`📋 Untracked '${skill}' from ${result.local ? "local" : "shared"}${result.local && result.shared ? " and shared" : ""} manifest${result.local || result.shared ? "s" : ""}. Skill files were not deleted.`);
 }
-
 export function cmdPruneManifest(apply = false): void {
   const manifest = loadManifest(LOCAL_MANIFEST_FILE);
   const installedSkills = fs.existsSync(SKILLS_DIR)
@@ -154,15 +227,8 @@ export function cmdMigrateManifest(repoBase = DEFAULT_REPO, apply = false): void
 }
 
 export function cmdBootstrap(repoBase = DEFAULT_REPO) {
-  console.log(`\n🚀 Bootstrapping skills from ${repoBase}...`);
-  const repoManifestFile = repoManifestPath(repoBase);
-  const repoManifest = loadManifest(repoManifestFile);
-  if (Object.keys(repoManifest.skills).length === 0) {
-    console.log(`❌ No ${MANIFEST_FILENAME} found in repo. Run 'sync.ts track <skill> authored' on a machine that has skills first.\n`);
-    return;
-  }
-
-  // Seed the local manifest without overwriting this machine's own settings
+  console.log(`\n🚀 Bootstrapping from ${repoBase}...`);
+  const repoManifest = loadManifest(repoManifestPath(repoBase));
   const localManifest = loadManifest(LOCAL_MANIFEST_FILE);
   let seeded = 0;
   for (const [name, entry] of Object.entries(repoManifest.skills)) {
@@ -173,22 +239,12 @@ export function cmdBootstrap(repoBase = DEFAULT_REPO) {
   }
   saveManifest(LOCAL_MANIFEST_FILE, localManifest);
   console.log(`   📋 Local manifest updated with ${seeded} new entr${seeded === 1 ? "y" : "ies"} (${Object.keys(localManifest.skills).length} total)`);
+  cmdPull(repoBase);
 
-  // Skills with sync: true come directly from the repo backup
-  const syncedSkills = Object.keys(repoManifest.skills).filter((n) => repoManifest.skills[n].sync === true);
-  if (syncedSkills.length > 0) {
-    console.log(`   ✨ Pulling synced skills: ${syncedSkills.join(", ")}`);
-    cmdPull(repoBase, { target: "skills" });
-  }
-
-  // External skills with install command are installed from upstream
   const skillsDir = path.join(HOME, ".agents", "skills");
   for (const [name, entry] of Object.entries(repoManifest.skills)) {
     if (entry.origin !== "external" || entry.sync === true) continue;
-    if (fs.existsSync(path.join(skillsDir, name))) {
-      console.log(`   ✅ external '${name}' already installed`);
-      continue;
-    }
+    if (fs.existsSync(path.join(skillsDir, name))) continue;
     const installCmd = entry.install || (entry.source ? `npx -y skills add ${entry.source} -g` : null);
     if (!installCmd) {
       console.log(`   ⚠️  external '${name}' has no install command or source — install manually`);
@@ -371,18 +427,20 @@ export function parseArgs(rawArgs: string[]): {
   }
 
   if (positional[0]) command = positional[0];
-  // track/bootstrap take skill names as positionals, not target categories
   const rest = positional.slice(1);
-  if (command !== "track" && command !== "untrack" && command !== "prune-manifest" && command !== "migrate-manifest" && command !== "bootstrap" && command !== "discover" && rest[0]) {
-    // If rest[0] is an existing dir or starts with / or ~, it is custom repo.
-    // Otherwise, it can be treated as target category if not already set.
+  if (command === "init") {
+    if (rest[0]) repo = rest[0].replace(/^~/, HOME);
+  } else if (command !== "track" && command !== "untrack" && command !== "prune-manifest" && command !== "migrate-manifest" && command !== "bootstrap" && command !== "discover" && rest[0]) {
     if (rest[0].startsWith("/") || rest[0].startsWith("~") || fs.existsSync(rest[0])) {
       repo = rest[0].replace(/^~/, HOME);
     } else if (!opts.target) {
       opts.target = rest[0];
     }
   }
-  if (command !== "track" && command !== "untrack" && command !== "prune-manifest" && command !== "migrate-manifest" && command !== "bootstrap" && command !== "discover" && rest[1] && !repo) {
+  if ((command === "track" || command === "untrack") && rest[0] && isPathPolicyArgument(rest[0]) && rest[1]) {
+    repo = rest[1].replace(/^~/, HOME);
+  }
+  if (command !== "track" && command !== "untrack" && command !== "prune-manifest" && command !== "migrate-manifest" && command !== "bootstrap" && command !== "discover" && command !== "init" && rest[1] && !repo) {
     repo = rest[1].replace(/^~/, HOME);
   }
 
@@ -418,22 +476,24 @@ if (import.meta.main) {
     case "save":
       cmdPush(repo, opts);
       break;
+    case "init":
+      cmdInit(repo);
+      break;
     case "track":
-      if (!args[0] || !args[1]) {
-        console.log(`Usage: bun sync.ts track <skill> <authored|external> [--sync|--no-sync] [--from <owner/repo>] [--version <v>]`);
+      if (!args[0] || (!args[1] && !isPathPolicyArgument(args[0]))) {
+        console.log(`Usage: bun sync.ts track <skill> <authored|external> | track <repo-relative-path>`);
         process.exit(1);
       }
-      cmdTrack(args[0], args[1] as SkillOrigin, meta, repo);
+      if (isPathPolicyArgument(args[0])) cmdTrackPath(args[0], true, repo);
+      else cmdTrack(args[0], args[1] as SkillOrigin, meta, repo);
       break;
     case "untrack":
       if (!args[0]) {
-        console.log(`Usage: bun sync.ts untrack <skill>`);
+        console.log(`Usage: bun sync.ts untrack <skill|repo-relative-path>`);
         process.exit(1);
       }
-      cmdUntrack(args[0], repo);
-      break;
-    case "prune-manifest":
-      cmdPruneManifest(opts.apply === true);
+      if (isPathPolicyArgument(args[0])) cmdUntrackPath(args[0], repo);
+      else cmdUntrack(args[0], repo);
       break;
     case "migrate-manifest":
       cmdMigrateManifest(repo, opts.apply === true);

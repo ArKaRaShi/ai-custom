@@ -205,16 +205,17 @@ export function buildProviderSparklineString(
 
   if (!matchingReports || matchingReports.length === 0) return "";
 
-  // 1. Pick the Active Account:
-  // Sort accounts so that the one with active short-window usage (5h) comes first.
+  const hasMultipleAccounts = matchingReports.length > 1;
   const activeReport = [...matchingReports].sort((a, b) => {
     const shortLimitA = a.limits?.find((l) => /5h|5\s*hour/i.test(l.id || l.label || ""));
     const shortLimitB = b.limits?.find((l) => /5h|5\s*hour/i.test(l.id || l.label || ""));
     const usedA = shortLimitA?.amount?.usedFraction ?? 0;
     const usedB = shortLimitB?.amount?.usedFraction ?? 0;
-    if (usedA !== usedB) return usedB - usedA; // highest 5h activity first
+    const exhaustedA = usedA >= 1 ? 1 : 0;
+    const exhaustedB = usedB >= 1 ? 1 : 0;
+    if (exhaustedA !== exhaustedB) return exhaustedA - exhaustedB;
+    if (usedA !== usedB) return usedB - usedA;
 
-    // Fallback: highest overall max window usage
     const maxA = Math.max(0, ...(a.limits || []).map((l) => l.amount?.usedFraction ?? 0));
     const maxB = Math.max(0, ...(b.limits || []).map((l) => l.amount?.usedFraction ?? 0));
     return maxB - maxA;
@@ -253,10 +254,10 @@ export function buildProviderSparklineString(
     const fraction = l.amount?.usedFraction ?? 0;
     const pct = Math.round(fraction * 100);
     const resetStr = l.window?.resetsAt ? ` 󰥔 ${formatReset(l.window.resetsAt, now)}` : "";
-
-    // Collapse 100% exhausted quota into a compact alert pill tag
     if (pct >= 100) {
-      activeBars.push(`󰀪 [${name}: 100%${resetStr}]`);
+      if (!hasMultipleAccounts) {
+        activeBars.push(`󰀪 [${name}: 100%${resetStr}]`);
+      }
       continue;
     }
 
@@ -279,14 +280,27 @@ export function buildProviderSparklineString(
     result += `  (${idleSummaries.join(" · ")})`;
   }
 
-  // Multi-Account Pool Capacity Pill
-  const capacityList = usageData.capacity?.[provider];
-  if (capacityList && capacityList.length > 0) {
-    const primaryCap = capacityList.find((c) => /5h/i.test(c.window || "")) || capacityList[0];
-    if (primaryCap && (primaryCap.accounts ?? 0) > 1) {
-      const leftRatio = (primaryCap.remainingAccounts ?? 0).toFixed(2);
-      result += `  [pool: ${primaryCap.accounts} accts · ${leftRatio}× left]`;
+  if (hasMultipleAccounts) {
+    const exhaustedAccounts = matchingReports.filter((report) => {
+      const shortLimit = report.limits?.find((l) => /5h|5\s*hour/i.test(l.id || l.label || ""));
+      const fraction = shortLimit?.amount?.usedFraction ?? Math.max(
+        0,
+        ...(report.limits || []).map((l) => l.amount?.usedFraction ?? 0),
+      );
+      return fraction >= 1;
+    }).length;
+    const availableAccounts = matchingReports.length - exhaustedAccounts;
+    const poolParts = [
+      `${matchingReports.length} accts`,
+      `${exhaustedAccounts} exhausted`,
+      `${availableAccounts} available`,
+    ];
+    const capacityList = usageData.capacity?.[provider];
+    const primaryCap = capacityList?.find((c) => /5h/i.test(c.window || "")) || capacityList?.[0];
+    if (primaryCap?.remainingAccounts !== undefined) {
+      poolParts.push(`${primaryCap.remainingAccounts.toFixed(2)}× left`);
     }
+    result += `  [pool: ${poolParts.join(" · ")}]`;
   }
 
   const syncTag = formatSyncTime(fetchedAtMs, now);

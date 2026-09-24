@@ -1,9 +1,9 @@
 // ~/.omp/agent/hooks/post/smart-terminal-notifier.ts
 // Native macOS audio and banner notification hook for Oh My Pi:
-//   agent_start             -> Ping.aiff
-//   agent_end               -> Glass.aiff + native banner (when in background)
-//   tool_approval_requested -> Hero.aiff + native banner (always)
-//   session_before_compact  -> Pop.aiff + native banner
+//   agent_start             -> Blop.mp3
+//   agent_end               -> Ding.mp3 + native banner (when in background)
+//   tool_approval_requested -> Bong.mp3 + native banner (always)
+//   session_before_compact  -> Thump.mp3 + native banner
 import type { HookAPI } from "@oh-my-pi/pi-coding-agent/extensibility/hooks";
 
 interface ToolApprovalEvent {
@@ -11,10 +11,10 @@ interface ToolApprovalEvent {
 }
 
 const SOUNDS = {
-  ping: "/System/Library/Sounds/Ping.aiff",
-  glass: "/System/Library/Sounds/Glass.aiff",
-  pop: "/System/Library/Sounds/Pop.aiff",
-  hero: "/System/Library/Sounds/Hero.aiff",
+  ping: `${process.env.HOME}/.omp/sounds/blop.mp3`,
+  glass: `${process.env.HOME}/.omp/sounds/ding.mp3`,
+  pop: `${process.env.HOME}/.omp/sounds/thump.mp3`,
+  hero: `${process.env.HOME}/.omp/sounds/bong.mp3`,
 } as const;
 
 async function isTerminalActive(pi: HookAPI): Promise<boolean> {
@@ -54,7 +54,7 @@ export default function smartTerminalNotifier(pi: HookAPI): void {
     if (!terminalActive) {
       void Promise.all([
         pi.exec("afplay", [SOUNDS.glass]).catch(() => {}),
-        showNotification(pi, ctx.cwd, "Session finished", "Glass"),
+        showNotification(pi, ctx.cwd, "Session finished"),
       ]);
     } else {
       void pi.exec("afplay", [SOUNDS.glass]).catch(() => {});
@@ -66,7 +66,7 @@ export default function smartTerminalNotifier(pi: HookAPI): void {
     const toolName = toolEvent?.toolName ? `Approval: ${toolEvent.toolName}` : "Approval required";
     void Promise.all([
       pi.exec("afplay", [SOUNDS.hero]).catch(() => {}),
-      showNotification(pi, ctx.cwd, toolName, "Hero"),
+      showNotification(pi, ctx.cwd, toolName),
     ]);
   });
 
@@ -75,7 +75,7 @@ export default function smartTerminalNotifier(pi: HookAPI): void {
     if (!terminalActive) {
       void Promise.all([
         pi.exec("afplay", [SOUNDS.pop]).catch(() => {}),
-        showNotification(pi, ctx.cwd, "Context compacting...", "Pop"),
+        showNotification(pi, ctx.cwd, "Context compacting..."),
       ]);
     } else {
       void pi.exec("afplay", [SOUNDS.pop]).catch(() => {});

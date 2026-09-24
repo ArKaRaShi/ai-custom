@@ -109,11 +109,17 @@ Every PR description MUST have:
 
 ### `## Testing`
 
-- **Trigger:** when tests or verification steps ran.
+- **Trigger:** when tests or verification steps ran, or when test files changed in the diff.
 - **Content:**
-  - Exact command(s) run and actual pass/fail counts.
-  - Linting or typecheck status if verified.
-
+  - **Verification commands:** exact command(s) run and actual pass/fail/skip counts.
+  - **Test case delta (grounded on `<base>...HEAD`):**
+    - **Added tests:** new test cases protecting newly added or fixed behaviors.
+    - **Updated / Fixed tests:** existing tests adjusted for updated contracts or flaky assertions.
+    - **Refactored / Migrated suites:** structural test restructuring (e.g. framework migrations, suite consolidation, helper refactors) with zero loss of behavioral coverage.
+  - **Proportional scaling rule:**
+    - **Compact delta (≤ 5 test cases):** flat bullet list naming each test case and its covered invariant.
+    - **Broad delta (> 5 test cases):** wrap inside a collapsible `<details><summary><b>View N added/updated test cases</b></summary>` block or group by component.
+    - **Suite refactor / migration:** summarize the structural migration pattern in 2 to 3 bullets instead of dumping dozens of mechanical test renames.
 ### `## Related PRs`
 
 - **Trigger:** cross-repo dependencies, frontend-vs-backend PRs, or prerequisite PRs exist.

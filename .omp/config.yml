@@ -1,5 +1,5 @@
 modelRoles:
-  smol: litellm/gemini-3.8-flash:auto
+  smol: litellm/vertex_ai/zai-org/glm-5-maas
   slow: openai-codex/gpt-6-sol:high
   vision: anthropic/claude-sonnet-5:auto
   plan: anthropic/claude-sonnet-5:xhigh

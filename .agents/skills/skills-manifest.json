@@ -9,8 +9,7 @@
     },
     "archify": {
       "origin": "external",
-      "sync": true,
-      "detectionReason": "matched in repo"
+      "sync": false
     },
     "db-sandbox": {
       "origin": "authored",

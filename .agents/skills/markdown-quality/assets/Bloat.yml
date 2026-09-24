@@ -1,0 +1,39 @@
+extends: existence
+message: "Paragraph exceeds 120 words; consider splitting or tightening."
+level: warning
+scope: paragraph
+nonword: true
+tokens:
+  - '(?:\S+\s+){120,}\S+'
+---
+extends: existence
+message: "Heading appears to contain a full sentence (>12 words); prefer a tighter title."
+level: suggestion
+scope: heading
+nonword: true
+tokens:
+  - '^(?:\S+\s+){12,}\S+\s*$'
+---
+extends: existence
+message: "List nested more than 3 levels deep; consider flattening or refactoring."
+level: warning
+scope: raw
+nonword: true
+tokens:
+  - '^(?:\s{6,})[-*+]\s'
+---
+extends: existence
+message: "Possible empty section (heading with no following content)."
+level: warning
+scope: raw
+nonword: false
+tokens:
+  - '^#{1,6}\s+.*\n(?:\s*\n)*#{1,6}\s+'
+---
+extends: existence
+message: "TODO/FIXME marker left in published doc."
+level: error
+scope: raw
+nonword: false
+tokens:
+  - '\b(?:TODO|FIXME|XXX|HACK)\b'

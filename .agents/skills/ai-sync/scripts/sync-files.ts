@@ -8,6 +8,7 @@ import type { SkillManifestEntry } from "./manifest";
 import { DEFAULT_REPO, HOME, TARGET_MAP, SyncOptions, matchesPattern } from "./targets";
 import { LOCAL_MANIFEST_FILE, loadManifest, withOriginFilter, SkillOrigin } from "./manifest";
 import { checkGitRemoteStatus } from "./git";
+import { createPathMatcher, loadPathManifest } from "./path-manifest";
 import { printSyncSummary } from "./reporting";
 
 export function sha256(filePath: string): string {
@@ -84,14 +85,19 @@ export function compare(repoBase = DEFAULT_REPO, opts: SyncOptions = {}): DiffRe
         item.name.toLowerCase().includes(opts.target!.toLowerCase())
       )
     : TARGET_MAP;
+  const shouldSyncPath = createPathMatcher(loadPathManifest(repoBase));
 
   for (const item of targets) {
     const adjustedRepo = item.repo.replace(DEFAULT_REPO, repoBase);
+    const policyAllows = (relativePath: string): boolean =>
+      item.category === "skills" ||
+      shouldSyncPath(path.relative(repoBase, path.join(adjustedRepo, relativePath)));
 
     // Single file comparison
     if (fs.existsSync(item.local) && fs.statSync(item.local).isFile()) {
       const rel = path.basename(item.local);
       if (opts.exclude && matchesPattern(rel, opts.exclude)) continue;
+      if (!shouldSyncPath(path.relative(repoBase, adjustedRepo).replace(/\\/g, "/"))) continue;
 
       if (!fs.existsSync(adjustedRepo)) {
         report.missingInRepo.push(item.local);
@@ -109,6 +115,7 @@ export function compare(repoBase = DEFAULT_REPO, opts: SyncOptions = {}): DiffRe
     const localRelMap = new Map<string, string>();
     for (const lf of localFiles) {
       const rel = path.relative(item.local, lf);
+      if (!policyAllows(rel)) continue;
       if (opts.exclude && matchesPattern(rel, opts.exclude)) continue;
       localRelMap.set(rel, lf);
     }
@@ -116,6 +123,7 @@ export function compare(repoBase = DEFAULT_REPO, opts: SyncOptions = {}): DiffRe
     const repoRelMap = new Map<string, string>();
     for (const rf of repoFiles) {
       const rel = path.relative(adjustedRepo, rf);
+      if (!policyAllows(rel)) continue;
       if (opts.exclude && matchesPattern(rel, opts.exclude)) continue;
       repoRelMap.set(rel, rf);
     }
@@ -255,6 +263,24 @@ export function cmdStatus(repoBase = DEFAULT_REPO, opts: SyncOptions = {}) {
     }
     console.log();
   }
+  const pathManifest = loadPathManifest(repoBase);
+  const pathIsSynced = createPathMatcher(pathManifest);
+  console.log(`📋 Non-skill path policy (${path.join(repoBase, ".ai-sync/manifest.json")}):`);
+  for (const rule of pathManifest.rules) console.log(`   ${rule.sync ? "include" : "exclude"} ${rule.pattern}`);
+  let candidateCount = 0;
+  for (const target of TARGET_MAP.filter((item) => item.category !== "skills")) {
+    const repoRoot = target.repo.replace(DEFAULT_REPO, repoBase);
+    for (const localFile of getAllFiles(target.local)) {
+      const rel = path.relative(target.local, localFile);
+      const repoRel = path.relative(repoBase, path.join(repoRoot, rel)).replace(/\\/g, "/");
+      if (!pathIsSynced(repoRel) && !fs.existsSync(path.join(repoRoot, rel))) {
+        console.log(`   Candidate (local only): ${repoRel}`);
+        candidateCount++;
+      }
+    }
+  }
+  if (!candidateCount) console.log("   No local-only candidates");
+  console.log();
 
   const report = compare(repoBase, withOriginFilter(opts, manifest));
 
