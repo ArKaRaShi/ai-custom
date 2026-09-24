@@ -1,6 +1,284 @@
 {
-  "version": 1,
-  "rules": [
-    { "pattern": ".omp/extensions/orca-*", "sync": false }
+  "version": 2,
+  "roots": {
+    "omp": {
+      "kind": "path",
+      "repoRoot": ".omp"
+    },
+    "agents": {
+      "kind": "skill",
+      "repoRoot": ".agents/skills"
+    }
+  },
+  "entries": [
+    {
+      "kind": "path",
+      "root": "omp",
+      "path": "extensions/orca-*",
+      "sync": false
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "archify",
+      "sync": false,
+      "skill": {
+        "origin": "external"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "db-sandbox",
+      "sync": true,
+      "skill": {
+        "origin": "authored",
+        "description": "Disposable database sandbox per branch/worktree"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "domain-modeling",
+      "sync": false,
+      "skill": {
+        "origin": "external",
+        "description": "DDD ubiquitous language and domain model tool"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "find-skills",
+      "sync": false,
+      "skill": {
+        "origin": "external",
+        "description": "Skill discovery tool for agent ecosystems"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "git-pr",
+      "sync": true,
+      "skill": {
+        "origin": "authored",
+        "description": "PR drafting and review conventional tool"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "grill-me",
+      "sync": false,
+      "skill": {
+        "origin": "external",
+        "description": "Relentless plan interview"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "grill-with-docs",
+      "sync": false,
+      "skill": {
+        "origin": "external",
+        "description": "Relentless plan interview with ADR creation"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "grilling",
+      "sync": false,
+      "skill": {
+        "origin": "external",
+        "description": "Interactive stress-test interviewer"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "isolated-worktree",
+      "sync": true,
+      "skill": {
+        "origin": "authored",
+        "description": "Git worktree isolation for experiments and subagents"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "markdown-quality",
+      "sync": true,
+      "skill": {
+        "origin": "authored",
+        "description": "Markdown and agent doc quality reviewer"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "mentor",
+      "sync": true,
+      "skill": {
+        "origin": "authored",
+        "description": "Senior engineer interactive teaching harness"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "prototype",
+      "sync": false,
+      "skill": {
+        "origin": "external"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "writing-omp-agents",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "obsidian-distill",
+      "sync": true,
+      "skill": {
+        "origin": "authored",
+        "description": "Distill operational session discoveries, runbooks, and gotchas into an Obsidian vault"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "obsidian-consult",
+      "sync": true,
+      "skill": {
+        "origin": "authored",
+        "description": "Consult and navigate the curated Obsidian knowledge vault before guessing commands or parameters"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "grounded-discussion",
+      "sync": true,
+      "skill": {
+        "origin": "authored",
+        "description": "Anchors open-ended technical discussions and evaluations in verifiable repo facts and primary docs with provenance tags"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "frontend-design",
+      "sync": false,
+      "skill": {
+        "origin": "external",
+        "source": "anthropics/skills",
+        "sourceType": "github",
+        "install": "npx skills add anthropics/skills -g"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "web-design-guidelines",
+      "sync": false,
+      "skill": {
+        "origin": "external",
+        "source": "vercel-labs/agent-skills",
+        "sourceType": "github",
+        "install": "npx skills add vercel-labs/agent-skills -g"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "async-ui-testing",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "data-closure",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "plannotator-review",
+      "sync": false,
+      "skill": {
+        "origin": "external"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "plannotator",
+      "sync": false,
+      "skill": {
+        "origin": "external"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "plannotator-last",
+      "sync": false,
+      "skill": {
+        "origin": "external"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "plannotator-annotate",
+      "sync": false,
+      "skill": {
+        "origin": "external"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "git-commit",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "standard-skill-layout",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "ai-sync",
+      "sync": true,
+      "skill": {
+        "origin": "authored",
+        "description": "Cross-machine sync harness for OMP rules, hooks, configs, and skills"
+      }
+    }
   ]
 }
