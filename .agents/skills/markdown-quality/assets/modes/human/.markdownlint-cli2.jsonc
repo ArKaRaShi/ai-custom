@@ -1,0 +1,22 @@
+{
+  "config": {
+    "default": true,
+    "MD013": false,
+    "MD024": { "siblings_only": true },
+    "MD029": false,
+    "MD033": {
+      "allowed_elements": ["details", "summary", "br", "kbd", "sub", "sup", "img", "a", "span"]
+    },
+    "MD040": true,
+    "MD041": false,
+    "MD046": { "style": "fenced" }
+  },
+  "globs": ["**/*.md", "**/*.mdx"],
+  "ignores": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/.next/**"
+  ],
+  "gitignore": true
+}

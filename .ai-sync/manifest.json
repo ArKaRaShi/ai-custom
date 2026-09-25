@@ -167,16 +167,6 @@
     {
       "kind": "skill",
       "root": "agents",
-      "path": "grounded-discussion",
-      "sync": true,
-      "skill": {
-        "origin": "authored",
-        "description": "Anchors open-ended technical discussions and evaluations in verifiable repo facts and primary docs with provenance tags"
-      }
-    },
-    {
-      "kind": "skill",
-      "root": "agents",
       "path": "frontend-design",
       "sync": false,
       "skill": {
@@ -196,15 +186,6 @@
         "source": "vercel-labs/agent-skills",
         "sourceType": "github",
         "install": "npx skills add vercel-labs/agent-skills -g"
-      }
-    },
-    {
-      "kind": "skill",
-      "root": "agents",
-      "path": "async-ui-testing",
-      "sync": true,
-      "skill": {
-        "origin": "authored"
       }
     },
     {
@@ -275,6 +256,15 @@
       "kind": "skill",
       "root": "agents",
       "path": "skill-framework",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "deep-research",
       "sync": true,
       "skill": {
         "origin": "authored"

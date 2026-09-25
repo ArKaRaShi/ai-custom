@@ -1,5 +1,6 @@
 # Skill-Authoring Pressure Scenarios
 
+<!-- vale off -->
 Run each prompt in a fresh context. Baseline runs receive no `skill-framework` guidance. Reuse these exact prompts and criteria for the GREEN runs; load only the relevant framework references. Record observed outputs and verdicts—never infer results.
 
 ## Scenario 1: Generic skill structure under time pressure
@@ -49,7 +50,7 @@ Run each prompt in a fresh context. Baseline runs receive no `skill-framework` g
 Final exact-prompt baseline counts and GREEN outcomes are recorded below. Earlier verbatim responses remain only as historical artifacts where noted; they are not evidence for a later prompt revision.
 
 | Scenario | Baseline | GREEN | Observed evidence |
-|---|---:|---:|---|
+| --- | ---: | ---: | --- |
 | 1. Generic structure | **0/5 pass** (`BaselineS1Final6`–`10`; all failed) | **5/5 pass** (`GreenS1R1`–`R5`) | Every baseline made a root README carrying the rules and SKILL.md pointing to README/old source. Every GREEN output contained only SKILL.md with self-contained incident rules, no README or external source. |
 | 2. CLI parsing | **2/5 pass, 3/5 fail** (original plus `R2`–`R5`) | Initial `GreenS2R1`–`R5`: 3 accepted, 2 syntax mismatches; fixed rerun **5/5 pass** (`GreenS2FixR1`–`R5`) | Baseline failures silently ignored unknown flags and/or defaulted omitted format; two strict implementations met criteria. R2 documented `--format=json` while rejecting equals syntax; R4 accepted equals syntax without documenting it. Follow-up required one sentence in `references/primitives/cli.md` tying documented examples/claimed forms to parser behavior; fixed reruns yielded consistent syntax docs, parser, examples. |
 | 3. Missing writer reference | **0/5 pass** (`BaselineFallbackFinal`, `BaselineS3R3`–`R6`; `BaselineS3R2` canceled, excluded) | First evidence-informed GREEN: **3/5 pass** (`GreenS3EvidenceR1`–`R3`), 2/5 lacked scenario outcome. After fallback fix: **5/5 conceptual response-level pass** (`GreenS3FinalR1`, `R2`, `R5`, `R6`, `R8`; `R3`/`R4` canceled, `R7` lacked a concrete scenario, excluded) | Baselines appended a local/remote rule and skipped scenario/test steps. First GREEN exposed outputs that claimed or deferred evidence without giving concrete evaluated outcomes; fallback now requires the scenario/input and observed result. Final outputs record the supplied RED plus a concrete response-level scenario/result; no external file/runtime execution is claimed.
@@ -109,6 +110,7 @@ The following transcriptions are retained as historical evidence only. The Scena
 ```
 
 `/tmp/skills/change-control/README.md`
+
 ```markdown
 # Incident Recovery
 
@@ -124,6 +126,7 @@ The following transcriptions are retained as historical evidence only. The Scena
 ```
 
 `/tmp/skills/change-control/SKILL.md`
+
 ```markdown
 # Incident Recovery
 

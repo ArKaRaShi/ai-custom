@@ -263,66 +263,162 @@ export function cmdDiff(fileA: string, fileB: string): string {
 }
 
 export function cmdStatus(repoBase = DEFAULT_REPO, opts: SyncOptions = {}): void {
-  console.log(`\n🔍 ai-sync status`);
-  console.log(`   Machine Home : ${HOME}`);
-  console.log(`   Repo Root    : ${repoBase}`);
-  if (opts.target) console.log(`   Target Scope : ${opts.target}`);
-
   const manifest = loadUnifiedManifest(repoBase);
   const locations = loadLocations();
   const missing = Object.keys(manifest.roots).filter((id) => !locations.roots[id]);
-  for (const [id, root] of Object.entries(manifest.roots)) {
-    console.log(`   ${id} (${root.kind}): ${root.repoRoot}${locations.roots[id] ? ` -> ${locations.roots[id]}` : " -> UNBOUND"}`);
-  }
-  for (const entry of manifest.entries) {
-    console.log(`   ${entry.sync ? "sync" : "local"} ${entry.root}:${entry.path}`);
-  }
-  if (missing.length) {
-    console.log(`Missing local bindings: ${missing.join(", ")}. Run 'root bind' for each root.`);
+  const report = compare(repoBase, opts);
+
+  if (opts.format === "json") {
+    console.log(JSON.stringify({
+      tool: "ai-sync",
+      command: "status",
+      status: missing.length ? "error" : "success",
+      fingerprint: {
+        machineHome: HOME,
+        repoRoot: repoBase,
+        targetScope: opts.target ?? "all",
+      },
+      summary: {
+        inSync: report.inSync,
+        newLocal: report.missingInRepo.length,
+        newRepo: report.missingInLocal.length,
+        modified: report.modified.length,
+      },
+      files: {
+        newLocal: report.missingInRepo,
+        newRepo: report.missingInLocal,
+        modified: report.modified,
+      },
+    }, null, 2));
     return;
   }
 
-  const report = compare(repoBase, opts);
-  console.log(`\n📊 Status Overview:`);
-  console.log(`   In Sync   : ${report.inSync} files`);
-  console.log(`   New Local : ${report.missingInRepo.length} files`);
-  console.log(`   New Repo  : ${report.missingInLocal.length} files`);
-  console.log(`   Modified  : ${report.modified.length} files`);
+  console.log(`ai-sync:status [${report.inSync} files in sync]`);
+  console.log(`  ├─ machine_home ${HOME}`);
+  console.log(`  ├─ repo_root    ${repoBase}`);
+  const rootPairs = Object.entries(manifest.roots).map(([id, root]) => `${id} -> ${locations.roots[id] ?? "UNBOUND"}`).join(" · ");
+  console.log(`  ├─ roots        ${rootPairs}`);
+  if (opts.target) console.log(`  ├─ scope        ${opts.target}`);
+  console.log(`  ├─ in_sync      ${report.inSync} files`);
+  console.log(`  ├─ new_local    ${report.missingInRepo.length} files`);
+  console.log(`  ├─ new_repo     ${report.missingInLocal.length} files`);
+  console.log(`  ├─ modified     ${report.modified.length} files`);
+  if (missing.length) {
+    console.log(`  └─ status       ✖ missing local bindings: ${missing.join(", ")}`);
+  } else if (report.missingInRepo.length === 0 && report.missingInLocal.length === 0 && report.modified.length === 0) {
+    console.log(`  └─ status       ✔ in sync`);
+  } else {
+    console.log(`  └─ status       ⚠ drift detected (run push or pull)`);
+  }
 }
 
 export function cmdPull(repoBase = DEFAULT_REPO, opts: SyncOptions = {}): void {
-  console.log(`\n⬇️  Pulling files from ${repoBase} into local roots...`);
   const report = compare(repoBase, opts);
   const targets = getSyncTargets(repoBase);
-  let updated = 0;
-  for (const rf of [...report.missingInLocal, ...report.modified.map((local) => {
+  const toImport = [...report.missingInLocal, ...report.modified.map((local) => {
     const pair = targetForPath(targets, local, "local");
     return pair ? path.join(pair.target.repo, pair.relative) : "";
-  }).filter(Boolean)]) {
+  }).filter(Boolean)].map((rf) => {
     const pair = targetForPath(targets, rf, "repo");
-    if (!pair) continue;
-    const destination = path.join(pair.target.local, pair.relative);
-    copyFileSafe(rf, destination);
-    console.log(`   [+] Synced: ${pair.relative}`);
-    updated++;
+    return pair ? { repo: rf, local: path.join(pair.target.local, pair.relative), relative: pair.relative } : null;
+  }).filter(Boolean) as { repo: string; local: string; relative: string }[];
+
+  const apply = opts.apply === true;
+
+  if (opts.format === "json") {
+    console.log(JSON.stringify({
+      tool: "ai-sync",
+      command: "pull",
+      mode: apply ? "apply" : "preview",
+      status: apply ? "synced" : "preview",
+      fingerprint: {
+        machineHome: HOME,
+        repoRoot: repoBase,
+        fileCount: toImport.length,
+      },
+      files: toImport.map((e) => e.relative),
+    }, null, 2));
+    if (apply) {
+      for (const item of toImport) copyFileSafe(item.repo, item.local);
+    }
+    return;
   }
-  console.log(`\n✅ Pull complete: ${updated} files updated on this machine.\n`);
+
+  if (!apply) {
+    console.log(`ai-sync:pull [preview]`);
+    console.log(`  ├─ repo_root  ${repoBase}`);
+    console.log(`  ├─ to_import  ${toImport.length} file(s)`);
+    if (toImport.length === 0) {
+      console.log(`  └─ status     ✔ nothing to import (in sync)`);
+      return;
+    }
+    for (const item of toImport) {
+      console.log(`  │  ├─ ${item.relative}`);
+    }
+    console.log(`  └─ action     none (preview only; run with --apply to import)`);
+    return;
+  }
+
+  console.log(`ai-sync:pull [apply]`);
+  console.log(`  ├─ repo_root  ${repoBase}`);
+  for (const item of toImport) {
+    copyFileSafe(item.repo, item.local);
+    console.log(`  │  ✔ synced: ${item.relative}`);
+  }
+  console.log(`  └─ status     ✔ pull complete (${toImport.length} files updated)`);
 }
 
 export function cmdPush(repoBase = DEFAULT_REPO, opts: SyncOptions = {}): void {
-  console.log(`\n⬆️  Backing up local roots into ${repoBase}...`);
   const report = compare(repoBase, opts);
   const targets = getSyncTargets(repoBase);
-  let updated = 0;
-  for (const lf of [...report.missingInRepo, ...report.modified]) {
+  const toExport = [...report.missingInRepo, ...report.modified].map((lf) => {
     const pair = targetForPath(targets, lf, "local");
-    if (!pair) continue;
-    const destination = path.join(pair.target.repo, pair.relative);
-    copyFileSafe(lf, destination);
-    console.log(`   [+] Exported: ${pair.relative}`);
-    updated++;
+    return pair ? { local: lf, repo: path.join(pair.target.repo, pair.relative), relative: pair.relative } : null;
+  }).filter(Boolean) as { local: string; repo: string; relative: string }[];
+
+  const apply = opts.apply === true;
+
+  if (opts.format === "json") {
+    console.log(JSON.stringify({
+      tool: "ai-sync",
+      command: "push",
+      mode: apply ? "apply" : "preview",
+      status: apply ? "exported" : "preview",
+      fingerprint: {
+        machineHome: HOME,
+        repoRoot: repoBase,
+        fileCount: toExport.length,
+      },
+      files: toExport.map((e) => e.relative),
+    }, null, 2));
+    if (apply) {
+      for (const item of toExport) copyFileSafe(item.local, item.repo);
+    }
+    return;
   }
-  console.log(`\n✅ Backup complete: ${updated} files backed up to ${repoBase}.\n`);
+
+  if (!apply) {
+    console.log(`ai-sync:push [preview]`);
+    console.log(`  ├─ repo_root  ${repoBase}`);
+    console.log(`  ├─ to_export  ${toExport.length} file(s)`);
+    if (toExport.length === 0) {
+      console.log(`  └─ status     ✔ nothing to export (in sync)`);
+      return;
+    }
+    for (const item of toExport) {
+      console.log(`  │  ├─ ${item.relative}`);
+    }
+    console.log(`  └─ action     none (preview only; run with --apply to export)`);
+    return;
+  }
+
+  console.log(`ai-sync:push [apply]`);
+  console.log(`  ├─ repo_root  ${repoBase}`);
+  for (const item of toExport) {
+    copyFileSafe(item.local, item.repo);
+    console.log(`  │  ✔ exported: ${item.relative}`);
+  }
+  console.log(`  └─ status     ✔ backup complete (${toExport.length} files backed up)`);
 }
 
 

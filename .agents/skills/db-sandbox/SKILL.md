@@ -22,16 +22,20 @@ One disposable, named database clone per unit of work (branch, task, or feature)
 ```bash
 SKILL_DIR="${SKILL_DIR:-$HOME/.agents/skills/db-sandbox}"
 
-# 1. List sandboxes (current engine or whole machine)
-bun "$SKILL_DIR/scripts/sandbox.ts" <postgres|mysql|sqlite> list
+# 1. List sandboxes (human tree or machine JSON)
 bun "$SKILL_DIR/scripts/sandbox.ts" list
+bun "$SKILL_DIR/scripts/sandbox.ts" list --format=json
 
-# 2. Create sandbox (full data copy or --tier bare for schema only)
-bun "$SKILL_DIR/scripts/sandbox.ts" <postgres|mysql|sqlite> create <identifier> --base <base-db-or-path> [--tier bare]
+# 2. Create sandbox (auto-detects engine from base/.env, branch as identifier)
+bun "$SKILL_DIR/scripts/sandbox.ts" create --base ./app.db
+bun "$SKILL_DIR/scripts/sandbox.ts" sqlite create feature-x --base ./app.db [--tier bare]
 
 # 3. Drop sandbox (destructive, requires explicit --confirm DROP)
-bun "$SKILL_DIR/scripts/sandbox.ts" <engine> drop <identifier> --base <base-db-or-path> --confirm DROP
-```
+bun "$SKILL_DIR/scripts/sandbox.ts" drop feature-x --base ./app.db --confirm DROP
+
+# 4. Prune dead entries (safe preview by default, --apply to execute)
+bun "$SKILL_DIR/scripts/sandbox.ts" prune
+bun "$SKILL_DIR/scripts/sandbox.ts" prune --apply
 
 For engine internals and adapter mechanics, see [references/engine-adapters.md](references/engine-adapters.md).
 
@@ -77,6 +81,15 @@ bun "$SKILL_DIR/scripts/sandbox.ts" mysql create feature-x --env-file .env.local
 Result: created demo_ticket_4821.db (tier=full)
 Verified: 3 rows present in widgets
 ```
+
+### Execution Fingerprint
+
+Every command logs a provenance fingerprint in tree logs or JSON:
+- **`project`**: absolute workspace directory
+- **`env_file`**: loaded `.env` configuration file path
+- **`engine`**: resolved engine (`sqlite`, `postgres`, `mysql`)
+- **`base`**: source base database name or file path
+- **`target`**: cloned sandbox database name or file path
 
 ## Guardrails (Code-Enforced)
 

@@ -58,7 +58,7 @@ Ran `npm test -- test/auth/` (24 passed)
 **Test suite refactoring:**
 - Migrated 22 legacy test cases to modern runner conventions with shared fixtures.
 - Preserved all assertion invariants with zero behavioral regressions.
-
+```
 ## Existing PR edit
 
 Shorten redundant prose, but preserve the existing motivation, screenshots, test checklist, reviewer notes, and useful links unless the user asks to remove them.

@@ -65,4 +65,10 @@ describe("given mentor skill specification, when validating contracts and invari
     const content = fs.readFileSync(SKILL_PATH, "utf8");
     expect(content).toMatch(/verify\s+it\s+yourself|runnable|safe\s+read-only|inspect/i);
   });
+
+  it("requires deep-research as a subskill with non-blocking fallback", () => {
+    const content = fs.readFileSync(SKILL_PATH, "utf8");
+    expect(content).toContain("**REQUIRE SUBSKILL:** `deep-research`");
+    expect(content).toContain("without stalling");
+  });
 });

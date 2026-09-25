@@ -10,6 +10,8 @@ export const SKILLS_DIR = process.env.AGENTS_SKILLS_DIR || path.join(HOME, ".age
 export interface SyncOptions {
   target?: string;
   exclude?: string[];
+  format?: "tree" | "json";
+  apply?: boolean;
   /** retained only to ensure this flag cannot alter manifest policy */
   includeLocal?: boolean;
   /** persist detected entries during discovery */

@@ -19,6 +19,25 @@ Create and bootstrap isolated sibling worktrees for independent feature developm
 
 If two tasks must share uncommitted files, they are not independent worktrees. Commit a shared base or use a different workflow.
 
+
+## Quick Reference
+
+Run directly with `bun`:
+
+```bash
+SKILL_DIR="${SKILL_DIR:-$HOME/.agents/skills/isolated-worktree}"
+
+# 1. List active worktrees (tree log or machine JSON)
+bun "$SKILL_DIR/scripts/worktree.ts" list
+bun "$SKILL_DIR/scripts/worktree.ts" list --format=json
+
+# 2. Create isolated sibling worktree
+bun "$SKILL_DIR/scripts/worktree.ts" create <slug> [--base <ref>]
+
+# 3. Teardown worktree (safe preview by default, --apply to execute)
+bun "$SKILL_DIR/scripts/worktree.ts" remove <slug>
+bun "$SKILL_DIR/scripts/worktree.ts" remove <slug> --apply
+```
 ## Workflow
 
 Follow these steps when creating an isolated worktree:
@@ -57,7 +76,7 @@ Check existing worktree paths and branches before creating anything. Reuse an ex
 
 ### 3. Create Worktree
 
-Use Git's worktree mechanism from the chosen base context:
+Use Git worktree commands from the chosen base context:
 
 ```bash
 git worktree add -b <branch> <sibling-path> <base-ref>
@@ -76,7 +95,8 @@ Each worktree must have its own mutable state when running concurrent execution:
 
 - **Environment/config:** separate files or namespaces (never symlink mutable env files).
 - **Ports:** distinct values for every server and sidecar.
-- **Database:** separate database, schema, container, or a safe sandbox (e.g. `db-sandbox`).
+- **Database:** separate database or sandbox.
+  **REQUIRE SUBSKILL:** `db-sandbox` (`skill://db-sandbox`). Use `db-sandbox` to clone a dedicated database copy for the worktree. If `db-sandbox` is unavailable, configure local database credentials manually without stalling.
 - **Caches/build outputs:** separate unless demonstrably read-only.
 - **Containers/networks:** distinct project, container, and network names.
 

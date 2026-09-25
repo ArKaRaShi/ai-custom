@@ -41,10 +41,12 @@ sync track skill archify --root agents --origin external \
   --from tt-a1i/archify --source-type github --version 2.17.0 \
   --install 'npx -y skills add tt-a1i/archify -g' --no-sync
 
-sync status "$REPO"
+sync status "$REPO" [--format=json]
 sync diff "$REPO"
-sync push "$REPO"
-sync pull "$REPO"
+sync push "$REPO"          # preview by default
+sync push "$REPO" --apply  # commit backup export
+sync pull "$REPO"          # preview by default
+sync pull "$REPO" --apply  # commit restore import
 sync resolve "$REPO"
 sync merge "$REPO"
 ```
@@ -56,6 +58,9 @@ sync untrack path extensions/orca-* --root omp  # records an exclusion
 sync untrack skill mentor --root agents         # removes policy only
 ```
 
+## Safe Mutation Contract
+
+File mutations are safe by default. Both `push` and `pull` preview file lists without copying bytes. Pass `--apply` to commit transfers to disk or repository.
 ## Discovery and bootstrap
 
 ```bash

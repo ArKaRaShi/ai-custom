@@ -1,32 +1,17 @@
 #!/usr/bin/env bun
 /**
- * Isolated sandbox database per identifier, across postgres/mysql/sqlite.
- *
- *   SKILL_DIR="${SKILL_DIR:-$HOME/.agents/skills/db-sandbox}"
- *   bun "$SKILL_DIR/scripts/sandbox.ts" postgres create feature-x --base app_dev
- *   bun "$SKILL_DIR/scripts/sandbox.ts" postgres drop feature-x --base app_dev --confirm DROP
- *   bun "$SKILL_DIR/scripts/sandbox.ts" postgres list        # this engine only
- *   bun "$SKILL_DIR/scripts/sandbox.ts" list                 # every engine, whole machine
- *
- * Connection config resolves per field as:
- *   --flag > --env-file entry > ambient process.env > built-in default
- * so a project agent can point --env-file at that project's own .env(.local)
- * (DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME) instead of restating
- * connection info as flags. See SKILL.md for the full pattern and guardrails.
- *
- * Registry defaults to a fixed per-user, per-machine root (defaultRegistryRoot
- * in base.ts), not the invoking cwd - two repos on the same machine share one
- * inventory, so `list` never misses a sandbox another repo created and
- * `create`/`drop` see the same registered entry regardless of which repo
- * runs them. `drop` refuses to remove a sandbox registered from a different
- * project directory unless `--force true` is passed.
+ * Isolated sandbox database per identifier across postgres/mysql/sqlite.
+ * Supports auto-detection of engine, git branch identifier, and safe-by-default preview.
  */
 
 import { existsSync, unlinkSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import {
+  type Conn,
+  type EngineName,
   assertDroppable,
   assertLocalTarget,
-  type Conn,
   defaultRegistryRoot,
   deriveTarget,
   listRegistry,
@@ -38,8 +23,7 @@ import {
   resolveField,
   writeRegistry,
 } from "./base";
-import { type EngineName, REGISTRY } from "./engines";
-import { type CloneMode } from "./engines/postgres";
+import { type CloneMode, REGISTRY } from "./engines";
 import * as postgres from "./engines/postgres";
 
 type Flags = Record<string, string>;
@@ -52,7 +36,6 @@ export function createsTargetBeforeClone(
   return tier !== "full" || engineName !== "postgres" || postgresCloneMode === "logical";
 }
 
-
 function parseArgs(argv: string[]): { positional: string[]; flags: Flags } {
   const positional: string[] = [];
   const flags: Flags = {};
@@ -61,12 +44,17 @@ function parseArgs(argv: string[]): { positional: string[]; flags: Flags } {
     if (arg === "-h") {
       flags.h = "true";
     } else if (arg.startsWith("--")) {
-      const value = argv[i + 1];
-      if (value !== undefined && !value.startsWith("-")) {
-        flags[arg.slice(2)] = value;
-        i++;
+      const eqIdx = arg.indexOf("=");
+      if (eqIdx !== -1) {
+        flags[arg.slice(2, eqIdx)] = arg.slice(eqIdx + 1);
       } else {
-        flags[arg.slice(2)] = "true";
+        const next = argv[i + 1];
+        if (next !== undefined && !next.startsWith("-")) {
+          flags[arg.slice(2)] = next;
+          i++;
+        } else {
+          flags[arg.slice(2)] = "true";
+        }
       }
     } else {
       positional.push(arg);
@@ -77,20 +65,52 @@ function parseArgs(argv: string[]): { positional: string[]; flags: Flags } {
 
 function printHelp(): void {
   console.log(`Usage:
-  sandbox.ts list
-  sandbox.ts <postgres|mysql|sqlite> list
-  sandbox.ts <engine> create <identifier> --base <base-db-or-path> [--tier bare]
-  sandbox.ts <engine> drop <identifier> --base <base-db-or-path> --confirm DROP
+  sandbox.ts list [--engine <engine>] [--format=json]
+  sandbox.ts prune [--apply] [--format=json]
+  sandbox.ts [engine] create [identifier] --base <base-db-or-path> [--tier bare|full]
+  sandbox.ts [engine] drop <identifier> --base <base-db-or-path> --confirm DROP [--force true]
+
+Auto-detection:
+  - If engine is omitted, it auto-detects from --base or .env (e.g. .db -> sqlite).
+  - If identifier is omitted on create, it defaults to the current git branch name.
+  - prune defaults to safe preview; pass --apply to execute deletions.
 
 Connection options: --env-file <path>, --host <host>, --port <port>, --user <user>, --password <password>
-Other options: --registry <path>, --force true (drop only), --tier bare|full (create only)
-Use --help after any command or -h for this help.`);
+Other options: --registry <path>, --format json|text`);
 }
 
-/** Resolve connection + base db name/path from --flags, --env-file, then ambient env. */
+function autoDetectCurrentBranch(): string | undefined {
+  const proc = Bun.spawnSync(["git", "branch", "--show-current"], {
+    cwd: process.cwd(),
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  if (proc.exitCode === 0) {
+    const branch = proc.stdout.toString().trim();
+    if (branch.length > 0) return branch;
+  }
+  return undefined;
+}
+
+function autoDetectEngine(base?: string, dbUrl?: string): EngineName {
+  if (base && (base.endsWith(".db") || base.endsWith(".sqlite") || base.endsWith(".sqlite3"))) {
+    return "sqlite";
+  }
+  if (dbUrl) {
+    if (dbUrl.startsWith("postgres://") || dbUrl.startsWith("postgresql://")) return "postgres";
+    if (dbUrl.startsWith("mysql://")) return "mysql";
+    if (dbUrl.startsWith("sqlite://") || dbUrl.includes(".db")) return "sqlite";
+  }
+  return "sqlite";
+}
+
 function resolveConfig(engineName: EngineName, flags: Flags): { conn: Conn; base: string | undefined } {
   const envFileValues = flags["env-file"] ? loadEnvFile(flags["env-file"]) : {};
-  const dbUrl = envFileValues.DATABASE_URL ?? envFileValues.DATABASE_URI ?? process.env.DATABASE_URL ?? process.env.DATABASE_URI;
+  const dbUrl =
+    envFileValues.DATABASE_URL ??
+    envFileValues.DATABASE_URI ??
+    process.env.DATABASE_URL ??
+    process.env.DATABASE_URI;
   const parsedUrl = parseDbUrl(dbUrl);
 
   const conn: Conn = {
@@ -119,9 +139,6 @@ async function cmdCreate(engineName: EngineName, identifier: string, flags: Flag
     assertLocalTarget(conn.host ?? "localhost");
   }
 
-  // Self-heal: a registered entry whose target no longer exists in the
-  // database (dropped by hand, or a create that died mid-clone) must not
-  // permanently squat the identifier - prune it instead of refusing forever.
   const existing = readRegistry(registryDir, engineName, conn, base, normId);
   if (existing) {
     if (await engine.exists(conn, existing.SANDBOX_DB)) {
@@ -137,7 +154,6 @@ async function cmdCreate(engineName: EngineName, identifier: string, flags: Flag
   if (await engine.exists(conn, target)) {
     throw new Error(`target already exists in the database itself: '${target}'`);
   }
-
 
   const postgresCloneMode =
     engineName === "postgres" && tier === "full"
@@ -160,13 +176,41 @@ async function cmdCreate(engineName: EngineName, identifier: string, flags: Flag
     }
     writeRegistry(registryDir, engineName, conn, base, normId, target, project);
   } catch (err) {
-    // Template clones create the target only on success; logical clones use
-    // a target created above.
-    if (targetCreated) await engine.drop(conn, target);
+    if (targetCreated) {
+      try {
+        await engine.drop(conn, target);
+      } catch {
+        // preserve original error
+      }
+    }
     throw err;
   }
 
-  console.log(`created: ${target} (tier=${tier})`);
+  if (flags.format === "json") {
+    console.log(JSON.stringify({
+      tool: "db-sandbox",
+      command: "create",
+      status: "created",
+      fingerprint: {
+        project,
+        env_file: flags["env-file"] ?? "none",
+        branch: identifier,
+        engine: engineName,
+        base,
+        target,
+        tier,
+      },
+    }, null, 2));
+  } else {
+    console.log(`db-sandbox:create [${engineName}]`);
+    console.log(`  ├─ project   ${project}`);
+    if (flags["env-file"]) {
+      console.log(`  ├─ env_file  ${flags["env-file"]}`);
+    }
+    console.log(`  ├─ base      ${base}`);
+    console.log(`  ├─ target    ${target}`);
+    console.log(`  └─ status    ✔ created (${tier} copy)`);
+  }
 }
 
 async function cmdDrop(engineName: EngineName, identifier: string, flags: Flags): Promise<void> {
@@ -190,9 +234,6 @@ async function cmdDrop(engineName: EngineName, identifier: string, flags: Flags)
   const target = entry?.SANDBOX_DB ?? deriveTarget(engineName, base, normId);
   assertDroppable(base, target);
 
-  // The registry is shared across every repo on the machine, so a shared
-  // sandbox is also shared destructive access - refuse to drop another
-  // project's sandbox unless explicitly forced.
   if (entry?.PROJECT && entry.PROJECT !== process.cwd() && flags.force !== "true") {
     throw new Error(
       `sandbox '${identifier}' was created from ${entry.PROJECT}, not this repo (${process.cwd()}). ` +
@@ -203,8 +244,6 @@ async function cmdDrop(engineName: EngineName, identifier: string, flags: Flags)
   const path = registryPath(registryDir, engineName, conn, base, normId);
   if (!(await engine.exists(conn, target))) {
     if (entry) {
-      // Already gone from the database (dropped outside the tool) - prune
-      // the stale entry instead of refusing forever.
       if (existsSync(path)) unlinkSync(path);
       console.log(`pruned stale entry: ${target} (already gone from the database)`);
       return;
@@ -214,21 +253,143 @@ async function cmdDrop(engineName: EngineName, identifier: string, flags: Flags)
   await engine.drop(conn, target);
 
   if (existsSync(path)) unlinkSync(path);
-  console.log(`dropped: ${target}`);
+
+  if (flags.format === "json") {
+    console.log(JSON.stringify({
+      tool: "db-sandbox",
+      command: "drop",
+      status: "dropped",
+      fingerprint: {
+        project: process.cwd(),
+        engine: engineName,
+        base,
+        target,
+      },
+    }, null, 2));
+  } else {
+    console.log(`db-sandbox:drop [${engineName}]`);
+    console.log(`  ├─ project   ${process.cwd()}`);
+    console.log(`  ├─ base      ${base}`);
+    console.log(`  ├─ target    ${target}`);
+    console.log(`  └─ status    ✔ dropped`);
+  }
 }
 
 function cmdList(flags: Flags): void {
   const registryDir = flags.registry ?? defaultRegistryRoot();
   const entries = listRegistry(registryDir, { engine: flags.engine, base: flags.base });
-  if (entries.length === 0) {
-    console.log("(no sandboxes registered)");
+
+  if (flags.format === "json") {
+    const jsonOutput = entries.map(([identifier, values]) => ({
+      identifier,
+      engine: values.ENGINE ?? "unknown",
+      sandbox: values.SANDBOX_DB ?? "",
+      base: values.BASE ?? "",
+      project: values.PROJECT ?? "",
+    }));
+    console.log(JSON.stringify({
+      tool: "db-sandbox",
+      command: "list",
+      status: "success",
+      fingerprint: {
+        project: process.cwd(),
+        registry: registryDir,
+        count: entries.length,
+      },
+      sandboxes: jsonOutput,
+    }, null, 2));
     return;
   }
+
+  console.log(`db-sandbox:list [${entries.length} registered]`);
+  console.log(`  (registry: ${registryDir.replace(homedir(), "~")})`);
+  if (entries.length === 0) {
+    console.log("  └─ (no sandboxes registered)");
+    return;
+  }
+  for (let i = 0; i < entries.length; i++) {
+    const isLast = i === entries.length - 1;
+    const branchChar = isLast ? "└─" : "├─";
+    const [identifier, values] = entries[i];
+    console.log(`  ${branchChar} ${identifier}: ${values.ENGINE ?? "?"} -> ${values.SANDBOX_DB ?? "?"} (base=${values.BASE ?? "?"})`);
+  }
+}
+async function cmdPrune(flags: Flags): Promise<void> {
+  const registryDir = flags.registry ?? defaultRegistryRoot();
+  const entries = listRegistry(registryDir, { engine: flags.engine, base: flags.base });
+  const stale: { identifier: string; engine: string; target: string; reason: string; path: string }[] = [];
+
   for (const [identifier, values] of entries) {
-    console.log(
-      `${identifier}: ${values.ENGINE ?? "?"} -> ${values.SANDBOX_DB ?? "?"} ` +
-        `(base=${values.BASE ?? "?"}, project=${values.PROJECT ?? "?"})`,
-    );
+    const engineName = values.ENGINE as EngineName;
+    const target = values.SANDBOX_DB ?? "";
+    const regPath = values.REGISTRY_PATH ?? "";
+    if (!engineName || !(engineName in REGISTRY) || !target) continue;
+
+    const engine = REGISTRY[engineName];
+    const conn: Conn = {
+      host: values.HOST ?? "localhost",
+      port: values.PORT ? Number(values.PORT) : undefined,
+      user: values.USER,
+      password: values.PASSWORD,
+    };
+
+    let exists = false;
+    try {
+      exists = await engine.exists(conn, target);
+    } catch {
+      exists = false;
+    }
+
+    if (!exists) {
+      stale.push({
+        identifier,
+        engine: engineName,
+        target,
+        reason: "target database does not exist on disk/server",
+        path: regPath,
+      });
+    }
+  }
+
+  const apply = flags.apply === "true";
+
+  if (flags.format === "json") {
+    console.log(JSON.stringify({
+      tool: "db-sandbox",
+      command: "prune",
+      status: apply ? "pruned" : "preview",
+      fingerprint: {
+        project: process.cwd(),
+        registry: registryDir,
+        scanned: entries.length,
+        staleCount: stale.length,
+      },
+      stale,
+    }, null, 2));
+  } else {
+    console.log(`db-sandbox:prune [${apply ? "apply" : "preview"}]`);
+    console.log(`  ├─ project   ${process.cwd()}`);
+    console.log(`  ├─ scanned   ${entries.length} registered sandboxes`);
+    if (stale.length === 0) {
+      console.log(`  └─ status    ✔ all sandboxes are healthy (0 stale)`);
+      return;
+    }
+    if (!apply) {
+      console.log(`  ├─ stale     ${stale.length} dead entry/entries found:`);
+      for (const item of stale) {
+        console.log(`  │  └─ [${item.engine}] ${item.identifier} (${item.target}) -> ${item.reason}`);
+      }
+      console.log(`  └─ action    none (preview only; run with --apply to delete)`);
+    } else {
+      console.log(`  ├─ purging   ${stale.length} dead entry/entries:`);
+      for (const item of stale) {
+        if (item.path && existsSync(item.path)) {
+          unlinkSync(item.path);
+        }
+        console.log(`  │  ✔ pruned ${item.identifier}`);
+      }
+      console.log(`  └─ status    ✔ registry clean`);
+    }
   }
 }
 
@@ -239,54 +400,72 @@ async function main(): Promise<void> {
     return;
   }
 
-
-
-  // `list` is the only command that works without picking an engine first -
-  // it's the whole-machine view across every engine, sharing one registry.
   if (positional[0] === "list") {
     cmdList(flags);
     return;
   }
 
-  const [engineArg, command, identifier] = positional;
-  if (!engineArg || !(engineArg in REGISTRY)) {
+  if (positional[0] === "prune") {
+    await cmdPrune(flags);
+    return;
+  }
+
+  let engineName: EngineName | undefined;
+  let command: string | undefined;
+  let identifier: string | undefined;
+
+  const first = positional[0];
+  if (first && first in REGISTRY) {
+    engineName = first as EngineName;
+    command = positional[1];
+    identifier = positional[2];
+  } else if (first === "create" || first === "drop") {
+    command = first;
+    identifier = positional[1];
+    engineName = (flags.engine as EngineName) ?? autoDetectEngine(flags.base, process.env.DATABASE_URL);
+  } else if (first === "list") {
+    cmdList(flags);
+    return;
+  }
+
+  if (flags.help === "true" || flags.h === "true" || (!command && positional.length === 0)) {
+    printHelp();
+    return;
+  }
+
+  if (!engineName || !(engineName in REGISTRY)) {
     throw new Error(`engine must be one of: ${Object.keys(REGISTRY).join(", ")}`);
   }
-  const engineName = engineArg as EngineName;
+
   if (!command && flags.help === "true") {
     printHelp();
     return;
   }
 
   if (command === "create") {
-    if (!identifier) throw new Error("create requires an identifier");
-    await cmdCreate(engineName, identifier, flags);
+    const resolvedId = identifier ?? autoDetectCurrentBranch();
+    if (!resolvedId) {
+      throw new Error("create requires an identifier (or run from a git branch to auto-detect)");
+    }
+    await cmdCreate(engineName, resolvedId, flags);
   } else if (command === "drop") {
     if (!identifier) throw new Error("drop requires an identifier");
     await cmdDrop(engineName, identifier, flags);
   } else if (command === "list") {
     cmdList({ ...flags, engine: engineName });
   } else {
-    throw new Error(`unknown command '${command}'. Expected create|drop|list`);
+    throw new Error(`unknown command '${command}'. Expected create|drop|list|prune`);
   }
-}
-
-/**
- * Bun's ShellError.message is always the generic "Failed with exit code N";
- * the actually useful text (command not found, connection refused, auth
- * failure, ...) is on .stderr. Prefer that when present.
- */
-function errorMessage(err: unknown): string {
-  if (err && typeof err === "object" && "stderr" in err) {
-    const stderr = String(err.stderr ?? "").trim();
-    if (stderr) return stderr;
-  }
-  return err instanceof Error ? err.message : String(err);
 }
 
 if (import.meta.main) {
-  main().catch((err) => {
-    console.error(errorMessage(err));
+  try {
+    await main();
+  } catch (err) {
+    const msg = err && typeof err === "object" && "stderr" in err && err.stderr
+      ? String(err.stderr).trim()
+      : err instanceof Error ? err.message : String(err);
+    console.error(msg);
     process.exit(1);
-  });
+  }
 }

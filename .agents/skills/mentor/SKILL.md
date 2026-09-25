@@ -29,8 +29,11 @@ When `mentor` is active:
 
 ## Invariant 2: Grounded Research
 
-Industrial, legacy, and specialized technologies evolve across versions and have vendor-specific quirks:
+**REQUIRE SUBSKILL:** `deep-research` (`skill://deep-research`).
 
+Use `deep-research` to investigate unfamiliar libraries or vendor specifications before explaining architecture. If `deep-research` is unavailable, query `Context7` or `web_search` directly with manual provenance tags without stalling.
+
+Industrial, legacy, and specialized technologies evolve across versions and have vendor-specific quirks:
 1. **Active Documentation Lookup:**
    - Always query authoritative documentation before explaining non-obvious architecture:
      - Use **Context7** (`xd://mcp__context_query_docs`) for modern libraries, frameworks, SDKs, and developer tools.
@@ -55,8 +58,8 @@ What real-world problem does this technology or component solve? Why not a regul
 
 Anchor the concept to a physical or familiar everyday thing.
 
-- *Example (Time-Series DB):* "Like a hospital sensor that writes beats per second to a continuous paper spool, instead of an address book where you update a phone number."
-- *Example (OSIsoft PI Asset Framework / AF):* "Like organizing factory machines into a folder tree with clear labels, avoiding cryptic sensor serial numbers."
+- *Example (Time-Series DB):* "Like a hospital sensor that writes beats per second to a continuous paper spool."
+- *Example (OSIsoft PI Asset Framework / AF):* "Like organizing factory machines into a folder tree with clear labels."
 
 ### 3. Jargon Translation & Essential Vocabulary Table
 

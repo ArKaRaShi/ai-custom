@@ -4,7 +4,7 @@ import * as os from "os";
 import * as path from "path";
 
 const tempDirs: string[] = [];
-const cliPath = path.join(import.meta.dir, "sync.ts");
+const cliPath = path.join(import.meta.dir, "../scripts/sync.ts");
 
 function tempDir(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-sync-migrate-v2-"));
@@ -21,7 +21,7 @@ afterEach(() => {
   for (const dir of tempDirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
 });
 
-describe("one-time manifest v2 migration", () => {
+describe("given manifest v1 files, when migrate-v2 is executed, then migrates to unified manifest v2", () => {
   it("converts the path rule and merges skill metadata before removing old files", () => {
     const home = tempDir();
     const repo = tempDir();

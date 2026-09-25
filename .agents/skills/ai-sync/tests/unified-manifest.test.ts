@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "bun:test";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { loadLocations, resolveRootPaths, validateUnifiedManifest } from "./unified-manifest";
+import { loadLocations, resolveRootPaths, validateUnifiedManifest } from "../scripts/unified-manifest";
 
 const tempDirs: string[] = [];
 
@@ -24,7 +24,7 @@ afterEach(() => {
   for (const dir of tempDirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
 });
 
-describe("unified manifest validation", () => {
+describe("given unified manifest objects, when validated, then enforces root rules and path isolation", () => {
   it("accepts v2 roots and root-relative rules", () => {
     const repo = tempDir();
     expect(validateUnifiedManifest(manifest(".omp"), repo).version).toBe(2);

@@ -173,7 +173,10 @@ export function listRegistry(
   filter?: { engine?: string; base?: string },
 ): [string, Record<string, string>][] {
   return walkEnvFiles(registryDir)
-    .map((path): [string, Record<string, string>] => [basename(path, ".env"), parseDotenv(readFileSync(path, "utf8"))])
+    .map((path): [string, Record<string, string>] => [
+      basename(path, ".env"),
+      { ...parseDotenv(readFileSync(path, "utf8")), REGISTRY_PATH: path },
+    ])
     .filter(([, v]) => (!filter?.engine || v.ENGINE === filter.engine) && (!filter?.base || v.BASE === filter.base))
     .sort(([a], [b]) => a.localeCompare(b));
 }

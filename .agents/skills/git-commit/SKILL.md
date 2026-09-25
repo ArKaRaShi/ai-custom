@@ -39,3 +39,9 @@ Choose body depth independently. Omit it for atomic changes. Use one or two rati
 ## Boundary
 
 Present each proposed message in its own Markdown code block.
+
+## Message Quality Check
+
+**REQUIRE SUBSKILL:** `markdown-quality` (`bun ~/.agents/skills/markdown-quality/scripts/review.ts <draft-commit-path> --mode=human`).
+
+For multi-line commit bodies, verify readable prose and formatting using markdown-quality in human mode before presenting. If `markdown-quality` is unavailable, check grammar and imperative style manually without stalling.

@@ -4,7 +4,7 @@ import * as os from "os";
 import * as path from "path";
 
 const tempDirs: string[] = [];
-const cliPath = path.join(import.meta.dir, "sync.ts");
+const cliPath = path.join(import.meta.dir, "../scripts/sync.ts");
 
 function tempDir(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-sync-cli-v2-"));
@@ -21,7 +21,7 @@ afterEach(() => {
   for (const dir of tempDirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
 });
 
-describe("unified root and tracking commands", () => {
+describe("given unified sync CLI, when root and tracking commands are invoked, then applies shared policy", () => {
   it("stores shared root policy separately from machine-local binding", () => {
     const home = tempDir();
     const repo = tempDir();
@@ -70,9 +70,9 @@ describe("unified root and tracking commands", () => {
     const locations = JSON.parse(fs.readFileSync(path.join(home, ".config", "ai-sync", "locations.json"), "utf8"));
     expect(locations.roots.omp).toBe(local);
     const status = run(home, repo, "status");
-    expect(status.stdout).toContain("New Local : 1 files");
-    const push = run(home, repo, "push");
-    expect(push.stdout).toContain("Backup complete: 1 files");
+    expect(status.stdout).toContain("new_local    1 files");
+    const push = run(home, repo, "push", "--apply");
+    expect(push.stdout).toContain("backup complete");
     expect(fs.readFileSync(path.join(repo, ".omp", "extensions", "kept.ts"), "utf8")).toBe("kept");
     expect(fs.existsSync(path.join(repo, ".omp", "extensions", "private", "local.ts"))).toBe(false);
     expect(fs.existsSync(path.join(repo, ".omp", "unlisted.ts"))).toBe(false);
@@ -93,7 +93,7 @@ describe("unified root and tracking commands", () => {
     run(home, repo, "root", "bind", "claude", "--local-root", claude);
     run(home, repo, "track", "skill", "tool", "--root", "agents", "--origin", "authored", "--sync");
     run(home, repo, "track", "skill", "tool", "--root", "claude", "--origin", "external", "--sync");
-    expect(run(home, repo, "pull").exitCode).toBe(0);
+    expect(run(home, repo, "pull", "--apply").exitCode).toBe(0);
     expect(fs.readFileSync(path.join(agents, "tool", "source.txt"), "utf8")).toBe("agent");
     expect(fs.readFileSync(path.join(claude, "tool", "source.txt"), "utf8")).toBe("claude");
   });

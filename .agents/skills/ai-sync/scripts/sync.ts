@@ -272,12 +272,12 @@ export function parseArgs(rawArgs: string[]): {
   repo: string;
   opts: SyncOptions;
   args: string[];
-  meta: { from?: string; version?: string; sync?: boolean; root?: string; kind?: RootKind; repoRoot?: string; localRoot?: string; origin?: SkillMetadata["origin"]; sourceType?: string; install?: string; description?: string; entryPath?: string };
+  meta: { from?: string; version?: string; sync?: boolean; root?: string; kind?: RootKind; repoRoot?: string; localRoot?: string; origin?: SkillMetadata["origin"]; sourceType?: string; install?: string; description?: string; entryPath?: string; help?: boolean };
 } {
   let command = "status";
   let repo = DEFAULT_REPO;
   const opts: SyncOptions = { exclude: [] };
-  const meta: { from?: string; version?: string; sync?: boolean; root?: string; kind?: RootKind; repoRoot?: string; localRoot?: string; origin?: SkillMetadata["origin"]; sourceType?: string; install?: string; description?: string; entryPath?: string } = {};
+  const meta: { from?: string; version?: string; sync?: boolean; root?: string; kind?: RootKind; repoRoot?: string; localRoot?: string; origin?: SkillMetadata["origin"]; sourceType?: string; install?: string; description?: string; entryPath?: string; help?: boolean } = {};
   const positional: string[] = [];
   const named = new Map<string, keyof typeof meta>([
     ["--root", "root"], ["--kind", "kind"], ["--repo-root", "repoRoot"], ["--local-root", "localRoot"],
@@ -294,6 +294,11 @@ export function parseArgs(rawArgs: string[]): {
     else if (arg === "--target" || arg === "-t") {
       if (i + 1 < rawArgs.length) opts.target = rawArgs[++i];
     } else if (arg.startsWith("--target=")) opts.target = arg.slice("--target=".length);
+    else if (arg === "--format") {
+      if (i + 1 < rawArgs.length) opts.format = rawArgs[++i] as "tree" | "json";
+    } else if (arg.startsWith("--format=")) opts.format = arg.slice("--format=".length) as "tree" | "json";
+    else if (arg === "--apply") opts.apply = true;
+    else if (arg === "-h" || arg === "--help") meta.help = true;
     else if (arg === "--include-local") opts.includeLocal = true;
     else if (arg === "--write") opts.write = true;
     else if (arg === "--sync") meta.sync = true;
@@ -318,6 +323,30 @@ export function parseArgs(rawArgs: string[]): {
 // CLI entrypoint when run directly
 if (import.meta.main) {
   const { command, repo, opts, args, meta } = parseArgs(process.argv.slice(2));
+
+  if (meta.help || command === "--help" || command === "-h" || command === "help") {
+    console.log(`Usage: bun sync.ts <command> [repo_path] [options]
+
+Commands:
+  status                 Show synchronization status between local machine and repo
+  diff                   Show unified diffs of modified files
+  push [--apply]         Backup local files to repository (preview by default, --apply to copy)
+  pull [--apply]         Import repository files to local roots (preview by default, --apply to copy)
+  root add|bind          Manage root paths and local machine bindings
+  track path|skill       Track files or skills in the unified manifest
+  untrack path|skill     Remove tracking policy
+  discover [--write]     Detect unlisted skills and paths
+  bootstrap              Restore repository state on a fresh machine
+
+Options:
+  --apply                Execute file mutations (push and pull default to safe preview)
+  --format <tree|json>   Output format: human tree (default) or machine JSON
+  --format=<tree|json>   Equals-form syntax for --format
+  --target <scope>       Narrow operation to specific skill or directory
+  --exclude <pattern>    Exclude matching paths from operation
+  -h, --help             Show this help message`);
+    process.exit(0);
+  }
 
   switch (command) {
     case "status":

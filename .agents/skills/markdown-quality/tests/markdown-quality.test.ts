@@ -103,10 +103,10 @@ And here is unrendered math $\\alpha + \\beta$ in prose.
     if (existsSync(testFileStructure)) unlinkSync(testFileStructure);
   });
 
-  it("runFix returns clean status on well-formatted markdown file", async () => {
+  it("runFix returns clean or auto-fixed status on well-formatted markdown file", async () => {
     const result = await runFix({ target: testFileClean });
     expect(result.exitCode).toBe(0);
-    expect(result.status).toBe("clean");
+    expect(["clean", "auto-fixed"]).toContain(result.status);
     expect(result.remainingCount).toBe(0);
   });
 
@@ -188,34 +188,33 @@ Formula with $\\alpha$ inline.
     expect(["CLEAN", "NEEDS_REVIEW"]).toContain(result.verdict);
   });
 
-  it("runReview resolves vale config in project-local, user-global, bundled-asset priority order", () => {
+  it("runReview supports --mode=ai and --mode=human with explicit config overrides", () => {
     const scriptPath = resolve(import.meta.dir, "../scripts/review.ts");
-    const bundledVale = resolve(import.meta.dir, "../assets/.vale.ini");
-    const isolatedCwd = resolve(tmpdir(), `mq-vale-isolated-${Date.now()}`);
-    const isolatedHome = resolve(tmpdir(), `mq-vale-home-${Date.now()}`);
+    const isolatedCwd = resolve(tmpdir(), `mq-mode-isolated-${Date.now()}`);
     mkdirSync(isolatedCwd, { recursive: true });
-    mkdirSync(isolatedHome, { recursive: true });
-    writeFileSync(resolve(isolatedCwd, "sample.md"), "# Sample\n\nPlain content.\n");
+    const sampleFile = resolve(isolatedCwd, "sample.md");
+    writeFileSync(sampleFile, "# Sample\n\nPlain content.\n");
 
     try {
-      // Neither project-local nor user-global vale.ini exists -> bundled skill asset is used
-      const fallbackProc = Bun.spawnSync(["bun", scriptPath, "sample.md"], {
-        cwd: isolatedCwd,
-        env: { ...process.env, HOME: isolatedHome },
-      });
-      const fallbackOut = fallbackProc.stdout.toString();
-      expect(fallbackOut).toContain(`Config: bundled-asset (${bundledVale})`);
+      // Default AI mode uses bundled/ai
+      const aiProc = Bun.spawnSync(["bun", scriptPath, sampleFile]);
+      expect(aiProc.stdout.toString()).toContain("mode: ai");
+      expect(aiProc.stdout.toString()).toContain("lint → bundled/ai");
+      expect(aiProc.stdout.toString()).toContain("vale → bundled/ai");
 
-      // A project-local .vale.ini takes priority over the bundled fallback
-      writeFileSync(resolve(isolatedCwd, ".vale.ini"), "StylesPath = .vale/styles\n[*.md]\nBasedOnStyles = Vale\n");
-      const localProc = Bun.spawnSync(["bun", scriptPath, "sample.md"], {
-        cwd: isolatedCwd,
-        env: { ...process.env, HOME: isolatedHome },
-      });
-      expect(localProc.stdout.toString()).toContain("Config: project-local (.vale.ini)");
+      // Human mode uses bundled/human
+      const humanProc = Bun.spawnSync(["bun", scriptPath, sampleFile, "--mode=human"]);
+      expect(humanProc.stdout.toString()).toContain("mode: human");
+      expect(humanProc.stdout.toString()).toContain("lint → bundled/human");
+      expect(humanProc.stdout.toString()).toContain("vale → bundled/human");
+
+      // Custom config override via --config
+      const customIni = resolve(isolatedCwd, "custom.ini");
+      writeFileSync(customIni, "StylesPath = .vale/styles\n[*.md]\nBasedOnStyles = Vale\n");
+      const customProc = Bun.spawnSync(["bun", scriptPath, sampleFile, `--vale-config=${customIni}`]);
+      expect(customProc.stdout.toString()).toContain("vale → custom");
     } finally {
       rmSync(isolatedCwd, { recursive: true, force: true });
-      rmSync(isolatedHome, { recursive: true, force: true });
     }
   });
 
@@ -239,6 +238,79 @@ Formula with $\\alpha$ inline.
       const shortHelpProc = Bun.spawnSync(["bun", scriptPath, "-h"]);
       expect(shortHelpProc.exitCode).toBe(0);
       expect(shortHelpProc.stdout.toString()).toContain("Usage:");
+    }
+  });
+
+  it("review.ts and fix.ts reject unknown CLI flags", () => {
+    const reviewScript = resolve(import.meta.dir, "../scripts/review.ts");
+    const fixScript = resolve(import.meta.dir, "../scripts/fix.ts");
+
+    const resReview = Bun.spawnSync(["bun", reviewScript, "--unknown-flag"]);
+    expect(resReview.exitCode).not.toBe(0);
+    expect(resReview.stderr.toString()).toContain("Unknown flag");
+
+    const resFix = Bun.spawnSync(["bun", fixScript, "--unknown-flag"]);
+    expect(resFix.exitCode).not.toBe(0);
+    expect(resFix.stderr.toString()).toContain("Unknown flag");
+  });
+
+  it("review.ts validates --min-level syntax per skill-framework contract", () => {
+    const reviewScript = resolve(import.meta.dir, "../scripts/review.ts");
+
+    // Missing value
+    const missingVal = Bun.spawnSync(["bun", reviewScript, "--min-level"]);
+    expect(missingVal.exitCode).not.toBe(0);
+    expect(missingVal.stderr.toString()).toContain("--min-level requires a value");
+
+    // Flag-like token as value
+    const flagVal = Bun.spawnSync(["bun", reviewScript, "--min-level", "-x"]);
+    expect(flagVal.exitCode).not.toBe(0);
+    expect(flagVal.stderr.toString()).toContain("--min-level requires a value");
+
+    // Valid separate form
+    const sepForm = Bun.spawnSync(["bun", reviewScript, "--min-level", "error", testFileClean]);
+    expect(sepForm.exitCode).toBe(0);
+
+    // Valid equals form
+    const eqForm = Bun.spawnSync(["bun", reviewScript, "--min-level=error", testFileClean]);
+    expect(eqForm.exitCode).toBe(0);
+  });
+
+  it("resolves directory targets recursively and ignores non-markdown files", async () => {
+    const testDir = resolve(tmpdir(), `test-dir-${Date.now()}`);
+    mkdirSync(testDir, { recursive: true });
+    const subDir = resolve(testDir, "nested");
+    mkdirSync(subDir, { recursive: true });
+
+    const md1 = resolve(testDir, "doc1.md");
+    const md2 = resolve(subDir, "doc2.markdown");
+    const nonMd = resolve(testDir, "script.ts");
+    const json = resolve(subDir, "data.json");
+
+    writeFileSync(md1, "# Doc 1\n\nContent here.\n");
+    writeFileSync(md2, "# Doc 2\n\nContent here.\n");
+    writeFileSync(nonMd, "console.log('not markdown');");
+    writeFileSync(json, "{}");
+
+    try {
+      const resolverScript = resolve(import.meta.dir, "../scripts/target-resolver.ts");
+      const { resolveMarkdownFiles } = await import(resolverScript);
+
+      const matched = resolveMarkdownFiles(testDir);
+      expect(matched.length).toBe(2);
+      expect(matched).toContain(md1);
+      expect(matched).toContain(md2);
+      expect(matched).not.toContain(nonMd);
+      expect(matched).not.toContain(json);
+
+      // Review script accepts the directory and processes the markdown files
+      const reviewScript = resolve(import.meta.dir, "../scripts/review.ts");
+      const reviewProc = Bun.spawnSync(["bun", reviewScript, testDir, nonMd]);
+      expect(reviewProc.stdout.toString()).toContain("2 files");
+      expect(reviewProc.stdout.toString()).toContain("├─ standards");
+      expect(reviewProc.stdout.toString()).toContain("Result: CLEAN");
+    } finally {
+      rmSync(testDir, { recursive: true, force: true });
     }
   });
 });

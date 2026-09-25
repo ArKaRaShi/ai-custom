@@ -26,15 +26,17 @@ Run directly with `bun`:
 ```bash
 SKILL_DIR="${SKILL_DIR:-$HOME/.agents/skills/markdown-quality}"
 
-# 1. Instant structural auto-fix (whitespace, blank lines, headings)
-bun "$SKILL_DIR/scripts/fix.ts" "<file.md>"
+# 1. Instant structural auto-fix (default: ai mode)
+bun "$SKILL_DIR/scripts/fix.ts" "<file-or-dir>"
 
-# 2. Full QA scorecard (standards + prose + links + structure + security + density)
-bun "$SKILL_DIR/scripts/review.ts" "<file.md>"
+# 2. Full QA scorecard in AI mode (dense, strict imperatives, token-efficient)
+bun "$SKILL_DIR/scripts/review.ts" "<file-or-dir>"
 
-# 3. Full QA scorecard with automatic structural fixes applied
-bun "$SKILL_DIR/scripts/review.ts" "<file.md>" --fix
-```
+# 3. Human readability mode (relaxed AI-tells, natural transitions)
+bun "$SKILL_DIR/scripts/review.ts" "<file-or-dir>" --mode=human
+
+# 4. Combined auto-fix + full review with custom config override
+bun "$SKILL_DIR/scripts/review.ts" "<file-or-dir>" --fix --config=./my-rules/
 
 ## Quality Standards
 
