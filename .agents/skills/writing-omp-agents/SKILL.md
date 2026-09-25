@@ -17,13 +17,13 @@ Classify the failure:
 
 | Failure | Repair |
 | --- | --- |
-| Catch-all description | Name only concrete dispatch triggers. |
+| Catch-all description | Specify only concrete dispatch triggers. |
 | Description explains workflow | Move process to the body. |
 | Every tool or unrestricted spawning | Give only capabilities the lane needs. |
 | Scope accepts architecture/security by default | State the bounded work class and escalation boundary. |
 | “Done” is a summary | Require files/findings plus observed verification. |
 
-If the baseline already holds the desired contract, do not add a skill or more prompt text.
+If the baseline already satisfies the desired contract, do not add a skill or more prompt text.
 
 ## GREEN: Write the contract
 
@@ -63,3 +63,9 @@ For an architecture, cross-module, or security lane, define its concrete slice a
 Run the same pressure scenario with the candidate agent. It passes only when its description routes narrowly and its instructions reject out-of-lane tasks.
 
 If it finds a new escape hatch, add the smallest structural rule that closes it, then rerun the scenario. Keep one source of truth: model routing belongs in `modelRoles`, while task behavior belongs in the agent definition.
+
+### Quality Verification
+
+**REQUIRE SUBSKILL:** `markdown-quality` (`bun ~/.agents/skills/markdown-quality/scripts/review.ts <agent-file> --mode=ai`).
+
+Verify authored or modified agent definitions in AI mode to ensure clean structure and zero conversational filler. If `markdown-quality` is unavailable, review the agent markdown manually without stalling.

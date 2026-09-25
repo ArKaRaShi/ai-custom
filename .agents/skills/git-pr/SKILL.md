@@ -20,7 +20,7 @@ Draft accurate, repo-aware pull request titles and descriptions. Scale with the 
 9. **Avoid local leakage.** Use repository-relative paths. Do not include absolute machine paths, credentials, private URLs, or confidential names.
 10. **No side effects by default.** Drafting returns text only in a markdown code block. Run `gh` or another PR API only when the user explicitly asks to create or update a PR.
 11. **Assignee handling.** When creating or updating PRs via `gh` or API upon explicit request, add the current user as an assignee (`--add-assignee "@me"` or `--assignee "@me"` on creation). Do not remove existing assignees; append the user instead.
-12. **REQUIRE SUBSKILL:** `markdown-quality` (`bun ~/.agents/skills/markdown-quality/scripts/review.ts <pr-body-path> --mode=human --fix`). Run review and auto-fix in human mode before presenting or passing to `gh pr create`. If `markdown-quality` is unavailable, inspect the PR body manually for broken links and heading structure without stalling.
+12. **REQUIRE SUBSKILL:** `markdown-quality` (`bun ~/.agents/skills/markdown-quality/scripts/review.ts --text="<pr-body>" --mode=human` or `<pr-body-path> --fix`). Run review in human mode before presenting or passing to `gh pr create`. If `markdown-quality` is unavailable, inspect the PR body manually for broken links and heading structure without stalling.
 
 ## Effective Diff & Base Branch Resolution (REQUIRED FLOW)
 

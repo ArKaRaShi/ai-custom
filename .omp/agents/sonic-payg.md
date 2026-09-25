@@ -1,8 +1,8 @@
 ---
-name: boilerplate-payg
-description: Use when generating code from an exact specification or applying mechanical edits.
+name: sonic-payg
+description: Fast paid mechanical worker. Use when generating boilerplate from an exact specification, mechanical find-and-replace, or routine file transforms.
 model: "@boilerplate"
-thinkingLevel: low
+thinkingLevel: auto
 tools: read, grep, glob, edit, write, bash
 ---
 

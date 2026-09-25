@@ -217,6 +217,19 @@ Formula with $\\alpha$ inline.
       rmSync(isolatedCwd, { recursive: true, force: true });
     }
   });
+  it("runReview supports reviewing direct string content via --text without files", () => {
+    const scriptPath = resolve(import.meta.dir, "../scripts/review.ts");
+    const cleanText = "# Title\n\nClean markdown content for testing.\n";
+    const res = Bun.spawnSync(["bun", scriptPath, `--text=${cleanText}`, "--format=json"]);
+    expect(res.exitCode).toBe(0);
+
+    const parsed = JSON.parse(res.stdout.toString());
+    expect(parsed.tool).toBe("markdown-quality");
+    expect(parsed.command).toBe("review");
+    expect(parsed.status).toBe("clean");
+    expect(parsed.fingerprint.files).toContain("<string>");
+  });
+
 
   it("all scripts support --help and -h flags", () => {
     const scripts = [

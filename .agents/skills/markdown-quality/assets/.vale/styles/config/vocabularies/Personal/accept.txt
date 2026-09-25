@@ -64,3 +64,8 @@ npm
 [Rr]epoint
 Makefile
 [Nn]amespacing
+[Ff]rontmatter
+swappable
+[Mm]ockup
+[Mm]ockups
+unrequested

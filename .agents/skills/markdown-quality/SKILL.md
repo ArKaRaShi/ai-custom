@@ -38,6 +38,8 @@ bun "$SKILL_DIR/scripts/review.ts" "<file-or-dir>" --mode=human
 # 4. Combined auto-fix + full review with custom config override
 bun "$SKILL_DIR/scripts/review.ts" "<file-or-dir>" --fix --config=./my-rules/
 
+# 5. Direct string review without creating temporary files
+bun "$SKILL_DIR/scripts/review.ts" --text="<content>" [--mode=human]
 ## Quality Standards
 
 Apply these checks across every markdown file:

@@ -1,6 +1,6 @@
 ---
-name: boilerplate-free
-description: Use when generating code from an exact specification or applying mechanical edits.
+name: sonic-free
+description: Zero-cost free mechanical worker. Use when generating boilerplate from an exact specification or applying routine mechanical edits on the free model pool.
 model: "@free"
 thinkingLevel: high
 tools: read, grep, glob, edit, write, bash

@@ -10,6 +10,7 @@ import { checkMarkdownSecurity, type SecurityFinding } from "./security-check";
 import { checkMarkdownStructure, type StructureFinding } from "./structure-check";
 
 export interface ReviewOptions {
+  text?: string;
   targets?: string | string[];
   target?: string | string[];
   glob?: string | string[];
@@ -73,10 +74,10 @@ function renderTree(header: string, configNotice: string, branches: TreeBranch[]
 }
 
 export async function runReview(options: ReviewOptions = {}): Promise<ReviewResult> {
-  const rawTargets = options.targets ?? options.target ?? options.glob ?? "**/*.md";
-  const targetDisplay = Array.isArray(rawTargets) ? rawTargets.join(", ") : rawTargets;
-  const matchedFiles = resolveMarkdownFiles(rawTargets, process.cwd());
-
+  const isTextInput = typeof options.text === "string";
+  const rawTargets = isTextInput ? ["<string>"] : (options.targets ?? options.target ?? options.glob ?? "**/*.md");
+  const targetDisplay = isTextInput ? (options.text!.length > 50 ? options.text!.slice(0, 47) + "..." : options.text!) : (Array.isArray(rawTargets) ? rawTargets.join(", ") : rawTargets);
+  const matchedFiles = isTextInput ? ["<string>"] : resolveMarkdownFiles(rawTargets, process.cwd());
   const mode: "ai" | "human" = options.mode === "human" ? "human" : "ai";
   const fix = options.fix ?? false;
   const minLevel = options.minLevel || "warning";
@@ -175,9 +176,14 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
       lintFixCount = m ? parseInt(m[1], 10) : 0;
     }
   }
-
   let lintOut = "";
-  if (hasLintBin) {
+  if (isTextInput) {
+    const lintProc = Bun.spawnSync(
+      hasLintBin ? ["markdownlint-cli2", ...configArg, "-"] : ["npx", "-y", "markdownlint-cli2", ...configArg, "-"],
+      { stdin: Buffer.from(options.text!), stdout: "pipe", stderr: "pipe" },
+    );
+    lintOut = lintProc.stdout.toString() + "\n" + lintProc.stderr.toString();
+  } else if (hasLintBin) {
     lintOut = await $`markdownlint-cli2 ${configArg} ${matchedFiles}`.quiet().nothrow().text();
   } else {
     lintOut = await $`npx -y markdownlint-cli2 ${configArg} ${matchedFiles}`.quiet().nothrow().text();
@@ -205,12 +211,20 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
   // --- Phase 2: Prose & AI-Tells (Vale) ---
   let valeErrors = 0;
   const hasVale = (await $`which vale`.quiet().nothrow()).exitCode === 0;
-
   if (hasVale) {
-    const valeOut = await $`vale ${valeConfigArg} --minAlertLevel=${minLevel} --output=line ${matchedFiles}`
-      .quiet()
-      .nothrow()
-      .text();
+    let valeOut = "";
+    if (isTextInput) {
+      const valeProc = Bun.spawnSync(
+        ["vale", "--ext=.md", ...valeConfigArg, `--minAlertLevel=${minLevel}`, "--output=line"],
+        { stdin: Buffer.from(options.text!), stdout: "pipe", stderr: "pipe" },
+      );
+      valeOut = valeProc.stdout.toString();
+    } else {
+      valeOut = await $`vale ${valeConfigArg} --minAlertLevel=${minLevel} --output=line ${matchedFiles}`
+        .quiet()
+        .nothrow()
+        .text();
+    }
 
     const rawValeLines = valeOut
       .split("\n")
@@ -243,10 +257,15 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
   // --- Phase 3: Link Integrity ---
   let totalBrokenLinks: BrokenLink[] = [];
   if (checkLinks) {
-    for (const f of matchedFiles) {
-      if (existsSync(f) && statSync(f).isFile()) {
-        const linkRes = checkMarkdownLinks(f);
-        totalBrokenLinks.push(...linkRes.brokenLinks);
+    if (isTextInput) {
+      const linkRes = checkMarkdownLinks("<string>", options.text!);
+      totalBrokenLinks.push(...linkRes.brokenLinks);
+    } else {
+      for (const f of matchedFiles) {
+        if (existsSync(f) && statSync(f).isFile()) {
+          const linkRes = checkMarkdownLinks(f);
+          totalBrokenLinks.push(...linkRes.brokenLinks);
+        }
       }
     }
     if (totalBrokenLinks.length === 0) {
@@ -274,15 +293,22 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
   // --- Phase 4: Document Structure (Depth & Orphans) ---
   let totalStructureIssues: Array<{ file: string; finding: StructureFinding }> = [];
   if (checkStructure) {
-    for (const f of matchedFiles) {
-      if (existsSync(f) && statSync(f).isFile()) {
-        try {
-          const content = readFileSync(f, "utf-8");
-          const structRes = checkMarkdownStructure(content);
-          for (const finding of structRes.findings) {
-            totalStructureIssues.push({ file: f, finding });
-          }
-        } catch {}
+    if (isTextInput) {
+      const structRes = checkMarkdownStructure(options.text!);
+      for (const finding of structRes.findings) {
+        totalStructureIssues.push({ file: "<string>", finding });
+      }
+    } else {
+      for (const f of matchedFiles) {
+        if (existsSync(f) && statSync(f).isFile()) {
+          try {
+            const content = readFileSync(f, "utf-8");
+            const structRes = checkMarkdownStructure(content);
+            for (const finding of structRes.findings) {
+              totalStructureIssues.push({ file: f, finding });
+            }
+          } catch {}
+        }
       }
     }
     if (totalStructureIssues.length === 0) {
@@ -312,15 +338,22 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
   // --- Phase 5: Security & Secret Leak Scanner ---
   let totalSecurityIssues: Array<{ file: string; finding: SecurityFinding }> = [];
   if (checkSecurity) {
-    for (const f of matchedFiles) {
-      if (existsSync(f) && statSync(f).isFile()) {
-        try {
-          const content = readFileSync(f, "utf-8");
-          const secRes = checkMarkdownSecurity(content);
-          for (const finding of secRes.findings) {
-            totalSecurityIssues.push({ file: f, finding });
-          }
-        } catch {}
+    if (isTextInput) {
+      const secRes = checkMarkdownSecurity(options.text!);
+      for (const finding of secRes.findings) {
+        totalSecurityIssues.push({ file: "<string>", finding });
+      }
+    } else {
+      for (const f of matchedFiles) {
+        if (existsSync(f) && statSync(f).isFile()) {
+          try {
+            const content = readFileSync(f, "utf-8");
+            const secRes = checkMarkdownSecurity(content);
+            for (const finding of secRes.findings) {
+              totalSecurityIssues.push({ file: f, finding });
+            }
+          } catch {}
+        }
       }
     }
     if (totalSecurityIssues.length === 0) {
@@ -354,21 +387,34 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
     let totalWords = 0;
     const densityWarnings: string[] = [];
 
-    for (const f of matchedFiles) {
-      if (existsSync(f) && statSync(f).isFile()) {
-        try {
-          const content = readFileSync(f, "utf-8");
-          const report = analyzeTokenDensity(content);
-          densityReports.push({ file: f, report });
-          totalTokens += report.estimatedTokens;
-          totalWords += report.wordCount;
-          for (const fm of report.fillerMatches) {
-            densityWarnings.push(`${f}:${fm.line} filler detected '${fm.phrase}'`);
-          }
-          for (const cm of report.condescendingMatches) {
-            densityWarnings.push(`${f}:${cm.line} presumptuous word '${cm.phrase}'`);
-          }
-        } catch {}
+    if (isTextInput) {
+      const report = analyzeTokenDensity(options.text!);
+      densityReports.push({ file: "<string>", report });
+      totalTokens += report.estimatedTokens;
+      totalWords += report.wordCount;
+      for (const fm of report.fillerMatches) {
+        densityWarnings.push(`<string>:${fm.line} filler detected '${fm.phrase}'`);
+      }
+      for (const cm of report.condescendingMatches) {
+        densityWarnings.push(`<string>:${cm.line} presumptuous word '${cm.phrase}'`);
+      }
+    } else {
+      for (const f of matchedFiles) {
+        if (existsSync(f) && statSync(f).isFile()) {
+          try {
+            const content = readFileSync(f, "utf-8");
+            const report = analyzeTokenDensity(content);
+            densityReports.push({ file: f, report });
+            totalTokens += report.estimatedTokens;
+            totalWords += report.wordCount;
+            for (const fm of report.fillerMatches) {
+              densityWarnings.push(`${f}:${fm.line} filler detected '${fm.phrase}'`);
+            }
+            for (const cm of report.condescendingMatches) {
+              densityWarnings.push(`${f}:${cm.line} presumptuous word '${cm.phrase}'`);
+            }
+          } catch {}
+        }
       }
     }
 
@@ -470,6 +516,7 @@ if (import.meta.main) {
   let lintConfig: string | undefined;
   let valeConfig: string | undefined;
   let format: "tree" | "json" = "tree";
+  let text: string | undefined;
   function fail(message: string): never {
     console.error(message);
     process.exit(1);
@@ -502,6 +549,8 @@ Options:
   --no-security            Skip Phase 5: security & credential leak scanner
   --no-density             Skip Phase 6: token density & AI context efficiency check
   -h, --help               Show this help message and exit
+  --text <content>         Direct string content to review instead of file targets
+  --text=<content>         Equals-form syntax for --text
 
 Examples:
   bun review.ts
@@ -579,6 +628,12 @@ Examples:
       const val = arg.slice("--format=".length);
       if (val === "tree" || val === "json") format = val;
       else fail(`Invalid --format: ${val}. Must be 'tree' or 'json'.`);
+    } else if (arg === "--text") {
+      const val = args[++i];
+      if (val === undefined) fail("--text requires a value");
+      text = val;
+    } else if (arg.startsWith("--text=")) {
+      text = arg.slice("--text=".length);
     } else if (arg.startsWith("-")) {
       fail(`Unknown flag: ${arg}`);
     } else {
@@ -591,6 +646,7 @@ Examples:
     mode,
     format,
     config,
+    text,
     lintConfig,
     valeConfig,
     fix,
