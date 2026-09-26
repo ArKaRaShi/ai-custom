@@ -1,0 +1,9 @@
+{
+  "name": "@agents/data-closure",
+  "version": "1.0.0",
+  "description": "Scoped database transfers with foreign-key dependency closure",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "^1.3.14"
+  }
+}

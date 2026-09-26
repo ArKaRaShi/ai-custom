@@ -13,7 +13,10 @@ The skill is framework-agnostic:
 - A project adapter owns framework and domain behavior.
 - The manifest is the stable boundary between the orchestrator and adapter.
 
-Do not use this for a full database clone. Use `db-sandbox` instead.
+Do not use this for a full database clone.
+
+**REQUIRE SUBSKILL:** db-sandbox (`bun ~/.agents/skills/db-sandbox/scripts/sandbox.ts create ...`)
+- Fallback if unavailable: proceed with scoped closure scripts only. Full clone requests without `db-sandbox` require manual database tooling.
 
 ## Modes
 
@@ -84,7 +87,6 @@ The generic orchestrator can run without stack-specific references. It must not 
 
 When creating or updating references, follow `references/reference-convention.md`.
 
-Auto mode permits the agent to execute the adapter lifecycle. Manual mode permits artifact preparation only. The agent never executes the generated artifact.
 
 ## Runtime Boundary
 
@@ -130,7 +132,7 @@ The adapter writes one bundle manifest covering base files, supplements, row cou
 - Check each manifest file and SHA-256 before preflight, apply, verify, and cleanup.
 - Refuse to overwrite an existing bundle or manual artifact directory.
 - Keep failed bundles for diagnosis.
-- Delete temporary JSON only after verification succeeds for the same bundle and target.
+- Delete temporary bundle files only after verification succeeds for the same bundle and target. Pass `--apply` to commit deletion (`cleanup` previews by default).
 
 ## Common Mistakes
 
@@ -143,4 +145,4 @@ The adapter writes one bundle manifest covering base files, supplements, row cou
 | Claiming source safety without a plan record | Require `source.access: "read_only"` |
 | Executing a manual artifact as a convenience | Stop after static validation |
 | Applying after the bundle changed | Run `preflight` again; stale lifecycle state blocks `apply` |
-| Deleting data after import without verification | Run `verify`, then `cleanup` |
+| Deleting data after import without verification | Run `verify`, then `cleanup --apply` |
