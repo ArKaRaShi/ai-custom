@@ -39,3 +39,40 @@ export function checkGitRemoteStatus(repoDir: string): { isGit: boolean; message
   }
   return result;
 }
+
+export function gitPull(repoDir: string): { success: boolean; output: string } {
+  if (!fs.existsSync(path.join(repoDir, ".git"))) {
+    return { success: false, output: `Not a git repository: ${repoDir}` };
+  }
+  try {
+    const out = execSync("git pull", { cwd: repoDir, stdio: "pipe" }).toString().trim();
+    return { success: true, output: out };
+  } catch (e: unknown) {
+    const msg = e && typeof e === "object" && "stderr" in e && Buffer.isBuffer(e.stderr)
+      ? e.stderr.toString()
+      : e instanceof Error ? e.message : String(e);
+    return { success: false, output: msg.trim() };
+  }
+}
+
+export function gitCommitAndPush(repoDir: string, commitMsg = "sync: update backup"): { success: boolean; output: string } {
+  if (!fs.existsSync(path.join(repoDir, ".git"))) {
+    return { success: false, output: `Not a git repository: ${repoDir}` };
+  }
+  try {
+    const status = execSync("git status --porcelain", { cwd: repoDir, stdio: "pipe" }).toString().trim();
+    let commitOut = "";
+    if (status) {
+      execSync("git add -A", { cwd: repoDir, stdio: "pipe" });
+      commitOut = execSync(`git commit -m ${JSON.stringify(commitMsg)}`, { cwd: repoDir, stdio: "pipe" }).toString().trim();
+    }
+    const pushOut = execSync("git push", { cwd: repoDir, stdio: "pipe" }).toString().trim();
+    const output = [commitOut, pushOut].filter(Boolean).join("\n");
+    return { success: true, output: output || "Already up to date." };
+  } catch (e: unknown) {
+    const msg = e && typeof e === "object" && "stderr" in e && Buffer.isBuffer(e.stderr)
+      ? e.stderr.toString()
+      : e instanceof Error ? e.message : String(e);
+    return { success: false, output: msg.trim() };
+  }
+}

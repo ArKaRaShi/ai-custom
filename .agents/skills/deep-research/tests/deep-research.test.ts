@@ -2,19 +2,21 @@ import { describe, it, expect } from "bun:test";
 import * as fs from "fs";
 import * as path from "path";
 
-const SKILL_PATH = path.join(
+const ROOT_PATH = path.join(
   process.env.HOME || "",
-  ".agents/skills/deep-research/SKILL.md"
+  ".agents/skills/deep-research"
 );
+const SKILL_PATH = path.join(ROOT_PATH, "SKILL.md");
+const CITATION_REF_PATH = path.join(ROOT_PATH, "references/citation-style.md");
+const ROUTING_REF_PATH = path.join(ROOT_PATH, "references/routing-strategy.md");
 
-describe("given deep-research skill specification, when validating contracts and invariants, then enforces evidence-anchored investigation and strict source provenance", () => {
+describe("given deep-research skill specification, when validating modular layout and contracts, then enforces clean layout, tool routing, and natural citation provenance", () => {
   it("exists and has valid YAML frontmatter adhering to SDO standards", () => {
     expect(fs.existsSync(SKILL_PATH)).toBe(true);
     const content = fs.readFileSync(SKILL_PATH, "utf8");
     expect(content).toMatch(/^---\nname:\s*deep-research\n/);
     expect(content).toMatch(/description:\s*Use when/);
-    
-    // Frontmatter description should be under 500 characters and avoid first person
+
     const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
     expect(frontmatterMatch).not.toBeNull();
     const descMatch = frontmatterMatch![1].match(/description:\s*(.+)/);
@@ -23,37 +25,35 @@ describe("given deep-research skill specification, when validating contracts and
     expect(descMatch![1]).not.toMatch(/\b(I|we|my|our)\b/i);
   });
 
-  it("enforces tool routing for Context7 and web search with local repo grounding", () => {
-    const content = fs.readFileSync(SKILL_PATH, "utf8");
-    expect(content).toMatch(/Context7/i);
-    expect(content).toMatch(/web_search|web search/i);
-    expect(content).toMatch(/repo|lockfile|dependencies/i);
+  it("conforms to skill-layout with references subdirectories and pointers", () => {
+    expect(fs.existsSync(CITATION_REF_PATH)).toBe(true);
+    expect(fs.existsSync(ROUTING_REF_PATH)).toBe(true);
+
+    const skillContent = fs.readFileSync(SKILL_PATH, "utf8");
+    expect(skillContent).toContain("references/citation-style.md");
+    expect(skillContent).toContain("references/routing-strategy.md");
   });
 
-  it("mandates explicit source provenance tags for every factual finding", () => {
-    const content = fs.readFileSync(SKILL_PATH, "utf8");
-    expect(content).toMatch(/Source Provenance|Source Attribution/i);
-    expect(content).toContain("[Source: Context7");
-    expect(content).toContain("[Source: WebSearch");
-    expect(content).toContain("[Source: Repo");
+  it("routes tools for Context7 and web search with local repo grounding", () => {
+    const routingContent = fs.readFileSync(ROUTING_REF_PATH, "utf8");
+    expect(routingContent).toMatch(/Context7/i);
+    expect(routingContent).toMatch(/web_search|web search/i);
+    expect(routingContent).toMatch(/lockfile|package\.json/i);
   });
 
-  it("defines structured technical research output recipe and excludes conversational debate/discussion", () => {
-    const content = fs.readFileSync(SKILL_PATH, "utf8");
-    // Structured research recipe
-    expect(content).toMatch(/Objective|Scope/i);
-    expect(content).toMatch(/Findings|Verified Findings/i);
-    expect(content).toMatch(/Code|Snippet|Usage/i);
-    expect(content).toMatch(/Constraints|Caveats|Breaking/i);
-    
-    // Explicitly excludes discussion-oriented debate recipes
-    expect(content).not.toMatch(/Empirical Trade-off Matrix/i);
-    expect(content).not.toMatch(/Discussion Mode/i);
+  it("mandates natural markdown links and placement rules in citation-style reference", () => {
+    const citationContent = fs.readFileSync(CITATION_REF_PATH, "utf8");
+    expect(citationContent).toMatch(/context badges|Natural Markdown Link/i);
+    expect(citationContent).toMatch(/Section or Block Scope/i);
+    expect(citationContent).toMatch(/Footnotes/i);
+    expect(citationContent).not.toContain("[Source: Repo /");
   });
 
-  it("includes rationalization table and red flags list for investigative discipline", () => {
+  it("defines structured technical research output recipe in SKILL.md", () => {
     const content = fs.readFileSync(SKILL_PATH, "utf8");
-    expect(content).toMatch(/Rationalization Table/i);
-    expect(content).toMatch(/Red Flags/i);
+    expect(content).toMatch(/Scope & Target Version/i);
+    expect(content).toMatch(/Verified Findings/i);
+    expect(content).toMatch(/Minimal Verified Snippet/i);
+    expect(content).toMatch(/Constraints & Breaking Caveats/i);
   });
 });

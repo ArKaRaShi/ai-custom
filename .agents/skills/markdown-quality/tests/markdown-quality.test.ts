@@ -230,6 +230,27 @@ Formula with $\\alpha$ inline.
     expect(parsed.fingerprint.files).toContain("<string>");
   });
 
+  it("runReview with --text ignores sibling markdown files in current working directory", () => {
+    const scriptPath = resolve(import.meta.dir, "../scripts/review.ts");
+    const isolatedCwd = resolve(tmpdir(), `test-text-isolation-${Date.now()}`);
+    mkdirSync(isolatedCwd, { recursive: true });
+    try {
+      // Sibling file with intentional lint error (bare URL violating MD034 in human mode)
+      writeFileSync(resolve(isolatedCwd, "sibling-dirty.md"), "# Dirty\n\nhttps://example.com/bare-url\n");
+      const cleanText = "## Summary\n\nAdd equipment-level filtering.\n";
+      const res = Bun.spawnSync(["bun", scriptPath, `--text=${cleanText}`, "--mode=human", "--format=json"], {
+        cwd: isolatedCwd,
+      });
+      expect(res.exitCode).toBe(0);
+      const parsed = JSON.parse(res.stdout.toString());
+      expect(parsed.status).toBe("clean");
+      expect(parsed.summary.lintErrors).toBe(0);
+      expect(parsed.summary.totalErrors).toBe(0);
+    } finally {
+      rmSync(isolatedCwd, { recursive: true, force: true });
+    }
+  });
+
 
   it("all scripts support --help and -h flags", () => {
     const scripts = [

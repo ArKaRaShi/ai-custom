@@ -167,11 +167,13 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
   let lintFixCount = 0;
   if (fix) {
     if (hasLintBin) {
-      const fixOut = await $`markdownlint-cli2 ${configArg} --fix ${matchedFiles}`.quiet().nothrow().text();
+      const fixProc = await $`markdownlint-cli2 --no-globs ${configArg} --fix ${matchedFiles}`.quiet().nothrow();
+      const fixOut = fixProc.stdout.toString() + "\n" + fixProc.stderr.toString();
       const m = fixOut.match(/Attempted:\s*(\d+)\s*fixes/i);
       lintFixCount = m ? parseInt(m[1], 10) : 0;
     } else {
-      const fixOut = await $`npx -y markdownlint-cli2 ${configArg} --fix ${matchedFiles}`.quiet().nothrow().text();
+      const fixProc = await $`npx -y markdownlint-cli2 --no-globs ${configArg} --fix ${matchedFiles}`.quiet().nothrow();
+      const fixOut = fixProc.stdout.toString() + "\n" + fixProc.stderr.toString();
       const m = fixOut.match(/Attempted:\s*(\d+)\s*fixes/i);
       lintFixCount = m ? parseInt(m[1], 10) : 0;
     }
@@ -179,14 +181,16 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
   let lintOut = "";
   if (isTextInput) {
     const lintProc = Bun.spawnSync(
-      hasLintBin ? ["markdownlint-cli2", ...configArg, "-"] : ["npx", "-y", "markdownlint-cli2", ...configArg, "-"],
+      hasLintBin ? ["markdownlint-cli2", "--no-globs", ...configArg, "-"] : ["npx", "-y", "markdownlint-cli2", "--no-globs", ...configArg, "-"],
       { stdin: Buffer.from(options.text!), stdout: "pipe", stderr: "pipe" },
     );
     lintOut = lintProc.stdout.toString() + "\n" + lintProc.stderr.toString();
   } else if (hasLintBin) {
-    lintOut = await $`markdownlint-cli2 ${configArg} ${matchedFiles}`.quiet().nothrow().text();
+    const proc = await $`markdownlint-cli2 --no-globs ${configArg} ${matchedFiles}`.quiet().nothrow();
+    lintOut = proc.stdout.toString() + "\n" + proc.stderr.toString();
   } else {
-    lintOut = await $`npx -y markdownlint-cli2 ${configArg} ${matchedFiles}`.quiet().nothrow().text();
+    const proc = await $`npx -y markdownlint-cli2 --no-globs ${configArg} ${matchedFiles}`.quiet().nothrow();
+    lintOut = proc.stdout.toString() + "\n" + proc.stderr.toString();
   }
 
   const lintLines = lintOut.split("\n").filter((line) => /MD\d{3}/.test(line));

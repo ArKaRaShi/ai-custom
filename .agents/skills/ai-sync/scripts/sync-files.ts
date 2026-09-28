@@ -5,6 +5,7 @@ import * as os from "os";
 import { createHash } from "crypto";
 import { execSync } from "child_process";
 import { DEFAULT_REPO, HOME, SyncOptions, matchesPattern } from "./targets";
+import { gitPull, gitCommitAndPush } from "./git";
 import {
   loadLocations,
   loadUnifiedManifest,
@@ -313,6 +314,20 @@ export function cmdStatus(repoBase = DEFAULT_REPO, opts: SyncOptions = {}): void
 }
 
 export function cmdPull(repoBase = DEFAULT_REPO, opts: SyncOptions = {}): void {
+  let gitPullResult: { success: boolean; output: string } | undefined;
+  if (opts.gitPull) {
+    gitPullResult = gitPull(repoBase);
+    if (opts.format !== "json") {
+      if (gitPullResult.success) {
+        console.log(`ai-sync:pull [git-remote]`);
+        console.log(`  └─ git_pull   ✔ ${gitPullResult.output || "up to date"}`);
+      } else {
+        console.log(`ai-sync:pull [git-remote]`);
+        console.log(`  └─ git_pull   ⚠️ ${gitPullResult.output}`);
+      }
+    }
+  }
+
   const report = compare(repoBase, opts);
   const targets = getSyncTargets(repoBase);
   const toImport = [...report.missingInLocal, ...report.modified.map((local) => {
@@ -331,6 +346,7 @@ export function cmdPull(repoBase = DEFAULT_REPO, opts: SyncOptions = {}): void {
       command: "pull",
       mode: apply ? "apply" : "preview",
       status: apply ? "synced" : "preview",
+      gitPull: gitPullResult,
       fingerprint: {
         machineHome: HOME,
         repoRoot: repoBase,
@@ -379,11 +395,19 @@ export function cmdPush(repoBase = DEFAULT_REPO, opts: SyncOptions = {}): void {
   const apply = opts.apply === true;
 
   if (opts.format === "json") {
+    let gitPushResult: { success: boolean; output: string } | undefined;
+    if (apply) {
+      for (const item of toExport) copyFileSafe(item.local, item.repo);
+      if (opts.gitPush) {
+        gitPushResult = gitCommitAndPush(repoBase, opts.commitMessage);
+      }
+    }
     console.log(JSON.stringify({
       tool: "ai-sync",
       command: "push",
       mode: apply ? "apply" : "preview",
       status: apply ? "exported" : "preview",
+      gitPush: gitPushResult,
       fingerprint: {
         machineHome: HOME,
         repoRoot: repoBase,
@@ -391,9 +415,6 @@ export function cmdPush(repoBase = DEFAULT_REPO, opts: SyncOptions = {}): void {
       },
       files: toExport.map((e) => e.relative),
     }, null, 2));
-    if (apply) {
-      for (const item of toExport) copyFileSafe(item.local, item.repo);
-    }
     return;
   }
 
@@ -417,6 +438,14 @@ export function cmdPush(repoBase = DEFAULT_REPO, opts: SyncOptions = {}): void {
   for (const item of toExport) {
     copyFileSafe(item.local, item.repo);
     console.log(`  │  ✔ exported: ${item.relative}`);
+  }
+  if (opts.gitPush) {
+    const gitRes = gitCommitAndPush(repoBase, opts.commitMessage);
+    if (gitRes.success) {
+      console.log(`  │  🌐 git_push  ✔ ${gitRes.output || "up to date"}`);
+    } else {
+      console.log(`  │  ⚠️  git_push  ✖ ${gitRes.output}`);
+    }
   }
   console.log(`  └─ status     ✔ backup complete (${toExport.length} files backed up)`);
 }

@@ -2,6 +2,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
+import * as readline from "readline";
 import { DEFAULT_REPO, SKILLS_DIR, HOME, SyncOptions } from "./targets";
 import { LOCAL_LOCATIONS_FILE, loadLocations, loadUnifiedManifest, saveLocations, saveUnifiedManifest, validateLocations, validateUnifiedManifest, resolveRootPaths, pathRuleMatches, isJsonObject, type RootKind, type SkillMetadata, type SyncEntry, type UnifiedManifest } from "./unified-manifest";
 import { checkGitRemoteStatus } from "./git";
@@ -299,6 +300,13 @@ export function parseArgs(rawArgs: string[]): {
     } else if (arg.startsWith("--format=")) opts.format = arg.slice("--format=".length) as "tree" | "json";
     else if (arg === "--apply") opts.apply = true;
     else if (arg === "-h" || arg === "--help") meta.help = true;
+    else if (arg === "--git-pull") opts.gitPull = true;
+    else if (arg === "--no-git-pull") opts.gitPull = false;
+    else if (arg === "--git-push") opts.gitPush = true;
+    else if (arg === "--no-git-push") opts.gitPush = false;
+    else if (arg === "-m" || arg === "--message") {
+      if (i + 1 < rawArgs.length) opts.commitMessage = rawArgs[++i];
+    } else if (arg.startsWith("--message=")) opts.commitMessage = arg.slice("--message=".length);
     else if (arg === "--include-local") opts.includeLocal = true;
     else if (arg === "--write") opts.write = true;
     else if (arg === "--sync") meta.sync = true;
@@ -342,6 +350,9 @@ Options:
   --apply                Execute file mutations (push and pull default to safe preview)
   --format <tree|json>   Output format: human tree (default) or machine JSON
   --format=<tree|json>   Equals-form syntax for --format
+  --git-pull             Pull remote git changes before restoring locally
+  --git-push             Commit and push changes to remote git after backup
+  -m, --message <msg>    Git commit message when using --git-push
   --target <scope>       Narrow operation to specific skill or directory
   --exclude <pattern>    Exclude matching paths from operation
   -h, --help             Show this help message`);
@@ -365,14 +376,31 @@ Options:
       cmdResolve(repo, opts, "merge-all");
       break;
     case "pull":
-    case "apply":
+    case "apply": {
+      if (opts.gitPull === undefined && process.stdin.isTTY && opts.format !== "json") {
+        const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+        const answer = await new Promise<string>((resolve) => rl.question("Pull latest changes from remote git repository first? (y/N): ", resolve));
+        rl.close();
+        if (/^(y|yes)$/i.test(answer.trim())) opts.gitPull = true;
+      }
       cmdPull(repo, opts);
       break;
+    }
     case "push":
     case "backup":
-    case "save":
+    case "save": {
       cmdPush(repo, opts);
+      if (opts.apply && opts.gitPush === undefined && process.stdin.isTTY && opts.format !== "json") {
+        const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+        const answer = await new Promise<string>((resolve) => rl.question("Commit and push backup to remote git repository? (y/N): ", resolve));
+        rl.close();
+        if (/^(y|yes)$/i.test(answer.trim())) {
+          const gitRes = gitCommitAndPush(repo, opts.commitMessage);
+          console.log(gitRes.success ? `  🌐 git remote push: ${gitRes.output || "up to date"}` : `  ⚠️ git remote push failed: ${gitRes.output}`);
+        }
+      }
       break;
+    }
     case "init":
       cmdInit(repo);
       break;

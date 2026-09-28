@@ -96,9 +96,11 @@ export async function runFix(options: FixOptions = {}): Promise<FixResult> {
 
   let out = "";
   if (hasBin) {
-    out = await $`markdownlint-cli2 ${configArg} --fix ${matchedFiles}`.quiet().nothrow().text();
+    const res = await $`markdownlint-cli2 --no-globs ${configArg} --fix ${matchedFiles}`.quiet().nothrow();
+    out = res.stdout.toString() + "\n" + res.stderr.toString();
   } else {
-    out = await $`npx -y markdownlint-cli2 ${configArg} --fix ${matchedFiles}`.quiet().nothrow().text();
+    const res = await $`npx -y markdownlint-cli2 --no-globs ${configArg} --fix ${matchedFiles}`.quiet().nothrow();
+    out = res.stdout.toString() + "\n" + res.stderr.toString();
   }
 
   const fixMatch = out.match(/Attempted:\s*(\d+)\s*fixes/i);

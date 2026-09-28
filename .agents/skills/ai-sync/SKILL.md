@@ -45,9 +45,10 @@ sync status "$REPO" [--format=json]
 sync diff "$REPO"
 sync push "$REPO"          # preview by default
 sync push "$REPO" --apply  # commit backup export
+sync push "$REPO" --apply --git-push [-m "msg"] # export + commit & push to remote
 sync pull "$REPO"          # preview by default
 sync pull "$REPO" --apply  # commit restore import
-sync resolve "$REPO"
+sync pull "$REPO" --apply --git-pull            # pull remote git first, then restore
 sync merge "$REPO"
 ```
 
@@ -61,6 +62,25 @@ sync untrack skill mentor --root agents         # removes policy only
 ## Safe Mutation Contract
 
 File mutations are safe by default. Both `push` and `pull` preview file lists without copying bytes. Pass `--apply` to commit transfers to disk or repository.
+
+## Git Remote Workflow
+
+When the backup repository tracks a configured git remote upstream:
+
+1. **Before `pull` (Pre-flight Gate):**
+   - Always ask the user if they want to pull remote git first before restoring locally:
+     *"Do you want to pull the latest changes from the git remote repository first?"*
+   - If confirmed: pass `--git-pull` or run `git pull` on the backup repository before running `sync pull`.
+   - If declined: restore files directly from the local repository directory.
+
+2. **After `push` (Post-flight Gate):**
+   - When `sync push --apply` finishes exporting files to the backup repository:
+   - Check whether uncommitted changes or unpushed commits exist in the backup repository.
+   - Ask the user if they want to push to remote:
+     *"Backup export complete. Do you want to commit and push changes to the git remote?"*
+   - If confirmed: pass `--git-push` (with optional `-m "commit message"`) or run `git add`, `git commit`, and `git push`.
+   - If declined: leave changes in the local backup repository without pushing to remote.
+
 ## Discovery and bootstrap
 
 ```bash

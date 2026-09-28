@@ -16,6 +16,9 @@ export interface SyncOptions {
   includeLocal?: boolean;
   /** persist detected entries during discovery */
   write?: boolean;
+  gitPull?: boolean;
+  gitPush?: boolean;
+  commitMessage?: string;
 }
 
 export function matchesPattern(relPath: string, patterns: string[]): boolean {
