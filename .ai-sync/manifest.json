@@ -269,6 +269,12 @@
       "skill": {
         "origin": "authored"
       }
+    },
+    {
+      "kind": "path",
+      "root": "omp",
+      "path": "config.yml",
+      "sync": true
     }
   ]
 }

@@ -1,6 +1,6 @@
 modelRoles:
-  smol: litellm/vertex_ai/zai-org/glm-5-maas
-  slow: openai-codex/gpt-6-sol:high
+  smol: openai-codex/gpt-6-luna:auto
+  slow: openai-codex/gpt-6.1-sol:high
   vision: anthropic/claude-sonnet-5:auto
   plan: anthropic/claude-sonnet-5:xhigh
   designer: anthropic/claude-sonnet-5:auto
@@ -8,17 +8,16 @@ modelRoles:
   advisor: openai-codex/gpt-6-luna:auto
   free: openrouter/thinkingmachines/inkling-small:free:high
   boilerplate: openrouter/z-ai/glm-5.3-flash:auto
-  default: anthropic/claude-sonnet-5
   tiny: local/lfm2.5-230m
+  judge: openrouter/~typesafe/jev-latest
 retry:
   fallbackChains:
     smol:
-      - openai-codex/gpt-6-luna:low
       - anthropic/claude-sonnet-5:low
     task:
       - openai-codex/gpt-6-luna:high
       - anthropic/claude-sonnet-5:auto
-      - openai-codex/gpt-6-sol:auto
+      - openai-codex/gpt-6.1-sol:auto
     commit:
       - openai-codex/gpt-6-luna:auto
     boilerplate:
@@ -75,6 +74,7 @@ display:
   cacheMissMarker: true
 task:
   showResolvedModelBadge: true
+  enableLsp: true
   agentModelOverrides:
     {}
 disabledExtensions:
@@ -94,7 +94,7 @@ colorBlindMode: false
 codexResets:
   autoRedeem: "no"
 disabledProviders:
-  - claude
-  - codex
-  - opencode
+  []
 defaultThinkingLevel: auto
+find:
+  enabled: "on"
