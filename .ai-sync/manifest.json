@@ -275,6 +275,15 @@
       "root": "omp",
       "path": "config.yml",
       "sync": true
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "task-followup",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
     }
   ]
 }

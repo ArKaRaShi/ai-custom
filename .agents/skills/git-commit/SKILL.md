@@ -1,9 +1,6 @@
 ---
 name: git-commit
-description: >
-  Use when generating, drafting, or writing a git commit message. Covers Conventional
-  Commits with or without emoji/unicode symbols, adaptive body, or when asked for
-  an emoji commit, a plain conventional commit, or just "write a commit".
+description: Use when generating, drafting, or writing a git commit message. Covers Conventional Commits with or without emoji/unicode symbols, adaptive body, or when asked for an emoji commit, a plain conventional commit, or just "write a commit".
 ---
 
 Draft concise Conventional Commit messages for each proposed change group.
@@ -14,7 +11,6 @@ Before drafting, check the repo's own instructions (AGENTS.md, CLAUDE.md, CONTRI
 
 - Repo specifies one (e.g. `Co-Authored-By: Claude <noreply@anthropic.com>`) → include it verbatim as the last line, every time, regardless of Style or Depth.
 - Repo specifies nothing → omit AI attribution trailers.
-
 
 ## Change Scope and Commit Groups
 

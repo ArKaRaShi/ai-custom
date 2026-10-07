@@ -1,22 +1,25 @@
 modelRoles:
   smol: openai-codex/gpt-6-luna:auto
   slow: openai-codex/gpt-6.1-sol:high
-  vision: anthropic/claude-sonnet-5:auto
-  plan: anthropic/claude-sonnet-5:xhigh
-  designer: anthropic/claude-sonnet-5:auto
+  vision: anthropic/claude-sonnet-5-5:auto
+  plan: anthropic/claude-sonnet-5-5:xhigh
+  designer: anthropic/claude-sonnet-5-5:auto
   commit: openai-codex/gpt-6-luna:auto
   advisor: openai-codex/gpt-6-luna:auto
   free: openrouter/thinkingmachines/inkling-small:free:high
   boilerplate: openrouter/z-ai/glm-5.3-flash:auto
   tiny: local/lfm2.5-230m
   judge: openrouter/~typesafe/jev-latest
+  cheap: litellm/vertex_ai/zai-org/glm-5-maas
 retry:
   fallbackChains:
+    cheap:
+      - google-antigravity/gemini-3.8-flash:high
     smol:
-      - anthropic/claude-sonnet-5:low
+      - anthropic/claude-sonnet-5-5:low
     task:
       - openai-codex/gpt-6-luna:high
-      - anthropic/claude-sonnet-5:auto
+      - anthropic/claude-sonnet-5-5:auto
       - openai-codex/gpt-6.1-sol:auto
     commit:
       - openai-codex/gpt-6-luna:auto
@@ -98,3 +101,7 @@ disabledProviders:
 defaultThinkingLevel: auto
 find:
   enabled: "on"
+snapcompact:
+  toolResults: true
+mnemopi:
+  scoping: per-project-tagged
