@@ -1,0 +1,13 @@
+{
+  "name": "starter-skill",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "biome lint .",
+    "format:check": "biome format .",
+    "check": "bun run typecheck && bun run lint && bun run format:check",
+    "fix": "biome check --write .",
+    "test": "bun test"
+  }
+}

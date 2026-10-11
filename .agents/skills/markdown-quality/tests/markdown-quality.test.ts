@@ -251,6 +251,123 @@ Formula with $\\alpha$ inline.
     }
   });
 
+  it("bundled vocabulary applies when a user-level Vale vocabulary has the same name", () => {
+    const scriptPath = resolve(import.meta.dir, "../scripts/review.ts");
+    const home = resolve(tmpdir(), `test-vale-home-${Date.now()}`);
+    // Vale reads user config from the macOS and XDG locations; create both so the test is platform independent.
+    const userDirs = [resolve(home, "Library/Application Support/vale"), resolve(home, ".config/vale")];
+    try {
+      for (const dir of userDirs) {
+        mkdirSync(resolve(dir, ".vale/styles/config/vocabularies/Personal"), { recursive: true });
+        writeFileSync(resolve(dir, ".vale/styles/config/vocabularies/Personal/accept.txt"), "unrelated\n");
+        writeFileSync(resolve(dir, ".vale.ini"), "StylesPath = .vale/styles\nVocab = Personal\n");
+      }
+      const res = Bun.spawnSync(["bun", scriptPath, "--text=# Title\n\nThe venv appears.\n", "--mode=ai", "--format=json"], {
+        env: { ...process.env, HOME: home, XDG_CONFIG_HOME: resolve(home, ".config") },
+      });
+      const parsed = JSON.parse(res.stdout.toString());
+      expect(parsed.summary.valeErrors).toBe(0);
+      expect(res.exitCode).toBe(0);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  describe("given more findings than the tree prints by default", () => {
+    const scriptPath = resolve(import.meta.dir, "../scripts/review.ts");
+    const words = Array.from({ length: 20 }, (_, i) => `zzqa${String.fromCharCode(97 + i)}x`);
+    const text = `# Title\n\n${words.join(" ")}\n`;
+    const run = (...flags: string[]) => Bun.spawnSync(["bun", scriptPath, `--text=${text}`, "--mode=ai", ...flags]);
+
+    it("prints a capped tree by default and points to the full list", () => {
+      const out = run().stdout.toString();
+      expect(out).toMatch(/\.\.\. and \d+ more/);
+      expect(out).toContain("--verbose");
+      expect(out).not.toContain(`'${words[19]}'`);
+    });
+
+    it("prints every finding with --verbose", () => {
+      const out = run("--verbose").stdout.toString();
+      expect(out).not.toContain("more");
+      for (const word of words) expect(out).toContain(`'${word}'`);
+    });
+
+    it("rejects the removed --all flag", () => {
+      const res = run("--all");
+      expect(res.exitCode).not.toBe(0);
+      expect(res.stderr.toString()).toContain("--all");
+    });
+
+    it("lists every finding in --format=json next to the counts", () => {
+      const parsed = JSON.parse(run("--format=json").stdout.toString());
+      expect(parsed.findings.prose).toHaveLength(parsed.summary.valeErrors);
+      expect(parsed.findings.prose.length).toBeGreaterThanOrEqual(20);
+      for (const word of words) expect(parsed.findings.prose.join("\n")).toContain(`'${word}'`);
+      expect(parsed.findings.lint).toEqual([]);
+    });
+  });
+
+  it("names the kind and reason of structure and security findings instead of undefined", () => {
+    const scriptPath = resolve(import.meta.dir, "../scripts/review.ts");
+    const text = '# Title\n\n##### Level 5 Heading\n\nBody.\n\nexport HOST="1.2.3.4"\n';
+    const res = Bun.spawnSync(["bun", scriptPath, `--text=${text}`, "--mode=ai", "--format=json"]);
+    const parsed = JSON.parse(res.stdout.toString());
+    expect(parsed.findings.structure.join("\n")).toContain("deep-heading");
+    expect(parsed.findings.security.join("\n")).toContain("dummy-ip");
+    for (const line of [...parsed.findings.structure, ...parsed.findings.security]) {
+      expect(line).not.toContain("undefined");
+    }
+  });
+
+  describe("given a document with only style warnings", () => {
+    const scriptPath = resolve(import.meta.dir, "../scripts/review.ts");
+    const text = "# Title\n\nA plain sentence has a colon: Use it; the tests pass.\n";
+    const run = (...flags: string[]) => Bun.spawnSync(["bun", scriptPath, `--text=${text}`, "--mode=ai", ...flags]);
+
+    it("passes with exit 0 and lists the warnings in json without counting them as errors", () => {
+      const res = run("--format=json");
+      const parsed = JSON.parse(res.stdout.toString());
+      expect(res.exitCode).toBe(0);
+      expect(parsed.status).toBe("clean");
+      expect(parsed.summary.valeErrors).toBe(0);
+      expect(parsed.summary.valeWarnings).toBeGreaterThanOrEqual(2);
+      const warnings = parsed.findings.warnings.join("\n");
+      expect(warnings).toContain("ai-tells.ColonUsage");
+      expect(warnings).toContain("ai-tells.SemicolonUsage");
+      expect(parsed.findings.prose).toEqual([]);
+    });
+
+    it("prints the warnings in the tree and reports a clean result that counts them", () => {
+      const res = run();
+      const out = res.stdout.toString();
+      expect(res.exitCode).toBe(0);
+      expect(out).toContain("ai-tells.ColonUsage");
+      expect(out).toMatch(/Result: CLEAN \(\d+ warning\(s\)\)/);
+    });
+
+    it("still fails with exit 1 when an error-level finding is present next to warnings", () => {
+      const res = Bun.spawnSync(["bun", scriptPath, `--text=${text}\nThe zzqxword appears.\n`, "--mode=ai", "--format=json"]);
+      const parsed = JSON.parse(res.stdout.toString());
+      expect(res.exitCode).toBe(1);
+      expect(parsed.summary.valeErrors).toBe(1);
+      expect(parsed.findings.prose.join("\n")).toContain("zzqxword");
+      expect(parsed.findings.warnings.join("\n")).toContain("ai-tells.ColonUsage");
+    });
+  });
+
+  it("treats ColonUsage as a warning that does not cause exit 1", () => {
+    const scriptPath = resolve(import.meta.dir, "../scripts/review.ts");
+    const text = "# Title\n\n**Goal:** Rebuild the tool.\n";
+    const res = Bun.spawnSync(["bun", scriptPath, `--text=${text}`, "--mode=ai", "--format=json"]);
+    expect(res.exitCode).toBe(0);
+    const parsed = JSON.parse(res.stdout.toString());
+    expect(parsed.status).toBe("clean");
+    expect(parsed.summary.valeErrors).toBe(0);
+    expect(parsed.summary.valeWarnings).toBeGreaterThanOrEqual(1);
+    const colon = (parsed.findings.warnings as string[]).filter((w) => w.includes("ColonUsage"));
+    expect(colon.length).toBeGreaterThanOrEqual(1);
+  });
+
 
   it("all scripts support --help and -h flags", () => {
     const scripts = [

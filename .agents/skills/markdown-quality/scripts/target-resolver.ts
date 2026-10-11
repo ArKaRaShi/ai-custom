@@ -38,7 +38,7 @@ export function resolveMarkdownFiles(
         for (const file of glob.scanSync({
           cwd: targetPath,
           onlyFiles: true,
-          throwErrorOnBrokenSymbolicLink: false,
+          throwErrorOnBrokenSymlink: false,
         })) {
           const parts = file.split("/");
           if (parts.some((p) => IGNORED_DIRS[p])) continue;
@@ -52,7 +52,7 @@ export function resolveMarkdownFiles(
         for (const file of glob.scanSync({
           cwd,
           onlyFiles: true,
-          throwErrorOnBrokenSymbolicLink: false,
+          throwErrorOnBrokenSymlink: false,
         })) {
           if (!MD_REGEX.test(file)) continue;
           const parts = file.split("/");

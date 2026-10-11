@@ -29,11 +29,13 @@ export interface ReviewOptions {
   valeUserConfig?: string;
   valeFallbackConfig?: string;
   format?: "tree" | "json";
+  verbose?: boolean;
 }
 
 export interface ReviewResult {
   lintErrors: number;
   valeErrors: number;
+  valeWarnings: number;
   brokenLinksCount: number;
   securityIssuesCount: number;
   structureIssuesCount: number;
@@ -43,6 +45,28 @@ export interface ReviewResult {
   exitCode: number;
 }
 
+interface ValeAlert {
+  Check: string;
+  Message: string;
+  Severity: string;
+  Line: number;
+  Span: [number, number];
+}
+
+// Vale reports one Severity per alert; only `error` blocks the review, warnings and suggestions inform.
+function parseValeAlerts(json: string): Array<{ line: string; blocking: boolean }> {
+  if (json.trim() === "") return [];
+  let parsed: Record<string, ValeAlert[]>;
+  try {
+    parsed = JSON.parse(json) as Record<string, ValeAlert[]>;
+  } catch {
+    throw new Error(`vale did not return JSON: ${json.slice(0, 200)}`);
+  }
+  return Object.entries(parsed).flatMap(([file, alerts]) =>
+    alerts.map((a) => ({ line: `${file}:${a.Line}:${a.Span[0]}:${a.Check}:${a.Message}`, blocking: a.Severity === "error" })),
+  );
+}
+
 interface TreeBranch {
   name: string;
   status: string;
@@ -50,7 +74,7 @@ interface TreeBranch {
   children?: string[];
 }
 
-function renderTree(header: string, configNotice: string, branches: TreeBranch[]): void {
+function renderTree(header: string, configNotice: string, branches: TreeBranch[], verbose: boolean): void {
   console.log(header);
   console.log(`  (${configNotice})`);
   for (let i = 0; i < branches.length; i++) {
@@ -61,13 +85,13 @@ function renderTree(header: string, configNotice: string, branches: TreeBranch[]
 
     console.log(`${prefix}${branch.name.padEnd(14)} ${branch.status}`);
     if (branch.children && branch.children.length > 0) {
-      const maxChildren = 15;
+      const maxChildren = verbose ? branch.children.length : 15;
       const visible = branch.children.slice(0, maxChildren);
       for (const child of visible) {
         console.log(`${childPipe}└─ ${child}`);
       }
       if (branch.children.length > maxChildren) {
-        console.log(`${childPipe}└─ ... and ${branch.children.length - maxChildren} more`);
+        console.log(`${childPipe}└─ ... and ${branch.children.length - maxChildren} more (run with --verbose or --format=json to list every finding)`);
       }
     }
   }
@@ -145,11 +169,12 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
         status: "clean (no markdown files found)",
         isError: false,
       },
-    ]);
+    ], options.verbose === true);
     console.log("Result: CLEAN");
     return {
       lintErrors: 0,
       valeErrors: 0,
+      valeWarnings: 0,
       brokenLinksCount: 0,
       securityIssuesCount: 0,
       structureIssuesCount: 0,
@@ -214,40 +239,44 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
 
   // --- Phase 2: Prose & AI-Tells (Vale) ---
   let valeErrors = 0;
+  let valeWarnings = 0;
+  let valeErrorLines: string[] = [];
+  let valeWarningLines: string[] = [];
   const hasVale = (await $`which vale`.quiet().nothrow()).exitCode === 0;
   if (hasVale) {
     let valeOut = "";
     if (isTextInput) {
       const valeProc = Bun.spawnSync(
-        ["vale", "--ext=.md", ...valeConfigArg, `--minAlertLevel=${minLevel}`, "--output=line"],
+        ["vale", "--no-global", "--ext=.md", ...valeConfigArg, `--minAlertLevel=${minLevel}`, "--output=JSON"],
         { stdin: Buffer.from(options.text!), stdout: "pipe", stderr: "pipe" },
       );
       valeOut = valeProc.stdout.toString();
     } else {
-      valeOut = await $`vale ${valeConfigArg} --minAlertLevel=${minLevel} --output=line ${matchedFiles}`
+      valeOut = await $`vale --no-global ${valeConfigArg} --minAlertLevel=${minLevel} --output=JSON ${matchedFiles}`
         .quiet()
         .nothrow()
         .text();
     }
 
-    const rawValeLines = valeOut
-      .split("\n")
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0);
-
-    valeErrors = rawValeLines.length;
+    const alerts = parseValeAlerts(valeOut);
+    valeErrorLines = alerts.filter((a) => a.blocking).map((a) => a.line);
+    valeWarningLines = alerts.filter((a) => !a.blocking).map((a) => a.line);
+    valeErrors = valeErrorLines.length;
+    valeWarnings = valeWarningLines.length;
+    const warningNote = valeWarnings > 0 ? ` · ${valeWarnings} warning(s)` : "";
     if (valeErrors === 0) {
       branches.push({
         name: "prose/vale",
-        status: "✔ ok",
+        status: `✔ ok${warningNote}`,
         isError: false,
+        children: valeWarnings > 0 ? valeWarningLines.map((l) => `(warning) ${l}`) : undefined,
       });
     } else {
       branches.push({
         name: "prose/vale",
-        status: `✖ ${valeErrors} issue(s)`,
+        status: `✖ ${valeErrors} issue(s)${warningNote}`,
         isError: true,
-        children: rawValeLines,
+        children: [...valeErrorLines, ...valeWarningLines.map((l) => `(warning) ${l}`)],
       });
     }
   } else {
@@ -327,7 +356,7 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
         status: `✖ ${totalStructureIssues.length} issue(s)`,
         isError: true,
         children: totalStructureIssues.map(
-          (s) => `${s.file}:${s.finding.line} [${s.finding.rule}] ${s.finding.message}`
+          (s) => `${s.file}:${s.finding.line} [${s.finding.type}] ${s.finding.reason}: ${s.finding.match}`
         ),
       });
     }
@@ -372,7 +401,7 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
         status: `✖ ${totalSecurityIssues.length} leak(s)`,
         isError: true,
         children: totalSecurityIssues.map(
-          (s) => `${s.file}:${s.finding.line} [${s.finding.rule}] ${s.finding.message}`
+          (s) => `${s.file}:${s.finding.line} [${s.finding.type}] ${s.finding.reason}: ${s.finding.match}`
         ),
       });
     }
@@ -460,6 +489,25 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
   const totalErrors = lintErrors + valeErrors + brokenLinksCount + securityIssuesCount + structureIssuesCount;
   const verdict = totalErrors === 0 ? "CLEAN" : "NEEDS_REVIEW";
 
+  const findingKeys: Record<string, "lint" | "links" | "structure" | "security"> = {
+    standards: "lint",
+    links: "links",
+    structure: "structure",
+    security: "security",
+  };
+  const findings = {
+    lint: [] as string[],
+    prose: valeErrorLines,
+    warnings: valeWarningLines,
+    links: [] as string[],
+    structure: [] as string[],
+    security: [] as string[],
+  };
+  for (const branch of branches) {
+    const key = findingKeys[branch.name];
+    if (key && branch.isError) findings[key].push(...(branch.children ?? []));
+  }
+
   if (options.format === "json") {
     const jsonOutput = {
       tool: "markdown-quality",
@@ -477,17 +525,19 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
         totalErrors,
         lintErrors,
         valeErrors,
+        valeWarnings,
         brokenLinks: brokenLinksCount,
         securityIssues: securityIssuesCount,
         structureIssues: structureIssuesCount,
       },
+      findings,
       density: densityReports,
     };
     console.log(JSON.stringify(jsonOutput, null, 2));
   } else {
-    renderTree(header, configNotice, branches);
+    renderTree(header, configNotice, branches, options.verbose === true);
     if (totalErrors === 0) {
-      console.log("Result: CLEAN");
+      console.log(valeWarnings > 0 ? `Result: CLEAN (${valeWarnings} warning(s))` : "Result: CLEAN");
     } else {
       console.log(`Result: NEEDS_REVIEW (${totalErrors} total issue(s))`);
     }
@@ -496,6 +546,7 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
   return {
     lintErrors,
     valeErrors,
+    valeWarnings,
     brokenLinksCount,
     securityIssuesCount,
     structureIssuesCount,
@@ -520,6 +571,7 @@ if (import.meta.main) {
   let lintConfig: string | undefined;
   let valeConfig: string | undefined;
   let format: "tree" | "json" = "tree";
+  let verbose = false;
   let text: string | undefined;
   function fail(message: string): never {
     console.error(message);
@@ -546,7 +598,8 @@ Options:
   --format <tree|json>     Output format: tree (default) or machine json
   --format=<tree|json>     Equals-form syntax for --format
   --fix                    Apply automatic structural fixes via markdownlint-cli2 before review
-  --min-level <level>      Vale minimum alert level: error, warning, suggestion (default: warning)
+  --verbose                Print every finding in the tree instead of the first 15 per check (json always lists all)
+  --min-level <level>      Vale minimum alert level: error, warning, suggestion (default: warning). Only error findings block (exit 1); warnings and suggestions are listed
   --min-level=<level>      Equals-form syntax for --min-level
   --no-links               Skip Phase 3: link integrity check
   --no-structure           Skip Phase 4: document structure check (heading depth, orphans, latex)
@@ -567,7 +620,9 @@ Examples:
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    if (arg === "--fix") {
+    if (arg === "--verbose") {
+      verbose = true;
+    } else if (arg === "--fix") {
       fix = true;
     } else if (arg === "--no-links") {
       checkLinks = false;
@@ -655,6 +710,7 @@ Examples:
     valeConfig,
     fix,
     minLevel,
+    verbose,
     checkLinks,
     checkDensity,
     checkSecurity,

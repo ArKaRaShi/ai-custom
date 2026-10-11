@@ -112,7 +112,7 @@ This paragraph is exempt from Vale.
 
 Or per-rule: `<!-- vale write-good.weasel off -->`.
 
-### Custom rules (see `assets/Bloat.yml`)
+### Custom rules (see `assets/.vale/styles/Bloat/`)
 
 YAML rule structure:
 
