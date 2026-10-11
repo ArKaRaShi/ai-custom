@@ -32,6 +32,18 @@ When a CLI command performs destructive mutations, file deletions, schema change
 - Committing mutations requires an explicit flag such as `--apply` or `--confirm`.
 - Tools MUST NOT mutate by default while requiring `--dry-run` to opt into safety. Safety is the baseline. Mutation is explicit.
 
+## Capped output and `--verbose`
+
+A command that can print many items (findings, files, entries) caps the human tree output per group and reveals the rest with `--verbose`.
+
+- Cap each group at a documented count, 15 by default. When a group hides items, its last line of the group says how many and names both `--verbose` and `--format=json`.
+- `--verbose` is a `boolean` flag. It prints every item in the human output and changes nothing else: exit codes, summaries and JSON stay the same.
+- `--format=json` always lists every item, with or without `--verbose`.
+- Use the name `--verbose` for this behavior. Do not use `--all`, `--full` or `--long`. Reserve `--all` for flags that widen which targets a command acts on.
+- Output that is always short does not need a cap or a flag.
+
+Example from `markdown-quality`: `review.ts docs/ --verbose` lists every finding, while `review.ts docs/` prints 15 per check and ends with `... and 40 more (run with --verbose or --format=json to list every finding)`.
+
 ## Standard Logging Contract (Dual-Mode: Tree Log + Machine JSON)
 
 CLI tools in authored skills must use dual-mode logging:

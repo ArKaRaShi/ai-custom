@@ -27,7 +27,7 @@ Authors may externally reference only `skill://writing-skills` and `skill://mark
   skills-manifest.json         # permitted at skills root; allowed but not required
   <skill-name>/
     SKILL.md                    # required; the only required file
-    scripts/                    # executable tools the agent runs
+    scripts/                    # executable tools; flat (Tier 0) or four layers (Tier 1)
     references/                 # long docs the agent reads on demand
     assets/                     # static config/templates scripts consume
     tests/                      # checks for scripts/
@@ -46,7 +46,7 @@ The permitted `skills-manifest.json` at `<skills-root>/` is allowed but not requ
 | `SKILL.md` | overview, when-to-use, rules, pointers to subdirs | ~200-400 words |
 | `scripts/` | `*.ts`/`*.py`/`*.sh` the agent runs (`bun`, `python`) | any |
 | `references/` | deep docs: API, contracts, formats, quirks | only >~100-line docs |
-| `assets/` | config read by scripts (`*.ini`, `*.jsonc`, `*.yml`) | any |
+| `assets/` | Configuration consumed by scripts, or copyable templates such as `assets/starters/`; shared tooling templates are installed only on demand | any |
 | `tests/` | `*.test.*` covering `scripts/` | any |
 | `examples/` | sample input/output showing expected shape | any |
 
@@ -78,16 +78,17 @@ Route a new file by kind:
 - config the code reads -> `assets/`
 - tests -> `tests/`
 - sample data -> `examples/`
-- anything else: only `SKILL.md`, `LICENSE`, or optional package manifests (`package.json`, lockfiles) may sit at the skill root
+- anything else: only `SKILL.md`, `LICENSE`, or optional package manifests (`package.json`, `requirements.txt`, `pyproject.toml`, lockfiles) may sit at the skill root
 
-Never: a second `README.md` (`SKILL.md` is the entry point); `*.test.*` at the skill root; tracked `node_modules` in any skill.
+Never: a second `README.md` (`SKILL.md` is the entry point); `*.test.*` at the skill root; tracked dependency directories (`node_modules`, `.venv`, `__pycache__`) in any skill.
 
 ### Package Manifests and Dependencies
 
-If a skill requires external dependencies and includes a `package.json`:
+If a skill requires external dependencies and includes a manifest (`package.json`, `requirements.txt`, `pyproject.toml`, or `go.mod`):
 
-- It must include `references/dependencies.md` (or instructions in `SKILL.md`) documenting install commands and recovery steps when script execution fails from missing packages.
-- `node_modules` must remain untracked and never sync to backup repositories.
+- It must include `references/dependencies.md` (or instructions in `SKILL.md`) satisfying the contract in `references/primitives/dependencies.md`: runtime requirements, declared packages with justifications, deterministic install commands across supported package managers, and observable failure recovery steps.
+- Allowed lockfiles at skill root: `bun.lock`, `package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`, `uv.lock`, `poetry.lock`, `go.sum`.
+- `node_modules` must remain untracked and never sync to backup repositories (similarly for Python `.venv`, `venv`, and `__pycache__`).
 
 ## Body shape by type
 
@@ -126,10 +127,11 @@ upstream layout untouched because reinstalling upstream packages would revert an
 1. `mkdir <skills-root>/<kebab-name>/`
 2. Write `SKILL.md` with `name:` equal to the directory.
 3. Add subdirectories only when content demands (see Placement).
-4. **REQUIRE SUBSKILL:** `markdown-quality` (run auto-fix in AI mode on authored markdown):
-   `bun ~/.agents/skills/markdown-quality/scripts/review.ts <skills-root>/<kebab-name>/SKILL.md --fix --mode=ai`
-   If `markdown-quality` is unavailable, review formatting manually against Quality Standards without blocking.
-5. Register as authored and back up to the sync repo within `skill-framework`
+4. **REQUIRE SUBSKILL:** `markdown-quality` (run a read-only review in AI mode on authored Markdown):
+   `bun ~/.agents/skills/markdown-quality/scripts/review.ts <skills-root>/<kebab-name>/ --mode=ai`
+   If `markdown-quality` is unavailable, review formatting and local links manually against Quality Standards and report the automated-check limit. Automatic fixes require a separate explicit action.
+5. Declare and exercise the skill's verification path under the [verification contract](primitives/verification.md), including applicable code checks and an isolated changed-behavior check.
+6. Register as authored and back up to the sync repo within `skill-framework`
    (see `.ai-sync/manifest.json` workflow. Do not hand-edit the manifest).
 
 ## Mirror checklist
@@ -140,18 +142,20 @@ Auditing or cloning an existing skill:
 2. exactly one `SKILL.md`, no `README.md`
 3. no loose files at skills root or skill root except the permitted `skills-manifest.json` (allowed, not required)
 4. heavy docs in `references/`, code in `scripts/`, tests in `tests/`
-5. no tracked `node_modules`; any `package.json` must include install instructions in `references/dependencies.md` or `SKILL.md`
+5. no tracked dependency artifacts (`node_modules`, `.venv`, `__pycache__`); any manifest must include install instructions fulfilling `references/primitives/dependencies.md` in `references/dependencies.md` or `SKILL.md`
 6. passes markdown quality review in AI mode (`bun ~/.agents/skills/markdown-quality/scripts/review.ts <path> --mode=ai`)
+7. declares a reproducible verification path and reports exercised results and limits; executable content includes applicable static checks and an isolated behavior check
 
 ## Framework integration rules
 
 - Apply this layout guidance to all authored skills, whether they contain
   executable tools.
+- Authored skills must declare a verification path under `primitives/verification.md` when created or modified. External skills keep their upstream files.
 - Consuming skills bundle copied primitives and do not import code from
   `skill-framework` at runtime.
 - Authors may externally reference only `skill://writing-skills` and `skill://markdown-quality`. All other guidance and examples must be self-contained and generic.
-- External skill cross-references (scripts or `skill://` URIs) must start with `**REQUIRE SUBSKILL:** <name>`.
-- Every subskill reference must specify a non-blocking fallback action if missing or unreadable. Workflows must proceed without stalling.
+- External skill cross-references (scripts or `skill://` links) must start with `**REQUIRE SUBSKILL:** <name>`.
+- Every sub-skill reference must specify a non-blocking fallback action if missing or unreadable. Workflows must proceed without stalling.
 - Mutating and destructive tools must preview actions by default and require explicit flags (such as `--apply` or `--confirm`) to execute mutations.
 - Authored CLI tools must provide dual-mode logging: tree logs for human terminals and structured JSON when callers pass `--format=json`.
 - The framework does not add a root `README.md`, shared runtime package, or code-distribution generator.

@@ -112,7 +112,7 @@ function resolveFiles(pattern: string): string[] {
     for (const file of glob.scanSync({
       cwd: process.cwd(),
       onlyFiles: true,
-      throwErrorOnBrokenSymbolicLink: false,
+      throwErrorOnBrokenSymlink: false,
     })) {
       if (
         !file.startsWith("node_modules/") &&

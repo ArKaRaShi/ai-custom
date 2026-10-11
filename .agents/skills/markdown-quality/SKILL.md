@@ -40,6 +40,20 @@ bun "$SKILL_DIR/scripts/review.ts" "<file-or-dir>" --fix --config=./my-rules/
 
 # 5. Direct string review without creating temporary files
 bun "$SKILL_DIR/scripts/review.ts" --text="<content>" [--mode=human]
+
+# 6. Print every finding (the tree shows 15 per check) or get all of them as JSON
+bun "$SKILL_DIR/scripts/review.ts" "<file-or-dir>" --verbose
+bun "$SKILL_DIR/scripts/review.ts" "<file-or-dir>" --format=json
+```
+
+## Findings and Severity
+
+Only `error` findings block the review (exit 1). Vale style findings (colons, semicolons, em-dashes, formal register, repeated sentence patterns, `write-good`) are warnings. The tree lists them, JSON reports them as `summary.valeWarnings`, and the result stays `CLEAN`.
+
+`--format=json` returns `findings` with `lint`, `prose` (blocking), `warnings`, `links`, `structure`, and `security`, so no finding is hidden behind the tree cap.
+
+Vale runs with `--no-global`. Only the bundled `assets/.vale/styles` and the `MarkdownQuality` vocabulary apply, so a Vale setup in your home directory cannot change results. Add accepted terms to `assets/.vale/styles/config/vocabularies/MarkdownQuality/accept.txt`.
+
 ## Quality Standards
 
 Apply these checks across every markdown file:
