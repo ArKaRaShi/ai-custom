@@ -94,3 +94,13 @@ semver
 toolchains
 Neovim
 
+[Uu]nreviewed
+unstored
+WRs
+dialogs
+KPIs
+[Cc]utover
+prefilled
+refetches
+EQs
+nullable

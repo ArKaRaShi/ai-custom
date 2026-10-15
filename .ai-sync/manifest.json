@@ -277,13 +277,10 @@
       "sync": true
     },
     {
-      "kind": "skill",
-      "root": "agents",
-      "path": "task-followup",
-      "sync": true,
-      "skill": {
-        "origin": "authored"
-      }
+      "kind": "path",
+      "root": "omp",
+      "path": "RULES.md",
+      "sync": true
     }
   ]
 }
