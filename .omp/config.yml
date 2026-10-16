@@ -10,7 +10,7 @@ modelRoles:
   boilerplate: openrouter/z-ai/glm-5.3-flash:auto
   tiny: local/lfm2.5-230m
   judge: openrouter/~typesafe/jev-latest
-  cheap: litellm/vertex_ai/zai-org/glm-5-maas
+  cheap: litellm/gemini-3.8-flash
 retry:
   fallbackChains:
     cheap:
