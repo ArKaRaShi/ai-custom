@@ -2,7 +2,7 @@ import { existsSync, readFileSync, statSync } from "fs";
 
 export interface StructureFinding {
   line: number;
-  type: "deep-heading" | "orphan-heading" | "unrendered-latex";
+  type: "deep-heading" | "orphan-heading" | "unrendered-latex" | "index-line-drift" | "index-missing-heading";
   match: string;
   reason: string;
 }
@@ -19,6 +19,21 @@ export function checkMarkdownStructure(content: string): StructureCheckResult {
   const lines = content.split("\n");
   const findings: StructureFinding[] = [];
 
+  // Pre-scan actual H2 headings (outside code blocks) to verify index line numbers
+  const actualH2Headings = new Map<string, number>();
+  let inCodeScan = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.trim().startsWith("```")) {
+      inCodeScan = !inCodeScan;
+      continue;
+    }
+    if (inCodeScan) continue;
+    const h2Match = line.match(/^##\s+(.+)$/);
+    if (h2Match) {
+      actualH2Headings.set(h2Match[1].trim(), i + 1);
+    }
+  }
   let inCode = false;
 
   for (let i = 0; i < lines.length; i++) {
@@ -76,6 +91,34 @@ export function checkMarkdownStructure(content: string): StructureCheckResult {
         reason: "Unrendered inline LaTeX syntax detected in standard prose",
       });
     }
+
+    // 4. Index Line Drift Check: Verify index tables in lines 1-35
+    if (i < 35) {
+      const stripped = line.replace(/^>\s*/, "").trim();
+      const rowMatch = stripped.match(/^\|\s*([^|]+?)\s*\|\s*L(\d+)(?:[–-]L?(\d+))?\s*\|\s*([^|]+?)\s*\|/);
+      if (rowMatch) {
+        const title = rowMatch[1].trim();
+        if (title !== "Section" && !title.startsWith(":")) {
+          const claimedStart = parseInt(rowMatch[2], 10);
+          const actualStart = actualH2Headings.get(title);
+          if (actualStart === undefined) {
+            findings.push({
+              line: i + 1,
+              type: "index-missing-heading",
+              match: line.trim(),
+              reason: `Index lists section '${title}', but no matching '## ${title}' exists in the document`,
+            });
+          } else if (actualStart !== claimedStart) {
+            findings.push({
+              line: i + 1,
+              type: "index-line-drift",
+              match: line.trim(),
+              reason: `Section '${title}' claims L${claimedStart}, but actual heading is at line ${actualStart}`,
+            });
+          }
+        }
+      }
+    }
   }
 
   return {
@@ -84,6 +127,54 @@ export function checkMarkdownStructure(content: string): StructureCheckResult {
   };
 }
 
+/**
+ * Recalculates exact heading line ranges in lines 1-35 index tables and updates them in place.
+ */
+export function fixIndexLineRanges(content: string): { updated: boolean; content: string } {
+  const lines = content.split("\n");
+  const headings: Array<{ line: number; title: string }> = [];
+  let inCode = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.trim().startsWith("```")) {
+      inCode = !inCode;
+      continue;
+    }
+    if (inCode) continue;
+    const h2Match = line.match(/^##\s+(.+)$/);
+    if (h2Match) {
+      headings.push({ line: i + 1, title: h2Match[1].trim() });
+    }
+  }
+
+  if (headings.length === 0) return { updated: false, content };
+
+  const rangeMap: Record<string, string> = {};
+  for (let idx = 0; idx < headings.length; idx++) {
+    const h = headings[idx];
+    const nextLine = idx < headings.length - 1 ? headings[idx + 1].line - 1 : lines.length;
+    rangeMap[h.title] = `L${h.line}-L${nextLine}`;
+  }
+
+  let updated = false;
+  for (let i = 0; i < Math.min(35, lines.length); i++) {
+    const raw = lines[i];
+    const stripped = raw.replace(/^>\s*/, "").trim();
+    const match = stripped.match(/^\|\s*([^|]+?)\s*\|\s*(L\d+[–-]L?\d+)\s*\|\s*([^|]+?)\s*\|/);
+    if (match) {
+      const title = match[1].trim();
+      if (rangeMap[title]) {
+        const correctRange = rangeMap[title];
+        if (match[2] !== correctRange) {
+          lines[i] = raw.replace(match[2], correctRange);
+          updated = true;
+        }
+      }
+    }
+  }
+
+  return { updated, content: lines.join("\n") };
+}
 function resolveFiles(pattern: string): string[] {
   if (existsSync(pattern) && statSync(pattern).isFile()) {
     return [pattern];

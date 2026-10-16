@@ -176,6 +176,68 @@ Formula with $\\alpha$ inline.
     expect(types).toContain("unrendered-latex");
   });
 
+  it("checkMarkdownStructure detects index-line-drift and index-missing-heading", () => {
+    const driftedDoc = `# Title
+
+> **Index:**
+> | Section | Lines | Anchor |
+> | :--- | :--- | :--- |
+> | First Section | L20–L30 | [#first-section](#first-section) |
+> | Nonexistent Section | L31–L40 | [#nonexistent](#nonexistent) |
+
+## First Section
+
+Body text.
+`;
+
+    const res = checkMarkdownStructure(driftedDoc);
+    const types = res.findings.map((f) => f.type);
+    expect(types).toContain("index-line-drift");
+    expect(types).toContain("index-missing-heading");
+
+    const validDoc = `# Title
+
+> **Index:**
+> | Section | Lines | Anchor |
+> | :--- | :--- | :--- |
+> | First Section | L8–L10 | [#first-section](#first-section) |
+
+## First Section
+
+Body text.
+`;
+    const validRes = checkMarkdownStructure(validDoc);
+    const validTypes = validRes.findings.map((f) => f.type);
+    expect(validTypes).not.toContain("index-line-drift");
+    expect(validTypes).not.toContain("index-missing-heading");
+  });
+
+  it("fixIndexLineRanges automatically recalculates and rewrites drifted lines", () => {
+    const structurePath = resolve(import.meta.dir, "scripts/structure-check".replace(/^/, "../"));
+    const { fixIndexLineRanges } = require(structurePath);
+    const driftedDoc = `# Title
+
+> **Index:**
+> | Section | Lines | Anchor |
+> | :--- | :--- | :--- |
+> | First Section | L99–L100 | [#first-section](#first-section) |
+> | Second Section | L200–L300 | [#second-section](#second-section) |
+
+## First Section
+
+Line 11.
+Line 12.
+
+## Second Section
+
+Line 16.
+`;
+
+    const { updated, content } = fixIndexLineRanges(driftedDoc);
+    expect(updated).toBe(true);
+    expect(content).toContain("| First Section | L9-L13 | [#first-section](#first-section) |");
+    expect(content).toContain("| Second Section | L14-L17 | [#second-section](#second-section) |");
+  });
   it("runReview performs comprehensive multi-phase review cleanly", async () => {
     const result = await runReview({ glob: testFileClean });
     expect(result).toBeDefined();
