@@ -1,10 +1,9 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
-import { existsSync, statSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, statSync } from "fs";
 import { resolve, dirname } from "path";
 import { homedir } from "os";
 import { resolveMarkdownFiles } from "./target-resolver";
-import { fixIndexLineRanges } from "./structure-check";
 
 export interface FixOptions {
   targets?: string | string[];
@@ -105,19 +104,8 @@ export async function runFix(options: FixOptions = {}): Promise<FixResult> {
   }
 
 
-  let indexFixCount = 0;
-  for (const filePath of matchedFiles) {
-    if (existsSync(filePath)) {
-      const original = readFileSync(filePath, "utf-8");
-      const { updated, content } = fixIndexLineRanges(original);
-      if (updated) {
-        writeFileSync(filePath, content, "utf-8");
-        indexFixCount++;
-      }
-    }
-  }
   const fixMatch = out.match(/Attempted:\s*(\d+)\s*fixes/i);
-  const fixCount = (fixMatch ? parseInt(fixMatch[1], 10) : 0) + indexFixCount;
+  const fixCount = fixMatch ? parseInt(fixMatch[1], 10) : 0;
 
   const mdMatches = out.split("\n").filter((line) => /MD\d{3}/.test(line));
   const remainingCount = mdMatches.length;

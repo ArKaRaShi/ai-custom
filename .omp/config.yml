@@ -11,10 +11,13 @@ modelRoles:
   tiny: local/lfm2.5-230m
   judge: openrouter/~typesafe/jev-latest
   cheap: litellm/gemini-3.8-flash
+  test: anthropic/claude-haiku-5-5:high
 retry:
   fallbackChains:
     cheap:
       - google-antigravity/gemini-3.8-flash:high
+    test:
+      - openai-codex/gpt-6-luna:high
     smol:
       - anthropic/claude-sonnet-5-5:low
     task:
@@ -78,10 +81,8 @@ display:
 task:
   showResolvedModelBadge: true
   enableLsp: true
-  agentModelOverrides:
-    {}
-disabledExtensions:
-  []
+  agentModelOverrides: {}
+disabledExtensions: []
 providers:
   tinyModelDevice: default
   tinyModelDtype: default
@@ -96,8 +97,7 @@ browser:
 colorBlindMode: false
 codexResets:
   autoRedeem: "no"
-disabledProviders:
-  []
+disabledProviders: []
 defaultThinkingLevel: auto
 find:
   enabled: "on"
@@ -105,3 +105,4 @@ snapcompact:
   toolResults: true
 mnemopi:
   scoping: per-project-tagged
+hideThinkingBlock: false

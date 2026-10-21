@@ -324,6 +324,8 @@ export interface ExtensionContext {
     setStatus?(key: string, text: string): void;
     setWidget?(key: string, lines: string[], options?: { placement?: string }): void;
   };
+  setTimeout?(fn: () => void | Promise<void>, ms: number): unknown;
+  clearTimer?(timer: unknown): void;
 }
 
 export function isSubagent(ctx?: ExtensionContext): boolean {
@@ -379,7 +381,8 @@ export async function getLatestModelFromSession(sessionFile?: string): Promise<s
 export function setQuotaStatus(ctx: ExtensionContext, text: string): void {
   if (ctx.ui?.setStatus) {
     ctx.ui.setStatus("quota_status", text);
-  } else if (ctx.ui?.setWidget) {
+  }
+  if (ctx.ui?.setWidget) {
     ctx.ui.setWidget("quota_status", [text], { placement: "belowEditor" });
   }
 }
@@ -387,9 +390,57 @@ export function setQuotaStatus(ctx: ExtensionContext, text: string): void {
 export function setQuotaWidget(ctx: ExtensionContext, text: string): void {
   if (ctx.ui?.setWidget) {
     ctx.ui.setWidget("quota_status", [text], { placement: "belowEditor" });
-  } else if (ctx.ui?.setStatus) {
+  }
+  if (ctx.ui?.setStatus) {
     ctx.ui.setStatus("quota_status", text);
   }
+}
+
+export const POLLING_INTERVAL_MS = 120_000; // 2 minutes
+
+export type TimerHandle = NodeJS.Timeout | number | unknown;
+
+let pollTimer: TimerHandle | null = null;
+
+export function isPollTimerActive(): boolean {
+  return pollTimer !== null;
+}
+
+export function clearPollTimer(ctx?: ExtensionContext | null): void {
+  if (pollTimer !== null) {
+    const effectiveCtx = ctx || lastCtx;
+    if (effectiveCtx?.clearTimer) {
+      effectiveCtx.clearTimer(pollTimer);
+    } else {
+      clearTimeout(pollTimer as NodeJS.Timeout);
+    }
+    pollTimer = null;
+  }
+}
+
+export function resetCooldown(
+  ctx?: ExtensionContext | null,
+  onTick?: () => Promise<void> | void,
+  intervalMs = POLLING_INTERVAL_MS,
+): void {
+  const effectiveCtx = ctx || lastCtx;
+  if (!effectiveCtx || isSubagent(effectiveCtx)) return;
+
+  clearPollTimer(effectiveCtx);
+
+  const schedule = effectiveCtx.setTimeout
+    ? effectiveCtx.setTimeout.bind(effectiveCtx)
+    : (fn: () => void, ms: number) => setTimeout(fn, ms);
+
+  pollTimer = schedule(async () => {
+    try {
+      if (onTick) {
+        await onTick();
+      }
+    } finally {
+      resetCooldown(effectiveCtx, onTick, intervalMs);
+    }
+  }, intervalMs);
 }
 
 export default function (pi: ExtensionAPI) {
@@ -427,15 +478,49 @@ export default function (pi: ExtensionAPI) {
     }
   }
 
-  pi.on("agent_start", async (_event: unknown, ctx: ExtensionContext) => {
+  let isAgentActive = false;
+
+  function armCooldown(ctx: ExtensionContext) {
+    if (!isAgentActive) return;
+    resetCooldown(ctx, async () => {
+      if (isAgentActive) {
+        await syncStatus(ctx, false);
+      }
+    }, POLLING_INTERVAL_MS);
+  }
+
+  pi.on("session_start", async (_event: unknown, ctx: ExtensionContext) => {
     await syncStatus(ctx, false);
+    clearPollTimer(ctx);
+  });
+
+  pi.on("agent_start", async (_event: unknown, ctx: ExtensionContext) => {
+    isAgentActive = true;
+    await syncStatus(ctx, false);
+    armCooldown(ctx);
+  });
+
+  pi.on("turn_end", async (_event: unknown, ctx: ExtensionContext) => {
+    if (!isAgentActive) return;
+    await syncStatus(ctx, false);
+    armCooldown(ctx);
   });
 
   pi.on("agent_end", async (_event: unknown, ctx: ExtensionContext) => {
+    isAgentActive = false;
+    clearPollTimer(ctx);
     await syncStatus(ctx, false);
   });
 
   pi.on("session_resume", async (_event: unknown, ctx: ExtensionContext) => {
     await syncStatus(ctx, true);
+    if (!isAgentActive) {
+      clearPollTimer(ctx);
+    }
+  });
+
+  pi.on("session_shutdown", (_event: unknown, ctx: ExtensionContext) => {
+    isAgentActive = false;
+    clearPollTimer(ctx);
   });
 }

@@ -1,7 +1,8 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
-import { existsSync, readFileSync, statSync } from "fs";
+import { existsSync, readFileSync, statSync, mkdirSync, writeFileSync } from "fs";
 import { resolve, dirname } from "path";
+import { randomUUID } from "crypto";
 import { homedir } from "os";
 import { resolveMarkdownFiles } from "./target-resolver";
 import { checkMarkdownLinks, type BrokenLink } from "./link-checker";
@@ -53,18 +54,38 @@ interface ValeAlert {
   Span: [number, number];
 }
 
+function isValeAlert(item: unknown): item is ValeAlert {
+  if (typeof item !== "object" || item === null) return false;
+  const record = item as Record<string, unknown>;
+  return (
+    typeof record.Check === "string" &&
+    typeof record.Message === "string" &&
+    typeof record.Severity === "string" &&
+    typeof record.Line === "number" &&
+    Array.isArray(record.Span) &&
+    record.Span.length === 2
+  );
+}
+
 // Vale reports one Severity per alert; only `error` blocks the review, warnings and suggestions inform.
 function parseValeAlerts(json: string): Array<{ line: string; blocking: boolean }> {
   if (json.trim() === "") return [];
-  let parsed: Record<string, ValeAlert[]>;
+  let raw: unknown;
   try {
-    parsed = JSON.parse(json) as Record<string, ValeAlert[]>;
+    raw = JSON.parse(json);
   } catch {
     throw new Error(`vale did not return JSON: ${json.slice(0, 200)}`);
   }
-  return Object.entries(parsed).flatMap(([file, alerts]) =>
-    alerts.map((a) => ({ line: `${file}:${a.Line}:${a.Span[0]}:${a.Check}:${a.Message}`, blocking: a.Severity === "error" })),
-  );
+  if (typeof raw !== "object" || raw === null) return [];
+  const record = raw as Record<string, unknown>;
+
+  return Object.entries(record).flatMap(([file, alerts]) => {
+    if (!Array.isArray(alerts)) return [];
+    return alerts.filter(isValeAlert).map((a) => ({
+      line: `${file}:${a.Line}:${a.Span[0]}:${a.Check}:${a.Message}`,
+      blocking: a.Severity === "error",
+    }));
+  });
 }
 
 interface TreeBranch {
@@ -495,13 +516,21 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
     structure: "structure",
     security: "security",
   };
-  const findings = {
-    lint: [] as string[],
+  interface FindingMap {
+    lint: string[];
+    prose: string[];
+    warnings: string[];
+    links: string[];
+    structure: string[];
+    security: string[];
+  }
+  const findings: FindingMap = {
+    lint: [],
     prose: valeErrorLines,
     warnings: valeWarningLines,
-    links: [] as string[],
-    structure: [] as string[],
-    security: [] as string[],
+    links: [],
+    structure: [],
+    security: [],
   };
   for (const branch of branches) {
     const key = findingKeys[branch.name];
@@ -606,9 +635,8 @@ Options:
   --no-security            Skip Phase 5: security & credential leak scanner
   --no-density             Skip Phase 6: token density & AI context efficiency check
   -h, --help               Show this help message and exit
-  --text <content>         Direct string content to review instead of file targets
+  --text <content>         Review text and save a reusable artifact under .tmp-markdown-quality/
   --text=<content>         Equals-form syntax for --text
-
 Examples:
   bun review.ts
   bun review.ts README.md --mode=human
@@ -698,6 +726,16 @@ Examples:
     } else {
       targets.push(arg);
     }
+  }
+
+  if (text !== undefined) {
+    const artifactDir = resolve(process.cwd(), ".tmp-markdown-quality");
+    mkdirSync(artifactDir, { recursive: true });
+    const artifact = resolve(artifactDir, `${Date.now()}-${randomUUID()}-text.md`);
+    writeFileSync(artifact, text);
+    console.error(`Saved text artifact: ${artifact}`);
+    console.error(`Reuse this path for another review. When finished, preview cleanup with:\nbun "${dirname(import.meta.path)}/cleanup.ts" "${artifact}"`);
+    console.error("Delete it with --apply when ready.");
   }
 
   const result = await runReview({

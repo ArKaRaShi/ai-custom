@@ -10,7 +10,12 @@ import {
   setQuotaStatus,
   setQuotaWidget,
   normalizeModelSelector,
+  resetCooldown,
+  clearPollTimer,
+  isPollTimerActive,
+  POLLING_INTERVAL_MS,
   type UsagePayload,
+  type ExtensionContext,
 } from "../../extensions/quota-status";
 import * as fs from "fs";
 import * as path from "path";
@@ -403,5 +408,51 @@ describe("given quota-status extension, when rendering usage sparklines and form
     expect(widgetCalls.length).toBe(1);
     expect(widgetCalls[0].lines).toEqual(["󰚩 widget 5h 42%"]);
     expect(widgetCalls[0].placement).toBe("belowEditor");
+  });
+
+  it("resetCooldown and clearPollTimer manage timer reset and cooldown without wall-clock sleep", async () => {
+    let scheduledFn: (() => Promise<void> | void) | null = null;
+    let scheduledMs = 0;
+    let clearedTimerHandle: unknown = null;
+    let tickCount = 0;
+
+    const mockCtx: ExtensionContext = {
+      setTimeout(fn: () => Promise<void> | void, ms: number) {
+        scheduledFn = fn;
+        scheduledMs = ms;
+        return "timer-handle-mock";
+      },
+      clearTimer(timer: unknown) {
+        clearedTimerHandle = timer;
+      },
+    };
+
+    expect(POLLING_INTERVAL_MS).toBe(120_000);
+
+    // Arm timer
+    resetCooldown(mockCtx, () => {
+      tickCount++;
+    });
+
+    expect(isPollTimerActive()).toBe(true);
+    expect(scheduledMs).toBe(120_000);
+    expect(scheduledFn).not.toBeNull();
+
+    // Simulate turn completion resetting cooldown: old timer cleared and new one scheduled
+    resetCooldown(mockCtx, () => {
+      tickCount++;
+    });
+    expect(clearedTimerHandle).toBe("timer-handle-mock");
+    expect(isPollTimerActive()).toBe(true);
+
+    // Invoke scheduled callback directly to test tick execution and re-arming
+    if (scheduledFn) {
+      await (scheduledFn as () => Promise<void>)();
+    }
+    expect(tickCount).toBe(1);
+
+    // Shutdown / cleanup
+    clearPollTimer(mockCtx);
+    expect(isPollTimerActive()).toBe(false);
   });
 });

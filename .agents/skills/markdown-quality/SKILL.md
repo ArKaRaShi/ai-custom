@@ -38,10 +38,15 @@ bun "$SKILL_DIR/scripts/review.ts" "<file-or-dir>" --mode=human
 # 4. Combined auto-fix + full review with custom config override
 bun "$SKILL_DIR/scripts/review.ts" "<file-or-dir>" --fix --config=./my-rules/
 
-# 5. Direct string review without creating temporary files
-bun "$SKILL_DIR/scripts/review.ts" --text="<content>" [--mode=human]
+# 5. Review long text by saving it as a Markdown file, then use the normal file target
+# Create .tmp-markdown-quality/draft.md with your file-writing tool
+bun "$SKILL_DIR/scripts/review.ts" .tmp-markdown-quality/draft.md
 
-# 6. Print every finding (the tree shows 15 per check) or get all of them as JSON
+# 6. Preview cleanup of one saved artifact; --apply performs the deletion
+bun "$SKILL_DIR/scripts/cleanup.ts" .tmp-markdown-quality/draft.md
+bun "$SKILL_DIR/scripts/cleanup.ts" .tmp-markdown-quality/draft.md --apply
+
+# 7. Print every finding (the tree shows 15 per check) or get all of them as JSON
 bun "$SKILL_DIR/scripts/review.ts" "<file-or-dir>" --verbose
 bun "$SKILL_DIR/scripts/review.ts" "<file-or-dir>" --format=json
 ```
@@ -50,7 +55,7 @@ bun "$SKILL_DIR/scripts/review.ts" "<file-or-dir>" --format=json
 
 Only `error` findings block the review (exit 1). Vale style findings (colons, semicolons, em-dashes, formal register, repeated sentence patterns, `write-good`) are warnings. The tree lists them, JSON reports them as `summary.valeWarnings`, and the result stays `CLEAN`.
 
-`--format=json` returns `findings` with `lint`, `prose` (blocking), `warnings`, `links`, `structure`, and `security`, so no finding is hidden behind the tree cap.
+The `--format=json` result includes `findings` for `lint`, `prose` (blocking), `warnings`, `links`, `structure`, and `security`, so the tree cap does not hide findings.
 
 Vale runs with `--no-global`. Only the bundled `assets/.vale/styles` and the `MarkdownQuality` vocabulary apply, so a Vale setup in your home directory cannot change results. Add accepted terms to `assets/.vale/styles/config/vocabularies/MarkdownQuality/accept.txt`.
 
@@ -72,9 +77,18 @@ Apply these checks across every markdown file:
 - **Verification Commands:** end technical docs with runnable test/check commands.
 - **Tables Over Narrative:** compact multi-variable descriptions into markdown tables.
 - **Tone & Objectivity:** avoid presumptuous wording in instructions.
-- **Token Density:** remove conversational filler phrases and drop ASCII art banners.
-- **Link Integrity:** verify relative file paths (`./doc.md`) and heading anchors (`#section`).
-- **Security Guardrails:** never commit raw credentials (`sk-...`, `ghp_...`) or unescaped secret tags.
+- **Link Integrity:** verify relative file paths (`./doc.md`) and heading anchors (`#section`). README indexes link each document to its relevant heading:
+
+  ```markdown
+  - [API contracts, services, and repositories](architecture.md#api-contracts-services-and-repositories)
+  - [Store conventions](stores.md#store-conventions)
+  ```
+
+  Do not use line numbers or line ranges in indexes. They become stale when content shifts.
+
+## Structural Check Scope
+
+The structural checker validates heading depth, orphan headings, and unrendered LaTeX. The link checker validates README index targets.
 
 ## Rationalizations & Red Flags
 

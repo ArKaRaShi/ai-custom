@@ -6,7 +6,7 @@ import { checkMarkdownLinks } from "../scripts/link-checker";
 import { analyzeTokenDensity } from "../scripts/token-density";
 import { checkMarkdownSecurity } from "../scripts/security-check";
 import { checkMarkdownStructure } from "../scripts/structure-check";
-import { writeFileSync, unlinkSync, existsSync, mkdirSync, rmSync } from "fs";
+import { writeFileSync, readFileSync, unlinkSync, existsSync, mkdirSync, rmSync } from "fs";
 import { resolve } from "path";
 import { tmpdir } from "os";
 
@@ -176,8 +176,8 @@ Formula with $\\alpha$ inline.
     expect(types).toContain("unrendered-latex");
   });
 
-  it("checkMarkdownStructure detects index-line-drift and index-missing-heading", () => {
-    const driftedDoc = `# Title
+  it("does not treat line-number indexes as Markdown structure errors", () => {
+    const content = `# Title
 
 > **Index:**
 > | Section | Lines | Anchor |
@@ -190,53 +190,9 @@ Formula with $\\alpha$ inline.
 Body text.
 `;
 
-    const res = checkMarkdownStructure(driftedDoc);
-    const types = res.findings.map((f) => f.type);
-    expect(types).toContain("index-line-drift");
-    expect(types).toContain("index-missing-heading");
-
-    const validDoc = `# Title
-
-> **Index:**
-> | Section | Lines | Anchor |
-> | :--- | :--- | :--- |
-> | First Section | L8–L10 | [#first-section](#first-section) |
-
-## First Section
-
-Body text.
-`;
-    const validRes = checkMarkdownStructure(validDoc);
-    const validTypes = validRes.findings.map((f) => f.type);
-    expect(validTypes).not.toContain("index-line-drift");
-    expect(validTypes).not.toContain("index-missing-heading");
-  });
-
-  it("fixIndexLineRanges automatically recalculates and rewrites drifted lines", () => {
-    const structurePath = resolve(import.meta.dir, "scripts/structure-check".replace(/^/, "../"));
-    const { fixIndexLineRanges } = require(structurePath);
-    const driftedDoc = `# Title
-
-> **Index:**
-> | Section | Lines | Anchor |
-> | :--- | :--- | :--- |
-> | First Section | L99–L100 | [#first-section](#first-section) |
-> | Second Section | L200–L300 | [#second-section](#second-section) |
-
-## First Section
-
-Line 11.
-Line 12.
-
-## Second Section
-
-Line 16.
-`;
-
-    const { updated, content } = fixIndexLineRanges(driftedDoc);
-    expect(updated).toBe(true);
-    expect(content).toContain("| First Section | L9-L13 | [#first-section](#first-section) |");
-    expect(content).toContain("| Second Section | L14-L17 | [#second-section](#second-section) |");
+    const result = checkMarkdownStructure(content);
+    expect(result.findings.map((finding) => finding.type)).not.toContain("index-line-drift");
+    expect(result.findings.map((finding) => finding.type)).not.toContain("index-missing-heading");
   });
   it("runReview performs comprehensive multi-phase review cleanly", async () => {
     const result = await runReview({ glob: testFileClean });
@@ -487,6 +443,44 @@ Line 16.
     // Valid equals form
     const eqForm = Bun.spawnSync(["bun", reviewScript, "--min-level=error", testFileClean]);
     expect(eqForm.exitCode).toBe(0);
+  });
+
+  it("--text saves inline content and prints reuse and cleanup instructions", () => {
+    const reviewScript = resolve(import.meta.dir, "../scripts/review.ts");
+    const text = "# Reusable input\n\nContent.\n";
+    const result = Bun.spawnSync(["bun", reviewScript, `--text=${text}`, "--no-links", "--no-security", "--no-density", "--no-structure"]);
+    const output = result.stdout.toString() + result.stderr.toString();
+    const artifact = output.match(/Saved text artifact: (.+)/)?.[1]?.trim();
+    expect(result.exitCode).toBe(0);
+    expect(artifact).toBeDefined();
+    expect(existsSync(artifact!)).toBe(true);
+    expect(readFileSync(artifact!, "utf8")).toBe(text);
+    expect(output).toContain(`bun "${resolve(import.meta.dir, "../scripts/cleanup.ts")}" "${artifact}"`);
+    expect(output).toContain("Delete it with --apply when ready.");
+    rmSync(artifact!);
+  });
+
+  it("rejects --text-file in favor of normal file targets", () => {
+    const reviewScript = resolve(import.meta.dir, "../scripts/review.ts");
+    const result = Bun.spawnSync(["bun", reviewScript, "--text-file=./draft.md"]);
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr.toString()).toContain("Unknown flag: --text-file=./draft.md");
+  });
+
+  it("cleanup defaults to dry-run and deletes only with --apply", () => {
+    const cleanupScript = resolve(import.meta.dir, "../scripts/cleanup.ts");
+    const artifactDir = resolve(import.meta.dir, "../.tmp-markdown-quality");
+    mkdirSync(artifactDir, { recursive: true });
+    const artifact = resolve(artifactDir, `markdown-artifact-${Date.now()}.md`);
+    writeFileSync(artifact, "# Keep until apply\n");
+    const dryRun = Bun.spawnSync(["bun", cleanupScript, artifact]);
+    expect(dryRun.exitCode).toBe(0);
+    expect(existsSync(artifact)).toBe(true);
+    expect(dryRun.stdout.toString()).toContain("Dry run");
+
+    const applied = Bun.spawnSync(["bun", cleanupScript, artifact, "--apply"]);
+    expect(applied.exitCode).toBe(0);
+    expect(existsSync(artifact)).toBe(false);
   });
 
   it("resolves directory targets recursively and ignores non-markdown files", async () => {

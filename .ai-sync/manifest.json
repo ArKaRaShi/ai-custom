@@ -12,12 +12,6 @@
   },
   "entries": [
     {
-      "kind": "path",
-      "root": "omp",
-      "path": "extensions/orca-*",
-      "sync": false
-    },
-    {
       "kind": "skill",
       "root": "agents",
       "path": "archify",
@@ -281,6 +275,36 @@
       "root": "omp",
       "path": "RULES.md",
       "sync": true
+    },
+    {
+      "kind": "path",
+      "root": "omp",
+      "path": "AGENTS.md",
+      "sync": true
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "scrawl",
+      "sync": false,
+      "skill": {
+        "origin": "external",
+        "source": "kitlangton/scrawl",
+        "sourceType": "github",
+        "install": "bunx skills add kitlangton/scrawl -g"
+      }
+    },
+    {
+      "kind": "path",
+      "root": "omp",
+      "path": "extensions",
+      "sync": true
+    },
+    {
+      "kind": "path",
+      "root": "omp",
+      "path": "extensions/orca-*",
+      "sync": false
     }
   ]
 }
