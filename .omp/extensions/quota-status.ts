@@ -322,7 +322,7 @@ export interface ExtensionContext {
   };
   ui?: {
     setStatus?(key: string, text: string): void;
-    setWidget?(key: string, lines: string[], options?: { placement?: string }): void;
+    setWidget?(key: string, lines?: string[], options?: { placement?: string }): void;
   };
   setTimeout?(fn: () => void | Promise<void>, ms: number): unknown;
   clearTimer?(timer: unknown): void;
@@ -383,16 +383,13 @@ export function setQuotaStatus(ctx: ExtensionContext, text: string): void {
     ctx.ui.setStatus("quota_status", text);
   }
   if (ctx.ui?.setWidget) {
-    ctx.ui.setWidget("quota_status", [text], { placement: "belowEditor" });
+    ctx.ui.setWidget("quota_status", undefined);
   }
 }
 
 export function setQuotaWidget(ctx: ExtensionContext, text: string): void {
   if (ctx.ui?.setWidget) {
     ctx.ui.setWidget("quota_status", [text], { placement: "belowEditor" });
-  }
-  if (ctx.ui?.setStatus) {
-    ctx.ui.setStatus("quota_status", text);
   }
 }
 
@@ -474,7 +471,7 @@ export default function (pi: ExtensionAPI) {
       data.reports.find((r) => r.provider === providerKey)?.metadata?.fetchedAt,
     );
     if (statusText) {
-      setQuotaWidget(effectiveCtx, statusText);
+      setQuotaStatus(effectiveCtx, statusText);
     }
   }
 

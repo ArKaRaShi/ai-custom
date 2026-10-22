@@ -305,6 +305,20 @@
       "root": "omp",
       "path": "extensions/orca-*",
       "sync": false
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "diagram-design",
+      "sync": false,
+      "skill": {
+        "origin": "external",
+        "source": "cathrynlavery/diagram-design",
+        "sourceType": "github",
+        "version": "2.6",
+        "install": "npx skills add cathrynlavery/diagram-design -g -y",
+        "description": "Editorial diagrams in self-contained HTML/SVG"
+      }
     }
   ]
 }

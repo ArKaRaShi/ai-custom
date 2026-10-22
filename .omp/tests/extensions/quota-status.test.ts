@@ -380,31 +380,29 @@ describe("given quota-status extension, when rendering usage sparklines and form
     expect(output).toContain("openai 1d [");
   });
 
-  it("setQuotaStatus and setQuotaWidget update status and widget on context safely", () => {
+  it("setQuotaStatus updates status and clears widget, setQuotaWidget updates widget safely", () => {
     const statusCalls: Array<{ key: string; text: string }> = [];
-    const widgetCalls: Array<{ key: string; lines: string[]; placement?: string }> = [];
+    const widgetCalls: Array<{ key: string; lines: string[] | undefined; placement?: string }> = [];
 
-    const statusCtx = {
+    const dualCtx = {
       ui: {
         setStatus(key: string, text: string) {
           statusCalls.push({ key, text });
         },
-      },
-    };
-
-    const widgetCtx = {
-      ui: {
-        setWidget(key: string, lines: string[], opts?: { placement?: string }) {
+        setWidget(key: string, lines?: string[], opts?: { placement?: string }) {
           widgetCalls.push({ key, lines, placement: opts?.placement });
         },
       },
     };
 
-    setQuotaStatus(statusCtx, "󰚩 status 5h 42%");
+    setQuotaStatus(dualCtx, "󰚩 status 5h 42%");
     expect(statusCalls.length).toBe(1);
     expect(statusCalls[0].text).toBe("󰚩 status 5h 42%");
+    expect(widgetCalls.length).toBe(1);
+    expect(widgetCalls[0].lines).toBeUndefined();
 
-    setQuotaWidget(widgetCtx, "󰚩 widget 5h 42%");
+    widgetCalls.length = 0;
+    setQuotaWidget(dualCtx, "󰚩 widget 5h 42%");
     expect(widgetCalls.length).toBe(1);
     expect(widgetCalls[0].lines).toEqual(["󰚩 widget 5h 42%"]);
     expect(widgetCalls[0].placement).toBe("belowEditor");
