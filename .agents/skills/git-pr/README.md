@@ -16,7 +16,7 @@ Repository-local instructions and PR templates override this global fallback.
 - Checking whether a PR description contains unsupported claims or fake links.
 - Grounding descriptions on the effective 3-dot diff (`<base>...HEAD`) rather than unmerged branch churn.
 
-Use `caveman-commit` for commit-message-only requests.
+Commit-message generation: see [`git-commit`](../git-commit/).
 
 ## Safety boundary
 

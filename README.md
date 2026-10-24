@@ -8,7 +8,7 @@ Cross-machine AI coding harness configuration, OMP extensions, TTSR rules, lifec
 ~/Disk/ai-custom/
 ├── .omp/                       # Oh My Pi runtime configuration (~/.omp/agent/)
 │   ├── config.yml              # Model routing, themes, statusline
-│   ├── extensions/             # Extensions (caveman-stats, quota-status, turn-metrics)
+│   ├── extensions/             # Extensions (quota-status, turn-metrics)
 │   ├── hooks/                  # Lifecycle hooks
 │   │   ├── pre/                # Safety guards (guard-destructive)
 │   │   └── post/               # Output filters & alerts (redact, smart-terminal-notifier)
@@ -26,7 +26,7 @@ Cross-machine AI coding harness configuration, OMP extensions, TTSR rules, lifec
     └── writing-omp-agents/     # OMP task-agent contract engineering & quality
 ```
 
-## Toolchain & Prerequisites
+## toolchain & prerequisites
 
 Core external CLI tools managed via Homebrew:
 
