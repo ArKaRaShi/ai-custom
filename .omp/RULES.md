@@ -13,8 +13,10 @@
 
 ## Mid-feature requirement changes
 
-- When the user adds or changes requested behavior mid-feature, MUST pause before editing and present both options:
+- When the user adds or changes requested behavior mid-feature, MUST pause before editing and present three options:
   1. **Smallest change.** Use the current design if it still fits. Make the smallest complete change and state its trade-off.
   2. **Revise the design.** Review the architecture and interfaces. Show the proposed design and affected tasks. Wait for approval before coding.
-- Recommend one option and state why. MUST wait for the user's choice before editing. If the user chooses a design revision, MUST get approval of that design before coding.
+  3. **Agent's recommended path.** The agent's reasoned proposal: this can endorse (1), endorse (2), or propose an alternative path, explaining why with trade-offs and affected scope.
+- Recommend one option and state why. MUST wait for the user's choice before editing. If the user chooses a design revision or an alternative proposal, MUST get approval before coding.
 - Update affected tasks, tests, and docs for the approved option.
+

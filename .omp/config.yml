@@ -18,6 +18,8 @@ retry:
       - google-antigravity/gemini-3.8-flash:high
     test:
       - openai-codex/gpt-6-luna:high
+    judge:
+      - openrouter/dots-studio/dots-3-note-preview:free
     smol:
       - anthropic/claude-sonnet-5-5:low
     task:

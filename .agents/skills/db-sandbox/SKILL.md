@@ -1,6 +1,6 @@
 ---
 name: db-sandbox
-description: Use when a task needs an isolated, disposable database clone to work against — parallel worktrees/branches touching migrations or data, notebook exploration, or any local change that must not corrupt a shared dev/base database. Symptoms this addresses: "which branch is this DB in", stale data after switching branches, migration conflicts against a shared local DB, fear of dropping the wrong database.
+description: "Use when a task needs an isolated, disposable database clone to work against — parallel worktrees/branches touching migrations or data, notebook exploration, or any local change that must not corrupt a shared dev/base database. Symptoms this addresses: 'which branch is this DB in', stale data after switching branches, migration conflicts against a shared local DB, fear of dropping the wrong database."
 ---
 
 # DB Sandbox
