@@ -17,8 +17,8 @@ Draft accurate, repo-aware pull request titles and descriptions. Scale with the 
 6. **Related PR links.** Put related PRs in a final section at the bottom of the body. Use one raw GitHub/GitLab PR URL as a bullet (`- https://github.com/owner/repo/pull/123`).
 7. **Preserve existing signal.** When revising an existing PR, read its current body first. Keep user motivation, screenshots, checklists, reviewer notes, and links unless the user explicitly asks to remove them.
 8. **Report testing truthfully.** Include commands actually run and their outcomes. Do not turn planned or unrun checks into passing results.
-9. **Avoid local leakage.** Use repository-relative paths. Do not include absolute machine paths, credentials, private URLs, or confidential names.
-10. **No side effects by default.** Drafting returns text only in a markdown code block. Run `gh` or another PR API only when the user explicitly asks to create or update a PR.
+9. **Avoid local leakage.** Use repository-relative paths. Do not include absolute machine paths, credentials, private URLs, or confidential names. For local-only tests, databases, infrastructure, and setup, report the environment and observed outcome, such as "Browser check against a local database". Do not describe local fixture mutations, cleanup, restores, or other workstation-only operations in the PR.
+10. **No side effects by default.** Provide draft text only in a markdown code block. Run `gh` or another PR API only when the user explicitly asks to create or update a PR.
 11. **Assignee handling.** When creating or updating PRs via `gh` or API upon explicit request, add the current user as an assignee (`--add-assignee "@me"` or `--assignee "@me"` on creation). Do not remove existing assignees; append the user instead.
 12. **REQUIRE SUBSKILL:** `markdown-quality` (`bun ~/.agents/skills/markdown-quality/scripts/review.ts --text="<pr-body>" --mode=human` or `<pr-body-path> --fix`). Run review in human mode before presenting or passing to `gh pr create`. If `markdown-quality` is unavailable, inspect the PR body manually for broken links and heading structure without stalling.
 
@@ -121,6 +121,7 @@ Every PR description MUST have:
     - **Compact delta (≤ 5 test cases):** flat bullet list naming each test case and its covered invariant.
     - **Broad delta (> 5 test cases):** wrap inside a collapsible `<details><summary><b>View N added/updated test cases</b></summary>` block or group by component.
     - **Suite refactor / migration:** summarize the structural migration pattern in 2 to 3 bullets instead of dumping dozens of mechanical test renames.
+
 ### `## Related PRs`
 
 - **Trigger:** cross-repo dependencies, frontend-vs-backend PRs, or prerequisite PRs exist.

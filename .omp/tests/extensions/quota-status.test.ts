@@ -13,6 +13,8 @@ import {
   resetCooldown,
   clearPollTimer,
   isPollTimerActive,
+  checkModelChange,
+  getActiveModelFamily,
   POLLING_INTERVAL_MS,
   type UsagePayload,
   type ExtensionContext,
@@ -253,7 +255,7 @@ describe("given quota-status extension, when rendering usage sparklines and form
     expect(idx5h).toBeLessThan(idx7d);
   });
 
-  it("buildProviderSparklineString returns empty string for unmetered/untracked providers", () => {
+  it("buildProviderSparklineString formats openrouter pay-per-token tag and returns empty for untracked providers", () => {
     const mockUsage: UsagePayload = {
       reports: [
         {
@@ -263,8 +265,11 @@ describe("given quota-status extension, when rendering usage sparklines and form
       ],
     };
 
-    expect(buildProviderSparklineString("openrouter", mockUsage)).toBe("");
-    expect(buildProviderSparklineString("non-existent", mockUsage)).toBe("");
+    const openrouterOutput = buildProviderSparklineString("openrouter", mockUsage);
+    expect(openrouterOutput).toBe("󱚝 openrouter  pay-per-token  (no fixed quota)");
+
+    const untrackedOutput = buildProviderSparklineString("non-existent", mockUsage);
+    expect(untrackedOutput).toBe("");
   });
 
   it("getLatestModelFromSession extracts the last model_change from session journal", async () => {
@@ -380,7 +385,7 @@ describe("given quota-status extension, when rendering usage sparklines and form
     expect(output).toContain("openai 1d [");
   });
 
-  it("setQuotaStatus updates status and clears widget, setQuotaWidget updates widget safely", () => {
+  it("setQuotaStatus updates status and clears widget, setQuotaWidget updates widget safely and clears status", () => {
     const statusCalls: Array<{ key: string; text: string }> = [];
     const widgetCalls: Array<{ key: string; lines: string[] | undefined; placement?: string }> = [];
 
@@ -402,12 +407,44 @@ describe("given quota-status extension, when rendering usage sparklines and form
     expect(widgetCalls[0].lines).toBeUndefined();
 
     widgetCalls.length = 0;
+    statusCalls.length = 0;
     setQuotaWidget(dualCtx, "󰚩 widget 5h 42%");
     expect(widgetCalls.length).toBe(1);
     expect(widgetCalls[0].lines).toEqual(["󰚩 widget 5h 42%"]);
     expect(widgetCalls[0].placement).toBe("belowEditor");
+    expect(statusCalls.length).toBe(1);
+    expect(statusCalls[0].text).toBe("");
   });
 
+  it("render12Bar and buildProviderSparklineString apply theme color tokens when theme is provided", () => {
+    const mockTheme = {
+      fg(token: string, text: string) {
+        return `<${token}>${text}</${token}>`;
+      },
+    };
+
+    // <50%: success
+    const low = render12Bar(0.3, mockTheme);
+    expect(low.bar).toContain("<success>");
+    expect(low.bar).toContain("<dim>");
+
+    // 50-79%: accent
+    const mid = render12Bar(0.7, mockTheme);
+    expect(mid.bar).toContain("<accent>");
+
+    // 80-99%: warning
+    const high = render12Bar(0.85, mockTheme);
+    expect(high.bar).toContain("<warning>");
+
+    // 100%: error
+    const full = render12Bar(1.0, mockTheme);
+    expect(full.bar).toContain("<error>");
+
+    // OpenRouter themed output
+    const mockUsage: UsagePayload = { reports: [] };
+    const orOutput = buildProviderSparklineString("openrouter", mockUsage, Date.now(), undefined, mockTheme);
+    expect(orOutput).toBe("<accent>󱚝 openrouter</accent>  <muted>pay-per-token  (no fixed quota)</muted>");
+  });
   it("resetCooldown and clearPollTimer manage timer reset and cooldown without wall-clock sleep", async () => {
     let scheduledFn: (() => Promise<void> | void) | null = null;
     let scheduledMs = 0;
@@ -452,5 +489,92 @@ describe("given quota-status extension, when rendering usage sparklines and form
     // Shutdown / cleanup
     clearPollTimer(mockCtx);
     expect(isPollTimerActive()).toBe(false);
+  });
+
+  it("Option 2: GoogleAntigravityResolver focuses on active model and collapses other weekly quotas", () => {
+    const fixedNow = new Date("2026-08-19T12:00:00").getTime();
+    const mockUsage: UsagePayload = {
+      reports: [
+        {
+          provider: "google-antigravity",
+          limits: [
+            {
+              id: "5h",
+              label: "5 Hour",
+              amount: { used: 4, usedFraction: 0.04 },
+              window: { durationMs: 18000000, resetsAt: fixedNow + 18 * 60_000 },
+            },
+            {
+              id: "google-antigravity:anthropic:default:3p-weekly",
+              label: "3p-weekly",
+              amount: { used: 47, usedFraction: 0.47 },
+              window: { durationMs: 604800000, resetsAt: fixedNow + 5 * 86400_000 },
+            },
+            {
+              id: "google-antigravity:openai:default:3p-weekly",
+              label: "3p-weekly",
+              amount: { used: 47, usedFraction: 0.47 },
+              window: { durationMs: 604800000, resetsAt: fixedNow + 5 * 86400_000 },
+            },
+            {
+              id: "google-antigravity:google:default:gemini-weekly",
+              label: "gemini-weekly",
+              amount: { used: 31, usedFraction: 0.31 },
+              window: { durationMs: 604800000, resetsAt: fixedNow + 2 * 86400_000 },
+            },
+          ],
+        },
+      ],
+    };
+
+    // When Gemini is active
+    const geminiOutput = buildProviderSparklineString(
+      "google-antigravity",
+      mockUsage,
+      fixedNow,
+      undefined,
+      undefined,
+      "google-antigravity/gemini-3.8-flash",
+    );
+    expect(geminiOutput).toContain("5h [");
+    expect(geminiOutput).toContain("gemini [");
+    expect(geminiOutput).not.toContain("google-antigravity:anthropic");
+    expect(geminiOutput).not.toContain("(: 0%)");
+    expect(geminiOutput).toContain("(claude: 47% · openai: 47%)");
+
+    // When Claude is active
+    const claudeOutput = buildProviderSparklineString(
+      "google-antigravity",
+      mockUsage,
+      fixedNow,
+      undefined,
+      undefined,
+      "google-antigravity/claude-3-7-sonnet",
+    );
+    expect(claudeOutput).toContain("5h [");
+    expect(claudeOutput).toContain("claude [");
+    expect(claudeOutput).toContain("(openai: 47% · gemini: 31%)");
+  });
+
+  it("checkModelChange detects model switch immediately", () => {
+    let currentModelName = "google-antigravity/gemini-3.8-flash";
+    const ctx: ExtensionContext = {
+      models: {
+        current() {
+          return currentModelName;
+        },
+      },
+    };
+
+    const firstCheck = checkModelChange(ctx);
+    expect(firstCheck).toBe(true);
+
+    const secondCheck = checkModelChange(ctx);
+    expect(secondCheck).toBe(false);
+
+    // Switch model
+    currentModelName = "google-antigravity/claude-3-7-sonnet";
+    const switchedCheck = checkModelChange(ctx);
+    expect(switchedCheck).toBe(true);
   });
 });

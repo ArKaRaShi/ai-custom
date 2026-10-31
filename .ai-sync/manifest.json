@@ -319,6 +319,15 @@
         "install": "npx skills add cathrynlavery/diagram-design -g -y",
         "description": "Editorial diagrams in self-contained HTML/SVG"
       }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "e2e-smoke-qa",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
     }
   ]
 }

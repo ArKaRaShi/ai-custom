@@ -84,7 +84,8 @@ task:
   showResolvedModelBadge: true
   enableLsp: true
   agentModelOverrides: {}
-disabledExtensions: []
+disabledExtensions:
+  - extension-module:bonsai-companion
 providers:
   tinyModelDevice: default
   tinyModelDtype: default
