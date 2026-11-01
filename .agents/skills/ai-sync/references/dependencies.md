@@ -1,39 +1,48 @@
 # Dependencies and Package Management
 
-This skill uses an isolated `package.json` for pattern matching.
+The skill directory holds `package.json`, `bun.lock`, `tsconfig.json`, and `biome.json`, so the skill installs and checks its own tools (standalone setup from the skill-framework TypeScript starter).
 
 ## Runtime Requirements
 
-- **Runtime:** `bun` (v1.1.0 or newer).
-- **Core modules:** uses native Node standard libraries (`node:fs`, `node:path`, `node:os`, `node:crypto`).
+- **Runtime:** `bun` 1.4 or later.
+- **Core modules:** Node standard libraries (`node:fs`, `node:path`, `node:os`, `node:crypto`, `node:child_process`).
+- **Git:** `git` 2.38 or later on `PATH`. Remote preview uses `git merge-tree --write-tree`.
 
-## External Dependencies
+## Declared Packages and Justification
 
-The root `package.json` contains:
+| Package | Kind | Why |
+| --- | --- | --- |
+| `ignore` ^7.0.10 | runtime | `.gitignore`-compliant matching for path rules in the shared manifest. |
+| `typescript` 7.0.2 | dev | Type check (`bun run typecheck`). |
+| `@types/bun` 1.4.2 | dev | Bun and Node type declarations for the type check. |
+| `@biomejs/biome` 2.5.15 | dev | Lint and format check (`bun run lint`, `bun run format:check`). |
 
-```json
-{
-  "dependencies": {
-    "ignore": "^7.0.10"
-  }
-}
-```
-
-The `ignore` package provides `.gitignore`-compliant path pattern matching for excluded and synced files.
+TypeScript 7 reads `paths` without `baseUrl`. The `@/*` alias maps to the skill root.
 
 ## Installation
 
-Install runtime dependencies inside the skill directory:
-
 ```bash
 cd "$HOME/.agents/skills/ai-sync"
-bun install
+bun install --frozen-lockfile    # restores the exact versions in bun.lock
+# without Bun: pnpm install, or npm install
+```
+
+Run `bun install` without `--frozen-lockfile` only to change declared versions, then commit the new `bun.lock`. Never track `node_modules`.
+
+## Verification commands
+
+```bash
+bun test tests/
+bun run check                    # typecheck, lint, format check
+bun run fix                      # explicit safe-fix and format
+bun ~/.agents/skills/skill-framework/scripts/layer-guard.ts scripts
 ```
 
 ## Failure Recovery
 
-If scripts fail with module resolution errors (e.g. `Cannot find package 'ignore'`):
-
-1. **Verify Bun install:** ensure `bun` is available in `PATH` with `bun --version`.
-2. **Reinstall dependencies:** run `bun install` inside `~/.agents/skills/ai-sync/`.
-3. **Check lockfile:** ensure `bun.lock` exists beside `package.json`.
+| Signature | Fix |
+| --- | --- |
+| `Cannot find package 'ignore'` | Run `bun install --frozen-lockfile` in `~/.agents/skills/ai-sync/`. |
+| `tsc: command not found` or `biome: command not found` | Same command: the dev tools install into `node_modules/.bin`. |
+| `bun: command not found` | Install Bun 1.4 or later and confirm with `bun --version`. |
+| Lockfile drift (`lockfile had changes`) | Confirm `bun.lock` sits beside `package.json`, then rerun with `bun install`. |

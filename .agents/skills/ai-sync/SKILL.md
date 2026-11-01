@@ -14,98 +14,115 @@ SKILL_DIR="${SKILL_DIR:-$HOME/.agents/skills/ai-sync}"
 REPO="$HOME/Disk/ai-custom"
 sync() { bun "$SKILL_DIR/scripts/sync.ts" "$@"; }
 
-# Create the shared v2 manifest once
-sync init "$REPO"
+sync init "$REPO"                                          # once; never overwrites a manifest
 sync root add omp --kind path --repo-root .omp
 sync root add agents --kind skill --repo-root .agents/skills
-
-# Bind each root to this machine's local directory
-sync root bind omp --local-root ~/.omp/agent
+sync root bind omp --local-root ~/.omp/agent               # this machine only
 sync root bind agents --local-root ~/.agents/skills
 ```
 
-`root add` changes shared repository policy. `root bind` changes only this machine's locations file. Other machines clone the repository, then bind the same root IDs to their own local directories. Missing or invalid bindings abort transfers before any copy.
+`root add` changes shared policy. `root bind` changes only this machine's locations file. Missing or invalid bindings abort transfers before any copy.
 
-## Track and sync
+## Track
 
 ```bash
-# Include OMP extensions, then exclude one path (last matching rule wins)
-sync track path extensions --root omp --sync
+sync track path extensions --root omp --sync               # last matching rule wins
 sync track path extensions/orca-* --root omp --no-sync
-
-# Track authored skills (sync defaults true)
-sync track skill mentor --root agents --origin authored
-
-# Record an external installer without copying its source to the backup
+sync track skill mentor --root agents --origin authored    # sync defaults true
 sync track skill archify --root agents --origin external \
   --from tt-a1i/archify --source-type github --version 2.17.0 \
   --install 'npx -y skills add tt-a1i/archify -g' --no-sync
-
-sync status "$REPO" [--format=json]
-sync diff "$REPO"
-sync push "$REPO"          # preview by default
-sync push "$REPO" --apply  # commit backup export
-sync push "$REPO" --apply --git-push [-m "msg"] # export + commit & push to remote
-sync pull "$REPO"          # preview by default
-sync pull "$REPO" --apply  # commit restore import
-sync pull "$REPO" --apply --git-pull            # pull remote git first, then restore
-sync merge "$REPO"
+sync untrack path extensions/orca-* --root omp             # records an exclusion
+sync untrack skill mentor --root agents                    # removes policy only
 ```
 
-Path roots are default-deny: only matching `sync: true` rules transfer. Later matching rules override earlier ones. Skill roots use exact entries. `--include-local` cannot override stored `sync: false`. Disabling sync or removing tracking never deletes files. Disabling a synced skill reports its existing backup path for review.
+Path roots are default-deny: only matching `sync: true` rules transfer. Skill roots use exact entries. Re-tracking a skill keeps recorded `--from`, `--source-type`, `--version`, `--install`, and `--description` unless a flag replaces them. Disabling sync or removing tracking never deletes files.
+
+## Workflow: preview, approve, apply, recover
+
+1. Preview: `sync push "$REPO" --target <scope>` or `sync pull ...` (gate: a preview leaves files and Git state untouched).
+2. Show the user the exact actions, errors, and Git facts from the preview.
+3. Get approval (gate: approval covers exactly that scope).
+4. Apply: rerun with `--apply --target <scope>`, or save with `--plan-out plan.json`, then `sync apply plan.json --apply`.
+5. Recover: after a nonzero exit, read `errors` and `recovery`, run a fresh preview, and ask again. Completed actions stay in place. ai-sync does not roll back.
+
+| Command | Effect |
+| --- | --- |
+| `status`, `diff`, `inspect` | read only |
+| `push`, `pull` | preview; `--apply` needs a bounded `--target` |
+| `prune` | preview excluded backup copies; `--apply --target` removes only those |
+| `apply plan.json` | recheck the saved plan; `--apply` executes it |
+| `discover`, `bootstrap` | read only unless `--write` or `--approve-install` |
 
 ```bash
-sync untrack path extensions/orca-* --root omp  # records an exclusion
-sync untrack skill mentor --root agents         # removes policy only
+sync push "$REPO" --target omp --plan-out plan.json   # keep the file outside the backup and managed roots
+sync apply plan.json                                  # recheck only
+sync apply plan.json --apply                          # stale plans are rejected; nothing changes
+sync inspect "$REPO" [--target <scope>]               # kind, root, path, shared|local-only, version or null, local path
+sync prune "$REPO"                                    # list; local files and unselected backup content stay untouched
+sync prune "$REPO" --apply --target omp:old/skill.md  # remove exact backup copies only
 ```
 
-## Safe Mutation Contract
+`--target` is repeatable and matches exactly or by glob, never by substring: a root id, a skill name, a root-relative path, `<root>:<path>`, or a glob. `--exclude <pattern>` filters relative paths.
 
-File mutations are safe by default. Both `push` and `pull` preview file lists without copying bytes. Pass `--apply` to commit transfers to disk or repository.
+`apply` takes only a plan file. It recomputes scope, policy, bindings, and every source and target fingerprint, and rejects the plan on any change. A concurrent change during apply fails that action, marks later actions `not_attempted`, and reports `partial`. Pruning removes working-tree copies only; Git history and remote copies keep earlier versions.
 
-## Git Remote Workflow
+## Result envelope and error codes
 
-When the backup repository tracks a configured git remote upstream:
+`--format=json` prints `{operation, scope, actions, outcome, errors, recovery}` plus `git` or `items` when relevant. `outcome` is `preview`, `success`, `partial`, or `failed`; failures exit nonzero. Each action is `proposed`, `completed`, `failed`, or `not_attempted`.
 
-1. **Before `pull` (Pre-flight Gate):**
-   - Always ask the user if they want to pull remote git first before restoring locally:
-     *"Do you want to pull the latest changes from the git remote repository first?"*
-   - If confirmed: pass `--git-pull` or run `git pull` on the backup repository before running `sync pull`.
-   - If declined: restore files directly from the local repository directory.
+| Code | Meaning |
+| --- | --- |
+| `EMPTY_SCOPE`, `BROAD_SCOPE`, `UNKNOWN_TARGET` | target selection is empty, unbounded for `--apply`, or unknown |
+| `PLAN_INVALID`, `PLAN_STALE_SCOPE`, `PLAN_STALE_POLICY`, `PLAN_STALE_SOURCE`, `PLAN_STALE_TARGET` | the plan is malformed or no longer matches current state |
+| `PATH_ESCAPE`, `SYMLINK_UNSUPPORTED` | a path leaves its root, or a symlink would be followed |
+| `GIT_DIRTY_UNRELATED`, `GIT_REMOTE_ADVANCED`, `GIT_CONFLICT` | Git state blocks the step |
+| `GIT_UNSUPPORTED_CONFIG`, `GIT_SIMULATION_FAILED`, `GIT_FAILED` | Git cannot be simulated or the command failed |
+| `IO_FAILED` | a file operation failed |
 
-2. **After `push` (Post-flight Gate):**
-   - When `sync push --apply` finishes exporting files to the backup repository:
-   - Check whether uncommitted changes or unpushed commits exist in the backup repository.
-   - Ask the user if they want to push to remote:
-     *"Backup export complete. Do you want to commit and push changes to the git remote?"*
-   - If confirmed: pass `--git-push` (with optional `-m "commit message"`) or run `git add`, `git commit`, and `git push`.
-   - If declined: leave changes in the local backup repository without pushing to remote.
+## Backup Repository Access
 
-## Discovery and bootstrap
+Use the bundled `sync.ts` entrypoint for every operation on the backup repository. Edit files in configured local roots, not in the backup repository. Never edit, copy, or redirect files into the backup repository, and never run Git commands against it directly (`git pull`, `git add`, `git commit`, `git push`). Do not bypass the script when a direct operation seems faster or the user approves a Git command.
+
+## Git remote workflow
+
+Remote preview never touches the backup repository's refs, index, working tree, or config. It fetches into a disposable repository, simulates the integration, and removes it.
+
+1. `sync pull "$REPO" --target <scope> --git-pull` previews `git.incoming` (add, modify, delete), `git.conflicts`, and any blocker. A blocked preview exits nonzero with every action `not_attempted`.
+2. With the user's approval, `sync pull "$REPO" --apply --target <scope> --git-pull` pulls exactly what was previewed, then restores. A failed pull or conflict stops before any restore.
+3. `sync pull ... --git-pull --plan-out plan.json` saves the remote commit and local Git state. `sync apply plan.json --apply` checks again that the remote commit, HEAD, and pending changes match, then pulls, then restores. A moved remote or changed local state fails with `GIT_REMOTE_ADVANCED` or `GIT_DIRTY_UNRELATED` and restores no files. A plan whose restore actions read files the pull changes is refused with `GIT_SIMULATION_FAILED`; apply directly instead.
+4. `sync push "$REPO" --target <scope> --git-push` previews `git.exportedPaths` and `git.unrelatedChanges`. Any unrelated staged, unstaged, or untracked change blocks with `GIT_DIRTY_UNRELATED` and lists the paths.
+5. `sync push "$REPO" --apply --target <scope> --git-push [-m "msg"]` runs that pre-flight before exporting, stages and commits only the exported paths, then pushes. Ask first: "Backup export complete. Commit and push to the git remote?" `--git-push` with `--plan-out` fails with `PLAN_INVALID`.
+
+Simulation proceeds only with `pull.rebase` unset or false, `pull.ff` unset or `only`, no `core.hooksPath`, `filter.*`, `.gitmodules`, sparse checkout, shallow clone, or `core.autocrlf` other than unset or false, and one named remote. Otherwise it reports `GIT_UNSUPPORTED_CONFIG`. Plans store a hash of the remote URL, never the URL.
+
+## Bootstrap and discovery
 
 ```bash
 sync discover "$REPO"        # report candidates only
 sync discover "$REPO" --write # record candidates as sync: false
-sync bootstrap "$REPO"
+sync bootstrap "$REPO" [--format=json]                          # review only: pending installers with commands and hashes
+sync bootstrap "$REPO" --approve-install agents:archify@3f2a9c1d7b04  # run only the approved installer (repeatable)
 ```
 
-Discovery reads only unless you pass `--write`. Bootstrap pulls synced entries and installs absent external skills marked `sync: false` with their stored installer metadata. Review installer commands first. Bootstrap runs them on this machine.
+Bootstrap lists absent external skills marked `sync: false` with their installer commands. Each command is shown with a 12-character hash, the start of the SHA-256 of the exact command string. Show the exact commands to the user, then rerun with `--approve-install <root>:<skill>@<hash>` for each one they approve. A command runs only when its flag is present, and every approval is checked before anything runs. A hash that no longer matches fails with `PLAN_STALE_POLICY`, and a token without a hash fails with `PLAN_INVALID`. In both cases bootstrap skips every installer, and the recovery text gives the current token to review. A skill with an empty installer and source is reported for manual installation.
 
-## Migration and compatibility
+## Migration and conflicts
 
-Installations with v1 path or skill manifests require one `migrate-v2` run from the ai-sync checkout. The command validates and converts the old path policy and local/shared skill records into `.ai-sync/manifest.json`. It then removes old skill-manifest files. A validation failure leaves the source files unchanged. Select the intended repository before migration. Test with an isolated `HOME`.
+Installations with v1 manifests need one `migrate-v2` run from the ai-sync checkout; a validation failure leaves the sources unchanged. Test with an isolated `HOME`. Runtime accepts only the v2 manifest; the old positional `track <skill> <origin>` and `untrack <skill>` forms, `prune-manifest`, and `migrate-manifest` are removed.
 
-Runtime commands accept only the unified v2 manifest. This change removes the old positional `track <skill> <origin>` and `untrack <skill>` syntax, plus `prune-manifest` and `migrate-manifest`. Use the root-scoped v2 commands above. `init` does not overwrite an existing manifest.
+`ours` means the local file. `theirs` means the repository file. `merge` uses a plain three-way text merge. Preserve non-conflicting changes and get user approval before replacing a conflicted result with a synthesized version.
 
-## Conflict resolution
+## Code layout
 
-`ours` means the local file. `theirs` means the repository file. `merge` uses a plain three-way text merge. When resolving conflict markers, preserve non-conflicting changes and get user approval before replacing a conflicted result with a synthesized version.
+`scripts/sync.ts` is the entry point and `scripts/container.ts` wires it. Code sits in `domain/` (pure rules and types), `application/` (interfaces, services, one-class use cases), `infrastructure/` (files, Git, shell, glob), and `presentation/` (arguments and rendering). The layer guard enforces the import rules.
 
-## Scope options
+## Verification
 
-```bash
-sync status "$REPO" --target skills
-sync push "$REPO" --target omp --exclude '*.log'
-```
+Prerequisites: Bun 1.4 or later; install with `bun install --frozen-lockfile`; run from this skill directory. **REQUIRE SUBSKILL:** `markdown-quality`. If unavailable, check frontmatter, structure, and local links manually and report that the automated review was unavailable.
 
-`--target` narrows operations by root or category. `--exclude` filters matching relative paths from that operation.
+- `bun test tests/` exits 0.
+- `bun run check` (type check, lint, format) exits 0.
+- `bun ~/.agents/skills/skill-framework/scripts/layer-guard.ts scripts` exits 0.
+- `bun ~/.agents/skills/markdown-quality/scripts/review.ts . --mode=ai` exits 0.
+- For workflow changes, run the relevant command against an isolated fixture with a temporary `HOME` and confirm previews leave files and Git state untouched. Report commands, results, and unchecked limits.

@@ -1,8 +1,40 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import * as fs from "fs";
-import * as os from "os";
-import * as path from "path";
-import { loadLocations, resolveRootPaths, validateUnifiedManifest } from "../scripts/unified-manifest";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import type { Environment } from "@/scripts/application/interfaces/environment";
+import { ManifestRepository } from "@/scripts/application/services/manifest-repository";
+import type { Locations, ResolvedRoot, UnifiedManifest } from "@/scripts/domain/manifest";
+import { BunGlobMatcher } from "@/scripts/infrastructure/bun-glob-matcher";
+import { NodeFileSystem } from "@/scripts/infrastructure/node-file-system";
+import { at } from "./helpers/at";
+
+function repositoryFor(home: string): ManifestRepository {
+  const environment: Environment = {
+    home,
+    defaultRepo: path.join(home, "Disk", "ai-custom"),
+    skillsDir: path.join(home, ".agents", "skills"),
+    locationsFile: path.join(home, ".config", "ai-sync", "locations.json"),
+    cwd: home,
+    isInteractive: false,
+  };
+  return new ManifestRepository({
+    fileSystem: new NodeFileSystem(),
+    environment,
+    globMatcher: new BunGlobMatcher(),
+  });
+}
+
+const unusedHome = path.join(os.tmpdir(), "ai-sync-v2-unused-home");
+const validateUnifiedManifest = (value: unknown, repoBase: string): UnifiedManifest =>
+  repositoryFor(unusedHome).validateManifest(value, repoBase);
+const loadLocations = (file: string, home: string): Locations =>
+  repositoryFor(home).loadLocations(file);
+const resolveRootPaths = (
+  value: UnifiedManifest,
+  locations: Locations,
+  repoBase: string,
+): ResolvedRoot[] => repositoryFor(unusedHome).resolveRoots(value, locations, repoBase);
 
 const tempDirs: string[] = [];
 
@@ -12,11 +44,24 @@ function tempDir(): string {
   return dir;
 }
 
-function manifest(repoRoot: string) {
+interface EntryInput {
+  kind: "path" | "skill";
+  root: string;
+  path: string;
+  sync: boolean;
+}
+
+interface ManifestInput {
+  version: 2;
+  roots: Record<string, { kind: "path" | "skill"; repoRoot: string }>;
+  entries: EntryInput[];
+}
+
+function manifest(repoRoot: string): ManifestInput {
   return {
-    version: 2 as const,
-    roots: { omp: { kind: "path" as const, repoRoot } },
-    entries: [{ kind: "path" as const, root: "omp", path: "extensions/**", sync: true }],
+    version: 2,
+    roots: { omp: { kind: "path", repoRoot } },
+    entries: [{ kind: "path", root: "omp", path: "extensions/**", sync: true }],
   };
 }
 
@@ -31,11 +76,15 @@ describe("given unified manifest objects, when validated, then enforces root rul
   });
 
   it("rejects the old v1 path manifest", () => {
-    expect(() => validateUnifiedManifest({ version: 1, rules: [] }, tempDir())).toThrow(/version|format/i);
+    expect(() => validateUnifiedManifest({ version: 1, rules: [] }, tempDir())).toThrow(
+      /version|format/i,
+    );
   });
 
   it("rejects repo roots that traverse outside the backup", () => {
-    expect(() => validateUnifiedManifest(manifest("../outside"), tempDir())).toThrow(/root|travers/i);
+    expect(() => validateUnifiedManifest(manifest("../outside"), tempDir())).toThrow(
+      /root|travers/i,
+    );
   });
 
   it("rejects a repo root symlink that resolves outside the backup", () => {
@@ -47,17 +96,35 @@ describe("given unified manifest objects, when validated, then enforces root rul
 
   it("rejects entries that reference missing or wrong-kind roots", () => {
     const unknown = manifest(".omp");
-    unknown.entries[0].root = "missing";
+    at(unknown.entries, 0).root = "missing";
     expect(() => validateUnifiedManifest(unknown, tempDir())).toThrow(/unknown root/i);
     const wrongKind = manifest(".omp");
-    wrongKind.entries[0].kind = "skill";
+    at(wrongKind.entries, 0).kind = "skill";
     expect(() => validateUnifiedManifest(wrongKind, tempDir())).toThrow(/kind mismatch/i);
   });
 
   it("rejects duplicate root-scoped entry identities", () => {
     const input = manifest(".omp");
-    input.entries.push({ ...input.entries[0] });
+    input.entries.push({ ...at(input.entries, 0) });
     expect(() => validateUnifiedManifest(input, tempDir())).toThrow(/duplicate/i);
+  });
+
+  it("keeps an optional version label on files and skills without inventing one", () => {
+    const input = manifest(".omp");
+    const first = at(input.entries, 0);
+    const withLabel = {
+      ...input,
+      entries: [
+        { ...first, version: "1.2" },
+        { ...first, path: "other/**" },
+      ],
+    };
+    const valid = validateUnifiedManifest(withLabel, tempDir());
+    expect(valid.entries[0]).toMatchObject({ version: "1.2" });
+    expect("version" in at(valid.entries, 1)).toBe(false);
+    expect(() =>
+      validateUnifiedManifest({ ...input, entries: [{ ...first, version: 3 }] }, tempDir()),
+    ).toThrow(/version/i);
   });
 
   it("expands only a leading tilde in local bindings", () => {
@@ -80,6 +147,12 @@ describe("given unified manifest objects, when validated, then enforces root rul
       },
       entries: [],
     };
-    expect(() => resolveRootPaths(value, { version: 1, roots: { a: home, b: path.join(home, "skills") } }, repo)).toThrow(/overlap/i);
+    expect(() =>
+      resolveRootPaths(
+        value,
+        { version: 1, roots: { a: home, b: path.join(home, "skills") } },
+        repo,
+      ),
+    ).toThrow(/overlap/i);
   });
 });

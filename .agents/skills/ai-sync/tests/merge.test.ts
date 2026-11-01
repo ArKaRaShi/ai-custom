@@ -1,14 +1,13 @@
-import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import * as fs from "fs";
-import * as path from "path";
-import * as os from "os";
-import {
-  plainMergeFiles,
-  checkGitRemoteStatus,
-  matchesPattern,
-  filterItems,
-  cmdDiff,
-} from "../scripts/sync";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import type { MergeResult } from "@/scripts/application/interfaces/command-runner";
+import { NodeCommandRunner } from "@/scripts/infrastructure/node-command-runner";
+
+const runner = new NodeCommandRunner();
+const plainMergeFiles = (localFile: string, repoFile: string, baseFile?: string): MergeResult =>
+  runner.mergeFiles(localFile, repoFile, baseFile);
 
 describe("given two versions of a file and an optional common base, when running plainMergeFiles, then cleanly merges or produces conflict markers", () => {
   let tmpDir: string;
@@ -28,7 +27,10 @@ describe("given two versions of a file and an optional common base, when running
 
     fs.writeFileSync(baseFile, "Header\n\nSection 1\n\nSection 2\n\nFooter\n");
     // Local improved Section 1
-    fs.writeFileSync(localFile, "Header\n\nSection 1 (Local Improvement A)\n\nSection 2\n\nFooter\n");
+    fs.writeFileSync(
+      localFile,
+      "Header\n\nSection 1 (Local Improvement A)\n\nSection 2\n\nFooter\n",
+    );
     // Repo improved Section 2
     fs.writeFileSync(repoFile, "Header\n\nSection 1\n\nSection 2 (Repo Improvement B)\n\nFooter\n");
 

@@ -1,439 +1,244 @@
 #!/usr/bin/env bun
-import * as fs from "fs";
-import * as path from "path";
-import { execSync } from "child_process";
-import * as readline from "readline";
-import { DEFAULT_REPO, SKILLS_DIR, HOME, SyncOptions } from "./targets";
-import { LOCAL_LOCATIONS_FILE, loadLocations, loadUnifiedManifest, saveLocations, saveUnifiedManifest, validateLocations, validateUnifiedManifest, resolveRootPaths, pathRuleMatches, isJsonObject, type RootKind, type SkillMetadata, type SyncEntry, type UnifiedManifest } from "./unified-manifest";
-import { checkGitRemoteStatus } from "./git";
-import {
-  cmdDiff,
-  cmdPull,
-  cmdPush,
-  cmdResolve,
-  cmdStatus,
-  cmdViewDiff,
-  DiffReport,
-  compare,
-  copyFileSafe,
-  getAllFiles,
-  plainMergeFiles,
-  sha256,
-} from "./sync-files";
+import { type App, createApp } from "@/scripts/container";
+import type { Result } from "@/scripts/domain/plan";
+import { canonicalOperation, hasProblem } from "@/scripts/presentation/exit-policy";
+import { fallbackUsage, usageText } from "@/scripts/presentation/help";
+import { type ParsedArgs, parseArgs } from "@/scripts/presentation/parse-args";
+import { renderApplyPlan } from "@/scripts/presentation/render/apply-plan";
+import { renderBootstrap } from "@/scripts/presentation/render/bootstrap";
+import { renderViewDiff } from "@/scripts/presentation/render/diff";
+import { renderDiscover } from "@/scripts/presentation/render/discover";
+import { renderFailure } from "@/scripts/presentation/render/failure";
+import { renderInit } from "@/scripts/presentation/render/init";
+import { renderInspect } from "@/scripts/presentation/render/inspect";
+import { renderMigrate } from "@/scripts/presentation/render/migrate";
+import { renderPrune } from "@/scripts/presentation/render/prune";
+import { renderResolve } from "@/scripts/presentation/render/resolve";
+import { renderAddRoot, renderBindRoot } from "@/scripts/presentation/render/root";
+import { renderStatus } from "@/scripts/presentation/render/status";
+import { renderTrackPath, renderTrackSkill } from "@/scripts/presentation/render/track";
+import { renderTransfer } from "@/scripts/presentation/render/transfer";
+import { renderUntrack } from "@/scripts/presentation/render/untrack";
 
-// Re-export everything callers/tests import from "./sync" so the CLI stays
-// the public surface and module-level refactors are transparent.
-export { DEFAULT_REPO, HOME, SKILLS_DIR, matchesPattern, filterItems } from "./targets";
-export type { SyncOptions } from "./targets";
-export { checkGitRemoteStatus } from "./git";
-export {
-  cmdDiff,
-  cmdPull,
-  cmdPush,
-  cmdResolve,
-  cmdStatus,
-  cmdViewDiff,
-  compare,
-  copyFileSafe,
-  getAllFiles,
-  plainMergeFiles,
-  sha256,
-} from "./sync-files";
-export type { DiffReport } from "./sync-files";
-export { loadUnifiedManifest, validateUnifiedManifest, resolveRootPaths, pathRuleMatches, loadLocations, saveLocations, LOCAL_LOCATIONS_FILE } from "./unified-manifest";
+const failOnProblem = (result: Result): void => {
+  if (hasProblem(result)) process.exitCode = 1;
+};
 
-
-export interface UnifiedTrackMetadata {
-  sync?: boolean;
-  origin?: "authored" | "external";
-  source?: string;
-  sourceType?: string;
-  version?: string;
-  install?: string;
-  description?: string;
-}
-
-export function cmdRootAdd(id: string, kind: RootKind, repoRoot: string, repoBase = DEFAULT_REPO): void {
-  const manifest = loadUnifiedManifest(repoBase);
-  manifest.roots[id] = { kind, repoRoot };
-  saveUnifiedManifest(repoBase, manifest);
-  console.log(`Added ${kind} root '${id}' at ${repoRoot}`);
-}
-
-export function cmdRootBind(id: string, localRoot: string, repoBase = DEFAULT_REPO): void {
-  const manifest = loadUnifiedManifest(repoBase);
-  if (!manifest.roots[id]) throw new Error(`Unknown root: ${id}`);
-  const locations = loadLocations();
-  const next = { version: 1 as const, roots: { ...locations.roots, [id]: localRoot } };
-  const validated = validateLocations(next, HOME);
-  saveLocations(LOCAL_LOCATIONS_FILE, validated);
-  console.log(`Bound root '${id}' to ${validated.roots[id]}`);
-}
-
-export function cmdTrackPathV2(pattern: string, rootId: string, sync: boolean, repoBase = DEFAULT_REPO): void {
-  const manifest = loadUnifiedManifest(repoBase);
-  if (manifest.roots[rootId]?.kind !== "path") throw new Error(`Unknown or non-path root: ${rootId}`);
-  const entry: SyncEntry = { kind: "path", root: rootId, path: pattern, sync };
-  manifest.entries = manifest.entries.filter((item) => !(item.kind === "path" && item.root === rootId && item.path === pattern));
-  manifest.entries.push(entry);
-  saveUnifiedManifest(repoBase, manifest);
-  console.log(`${sync ? "Tracking" : "Excluding"} ${rootId}:${pattern}`);
-}
-
-export function cmdTrackSkillV2(name: string, rootId: string, metadata: UnifiedTrackMetadata, repoBase = DEFAULT_REPO): void {
-  const manifest = loadUnifiedManifest(repoBase);
-  if (manifest.roots[rootId]?.kind !== "skill") throw new Error(`Unknown or non-skill root: ${rootId}`);
-  const origin = metadata.origin;
-  if (origin !== "authored" && origin !== "external") throw new Error("Skill origin must be authored or external");
-  const sync = metadata.sync ?? origin === "authored";
-  const skill: SkillMetadata = { origin };
-  if (metadata.source !== undefined) skill.source = metadata.source;
-  if (metadata.sourceType !== undefined) skill.sourceType = metadata.sourceType;
-  if (metadata.version !== undefined) skill.version = metadata.version;
-  if (metadata.install !== undefined) skill.install = metadata.install;
-  if (metadata.description !== undefined) skill.description = metadata.description;
-  const root = manifest.roots[rootId];
-  const target = path.join(repoBase, root.repoRoot, name);
-  const wasSynced = manifest.entries.some((entry) => entry.kind === "skill" && entry.root === rootId && entry.path === name && entry.sync);
-  manifest.entries = manifest.entries.filter((entry) => !(entry.kind === "skill" && entry.root === rootId && entry.path === name));
-  manifest.entries.push({ kind: "skill", root: rootId, path: name, sync, skill });
-  saveUnifiedManifest(repoBase, manifest);
-  console.log(`Tracked '${name}' under ${rootId} (sync: ${sync})`);
-  if (wasSynced && !sync && fs.existsSync(target)) {
-    console.log(`Existing backup copy remains at ${path.relative(repoBase, target)}; no files were deleted. Ask before removing it.`);
-  }
-}
-
-export function cmdUntrackV2(kind: RootKind, name: string, rootId: string, repoBase = DEFAULT_REPO): void {
-  const manifest = loadUnifiedManifest(repoBase);
-  if (manifest.roots[rootId]?.kind !== kind) throw new Error(`Unknown or wrong-kind root: ${rootId}`);
-  const entryPath = kind === "path" ? name.replace(/\/$/, "") : name;
-  if (kind === "path") {
-    cmdTrackPathV2(entryPath, rootId, false, repoBase);
-    return;
-  }
-  manifest.entries = manifest.entries.filter((entry) => !(entry.kind === "skill" && entry.root === rootId && entry.path === entryPath));
-  saveUnifiedManifest(repoBase, manifest);
-  console.log(`Untracked '${entryPath}' from ${rootId}; files were not deleted.`);
-}
-
-export function cmdInit(repoBase = DEFAULT_REPO): void {
-  const manifest = loadUnifiedManifest(repoBase);
-  if (fs.existsSync(path.join(repoBase, ".ai-sync", "manifest.json"))) {
-    console.log(`Unified manifest already exists with ${Object.keys(manifest.roots).length} root(s).`);
-    return;
-  }
-  saveUnifiedManifest(repoBase, { version: 2, roots: {}, entries: [] });
-  console.log(`Initialized unified manifest at ${path.join(repoBase, ".ai-sync", "manifest.json")}`);
-}
-
-function readLegacySkillEntries(file: string): Map<string, SkillMetadata & { sync: boolean }> {
-  if (!fs.existsSync(file)) return new Map();
-  let value: unknown;
-  try { value = JSON.parse(fs.readFileSync(file, "utf8")); }
-  catch { throw new Error(`Cannot read legacy skill manifest: ${file}`); }
-  if (!isJsonObject(value) || value.version !== 1 || !isJsonObject(value.skills)) throw new Error(`Invalid legacy skill manifest: ${file}`);
-  const entries = new Map<string, SkillMetadata & { sync: boolean }>();
-  for (const [name, raw] of Object.entries(value.skills)) {
-    if (!isJsonObject(raw) || (raw.origin !== "authored" && raw.origin !== "external") || typeof raw.sync !== "boolean") {
-      throw new Error(`Invalid legacy skill entry: ${name}`);
-    }
-    const skill: SkillMetadata & { sync: boolean } = { origin: raw.origin, sync: raw.sync };
-    for (const field of ["source", "sourceType", "version", "install", "description"] as const) {
-      if (raw[field] !== undefined) {
-        if (typeof raw[field] !== "string") throw new Error(`Invalid legacy skill ${field}: ${name}`);
-        skill[field] = raw[field];
-      }
-    }
-    entries.set(name, skill);
-  }
-  return entries;
-}
-
-export function cmdMigrateV2(repoBase = DEFAULT_REPO): void {
-  const pathFile = path.join(repoBase, ".ai-sync", "manifest.json");
-  const localSkillsFile = path.join(SKILLS_DIR, "skills-manifest.json");
-  const sharedSkillsFile = path.join(repoBase, ".agents", "skills", "skills-manifest.json");
-  if (!fs.existsSync(pathFile)) throw new Error(`Missing legacy path manifest: ${pathFile}`);
-  const pathText = fs.readFileSync(pathFile, "utf8");
-  let legacyPaths: unknown;
-  try { legacyPaths = JSON.parse(pathText); }
-  catch { throw new Error(`Cannot read legacy path manifest: ${pathFile}`); }
-  if (!isJsonObject(legacyPaths) || legacyPaths.version !== 1 || !Array.isArray(legacyPaths.rules)) {
-    throw new Error("Expected version 1 path manifest for migration");
-  }
-
-  const skills = readLegacySkillEntries(localSkillsFile);
-  for (const [name, entry] of readLegacySkillEntries(sharedSkillsFile)) {
-    const localEntry = skills.get(name);
-    if (localEntry && JSON.stringify(localEntry) !== JSON.stringify(entry)) throw new Error(`Conflicting legacy metadata for skill '${name}'`);
-    skills.set(name, entry);
-  }
-
-  const manifest: UnifiedManifest = {
-    version: 2,
-    roots: { omp: { kind: "path", repoRoot: ".omp" }, agents: { kind: "skill", repoRoot: ".agents/skills" } },
-    entries: [],
-  };
-  for (const raw of legacyPaths.rules) {
-    if (!isJsonObject(raw) || typeof raw.pattern !== "string" || typeof raw.sync !== "boolean" || !raw.pattern.startsWith(".omp/")) {
-      throw new Error(`Unsupported legacy path rule: ${isJsonObject(raw) ? String(raw.pattern) : "invalid rule"}`);
-    }
-    manifest.entries.push({ kind: "path", root: "omp", path: raw.pattern.slice(".omp/".length), sync: raw.sync });
-  }
-  for (const [name, skill] of skills) {
-    const { sync, ...metadata } = skill;
-    manifest.entries.push({ kind: "skill", root: "agents", path: name, sync, skill: metadata });
-  }
-
-  const checked = validateUnifiedManifest(manifest, repoBase);
-  const oldSkillFiles = [localSkillsFile, sharedSkillsFile].filter((file) => fs.existsSync(file));
-  const oldSkillText = new Map(oldSkillFiles.map((file) => [file, fs.readFileSync(file, "utf8")]));
-  saveUnifiedManifest(repoBase, checked);
-  try {
-    for (const file of oldSkillFiles) fs.unlinkSync(file);
-  } catch (error) {
-    fs.writeFileSync(pathFile, pathText, "utf8");
-    for (const [file, contents] of oldSkillText) fs.writeFileSync(file, contents, "utf8");
-    throw error;
-  }
-  console.log(`Converted ${manifest.entries.length} entries into ${pathFile}; removed ${oldSkillFiles.length} legacy skill manifest(s).`);
-}
-
-
-export function cmdBootstrap(repoBase = DEFAULT_REPO): void {
-  console.log(`\n🚀 Bootstrapping from ${repoBase}...`);
-  const manifest = loadUnifiedManifest(repoBase);
-  const roots = resolveRootPaths(manifest, loadLocations(), repoBase);
-  cmdPull(repoBase);
-  for (const entry of manifest.entries) {
-    if (entry.kind !== "skill" || entry.sync || entry.skill.origin !== "external") continue;
-    const root = roots.find((item) => item.id === entry.root);
-    if (!root) throw new Error(`Missing resolved skill root: ${entry.root}`);
-    if (fs.existsSync(path.join(root.local, entry.path))) continue;
-    const installCmd = entry.skill.install || (entry.skill.source ? `npx -y skills add ${entry.skill.source} -g` : null);
-    if (!installCmd) {
-      console.log(`   ⚠️  external '${entry.path}' has no install command or source — install manually`);
-      continue;
-    }
-    console.log(`   🌐 Installing external '${entry.path}' via: ${installCmd}`);
-    try {
-      execSync(installCmd, { stdio: "inherit" });
-    } catch {
-      console.log(`   ❌ Install failed for '${entry.path}'. Retry manually: ${installCmd}`);
-    }
-  }
-  console.log(`\n✅ Bootstrap complete.\n`);
-}
-
-export function cmdDiscover(repoBase = DEFAULT_REPO, write = false): UnifiedManifest {
-  const manifest = loadUnifiedManifest(repoBase);
-  const locations = loadLocations();
-  let recorded = 0;
-  for (const [id, root] of Object.entries(manifest.roots)) {
-    const local = locations.roots[id];
-    if (!local) {
-      console.log(`Unbound root '${id}'; bind it before discovery.`);
-      continue;
-    }
-    if (!fs.existsSync(local)) continue;
-    if (root.kind === "skill") {
-      for (const item of fs.readdirSync(local, { withFileTypes: true }).filter((entry) => entry.isDirectory())) {
-        const rel = item.name;
-        if (manifest.entries.some((entry) => entry.kind === "skill" && entry.root === id && entry.path === rel)) continue;
-        console.log(`Unlisted skill candidate: ${id}:${rel}`);
-        if (write) {
-          manifest.entries.push({ kind: "skill", root: id, path: rel, sync: false, skill: { origin: "authored" } });
-          recorded++;
-        }
-      }
-      continue;
-    }
-    for (const file of getAllFiles(local)) {
-      const rel = path.relative(local, file).replace(/\\/g, "/");
-      let matched = false;
-      for (const entry of manifest.entries) {
-        if (entry.kind === "path" && entry.root === id && pathRuleMatches(entry, rel)) matched = true;
-      }
-      if (matched) continue;
-      console.log(`Unlisted path candidate: ${id}:${rel}`);
-      if (write) {
-        manifest.entries.push({ kind: "path", root: id, path: rel, sync: false });
-        recorded++;
-      }
-    }
-  }
-  if (write) saveUnifiedManifest(repoBase, manifest);
-  console.log(write ? `Recorded ${recorded} candidate(s) with sync: false.` : "Read-only discovery; no entries changed.");
-  return manifest;
-}
-
-export function parseArgs(rawArgs: string[]): {
-  command: string;
-  repo: string;
-  opts: SyncOptions;
-  args: string[];
-  meta: { from?: string; version?: string; sync?: boolean; root?: string; kind?: RootKind; repoRoot?: string; localRoot?: string; origin?: SkillMetadata["origin"]; sourceType?: string; install?: string; description?: string; entryPath?: string; help?: boolean };
-} {
-  let command = "status";
-  let repo = DEFAULT_REPO;
-  const opts: SyncOptions = { exclude: [] };
-  const meta: { from?: string; version?: string; sync?: boolean; root?: string; kind?: RootKind; repoRoot?: string; localRoot?: string; origin?: SkillMetadata["origin"]; sourceType?: string; install?: string; description?: string; entryPath?: string; help?: boolean } = {};
-  const positional: string[] = [];
-  const named = new Map<string, keyof typeof meta>([
-    ["--root", "root"], ["--kind", "kind"], ["--repo-root", "repoRoot"], ["--local-root", "localRoot"],
-    ["--origin", "origin"], ["--source-type", "sourceType"], ["--install", "install"], ["--description", "description"], ["--path", "entryPath"],
-  ]);
-  for (let i = 0; i < rawArgs.length; i++) {
-    const arg = rawArgs[i];
-    const option = named.get(arg);
-    if (option && i + 1 < rawArgs.length) {
-      (meta[option] as string | undefined) = rawArgs[++i];
-    } else if (arg === "--exclude" || arg === "-x") {
-      if (i + 1 < rawArgs.length) opts.exclude!.push(rawArgs[++i]);
-    } else if (arg.startsWith("--exclude=")) opts.exclude!.push(arg.slice("--exclude=".length));
-    else if (arg === "--target" || arg === "-t") {
-      if (i + 1 < rawArgs.length) opts.target = rawArgs[++i];
-    } else if (arg.startsWith("--target=")) opts.target = arg.slice("--target=".length);
-    else if (arg === "--format") {
-      if (i + 1 < rawArgs.length) opts.format = rawArgs[++i] as "tree" | "json";
-    } else if (arg.startsWith("--format=")) opts.format = arg.slice("--format=".length) as "tree" | "json";
-    else if (arg === "--apply") opts.apply = true;
-    else if (arg === "-h" || arg === "--help") meta.help = true;
-    else if (arg === "--git-pull") opts.gitPull = true;
-    else if (arg === "--no-git-pull") opts.gitPull = false;
-    else if (arg === "--git-push") opts.gitPush = true;
-    else if (arg === "--no-git-push") opts.gitPush = false;
-    else if (arg === "-m" || arg === "--message") {
-      if (i + 1 < rawArgs.length) opts.commitMessage = rawArgs[++i];
-    } else if (arg.startsWith("--message=")) opts.commitMessage = arg.slice("--message=".length);
-    else if (arg === "--include-local") opts.includeLocal = true;
-    else if (arg === "--write") opts.write = true;
-    else if (arg === "--sync") meta.sync = true;
-    else if (arg === "--no-sync") meta.sync = false;
-    else if (arg === "--from" && i + 1 < rawArgs.length) meta.from = rawArgs[++i];
-    else if (arg.startsWith("--from=")) meta.from = arg.slice("--from=".length);
-    else if (arg === "--version" && i + 1 < rawArgs.length) meta.version = rawArgs[++i];
-    else if (arg.startsWith("--version=")) meta.version = arg.slice("--version=".length);
-    else if (!arg.startsWith("-")) positional.push(arg);
-  }
-
-  if (positional[0]) command = positional[0];
-  const rest = positional.slice(1);
-  if (command === "init" && rest[0]) repo = rest[0].replace(/^~/, HOME);
-  else if (!["track", "untrack", "root", "bootstrap", "discover"].includes(command) && rest[0]) {
-    if (rest[0].startsWith("/") || rest[0].startsWith("~") || fs.existsSync(rest[0])) repo = rest[0].replace(/^~/, HOME);
-    else if (!opts.target) opts.target = rest[0];
-  }
-  return { command, repo, opts, args: rest, meta };
-}
-
-// CLI entrypoint when run directly
-if (import.meta.main) {
-  const { command, repo, opts, args, meta } = parseArgs(process.argv.slice(2));
-
-  if (meta.help || command === "--help" || command === "-h" || command === "help") {
-    console.log(`Usage: bun sync.ts <command> [repo_path] [options]
-
-Commands:
-  status                 Show synchronization status between local machine and repo
-  diff                   Show unified diffs of modified files
-  push [--apply]         Backup local files to repository (preview by default, --apply to copy)
-  pull [--apply]         Import repository files to local roots (preview by default, --apply to copy)
-  root add|bind          Manage root paths and local machine bindings
-  track path|skill       Track files or skills in the unified manifest
-  untrack path|skill     Remove tracking policy
-  discover [--write]     Detect unlisted skills and paths
-  bootstrap              Restore repository state on a fresh machine
-
-Options:
-  --apply                Execute file mutations (push and pull default to safe preview)
-  --format <tree|json>   Output format: human tree (default) or machine JSON
-  --format=<tree|json>   Equals-form syntax for --format
-  --git-pull             Pull remote git changes before restoring locally
-  --git-push             Commit and push changes to remote git after backup
-  -m, --message <msg>    Git commit message when using --git-push
-  --target <scope>       Narrow operation to specific skill or directory
-  --exclude <pattern>    Exclude matching paths from operation
-  -h, --help             Show this help message`);
-    process.exit(0);
-  }
+/** Runs one parsed command. Throws on failure; the caller renders the error. */
+async function run(app: App, parsed: ParsedArgs): Promise<void> {
+  const { command, repo, opts, args, meta } = parsed;
+  const { useCases } = app;
+  const interactive = process.stdin.isTTY && opts.format !== "json";
 
   switch (command) {
-    case "status":
-    case "scan":
-      cmdStatus(repo, opts);
+    case "inspect": {
+      const output = useCases.inspectItems.execute({ repoBase: repo, opts });
+      renderInspect(output, opts.format);
+      failOnProblem(output.result);
       break;
+    }
+    case "status":
+    case "scan": {
+      const output = useCases.reportStatus.execute({ repoBase: repo, opts });
+      renderStatus(output, opts.format);
+      failOnProblem(output.result);
+      break;
+    }
     case "diff":
-      cmdViewDiff(repo, opts);
+      renderViewDiff(useCases.viewDiff.execute({ repoBase: repo, opts }));
       break;
     case "resolve":
     case "review":
-      cmdResolve(repo, opts, "interactive");
+      renderResolve(
+        await useCases.resolveConflicts.execute({ repoBase: repo, opts, mode: "interactive" }),
+      );
       break;
     case "merge":
     case "combine":
-      cmdResolve(repo, opts, "merge-all");
+      renderResolve(
+        await useCases.resolveConflicts.execute({ repoBase: repo, opts, mode: "merge-all" }),
+      );
       break;
-    case "pull":
-    case "apply": {
-      if (opts.gitPull === undefined && process.stdin.isTTY && opts.format !== "json") {
-        const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-        const answer = await new Promise<string>((resolve) => rl.question("Pull latest changes from remote git repository first? (y/N): ", resolve));
-        rl.close();
+    case "pull": {
+      if (opts.apply && opts.gitPull === undefined && interactive) {
+        const answer = await app.prompter.ask(
+          "Pull latest changes from remote git repository first? (y/N): ",
+        );
         if (/^(y|yes)$/i.test(answer.trim())) opts.gitPull = true;
       }
-      cmdPull(repo, opts);
+      const output = useCases.transferChanges.execute({
+        operation: "pull",
+        repoBase: repo,
+        opts,
+      });
+      renderTransfer(output, opts.format);
+      failOnProblem(output.result);
       break;
     }
     case "push":
     case "backup":
     case "save": {
-      cmdPush(repo, opts);
-      if (opts.apply && opts.gitPush === undefined && process.stdin.isTTY && opts.format !== "json") {
-        const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-        const answer = await new Promise<string>((resolve) => rl.question("Commit and push backup to remote git repository? (y/N): ", resolve));
-        rl.close();
+      const output = useCases.transferChanges.execute({
+        operation: "push",
+        repoBase: repo,
+        opts,
+      });
+      renderTransfer(output, opts.format);
+      const { result } = output;
+      failOnProblem(result);
+      if (opts.apply && result.outcome === "success" && opts.gitPush === undefined && interactive) {
+        const answer = await app.prompter.ask(
+          "Commit and push backup to remote git repository? (y/N): ",
+        );
         if (/^(y|yes)$/i.test(answer.trim())) {
-          const gitRes = gitCommitAndPush(repo, opts.commitMessage);
-          console.log(gitRes.success ? `  🌐 git remote push: ${gitRes.output || "up to date"}` : `  ⚠️ git remote push failed: ${gitRes.output}`);
+          const gitRes = app.gitGateway.commitAndPush(
+            repo,
+            result.git?.exportedPaths ?? [],
+            opts.commitMessage,
+          );
+          console.log(
+            gitRes.success
+              ? `  🌐 git remote push: ${gitRes.output || "up to date"}`
+              : `  ⚠️ git remote push failed: ${gitRes.output}`,
+          );
+          if (!gitRes.success) process.exitCode = 1;
         }
       }
       break;
     }
+    case "prune": {
+      const output = useCases.pruneBackup.execute({ repoBase: repo, opts });
+      renderPrune(output, opts.format);
+      failOnProblem(output.result);
+      break;
+    }
+    case "apply": {
+      const planFile = args[0];
+      if (!planFile) throw new Error("Usage: apply <plan-file> [--apply] [--format=json]");
+      const output = useCases.applySavedPlan.execute({ planFile, opts });
+      renderApplyPlan(output, opts.format);
+      failOnProblem(output.result);
+      break;
+    }
     case "init":
-      cmdInit(repo);
+      renderInit(useCases.initRepository.execute({ repoBase: repo }));
       break;
     case "root":
-      if (args[0] === "add" && args[1] && meta.kind && meta.repoRoot) cmdRootAdd(args[1], meta.kind, meta.repoRoot, repo);
-      else if (args[0] === "bind" && args[1] && meta.localRoot) cmdRootBind(args[1], meta.localRoot, repo);
-      else throw new Error("Usage: root add <id> --kind <path|skill> --repo-root <relative-path> | root bind <id> --local-root <absolute-or-~/path>");
+      if (args[0] === "add" && args[1] && meta.kind && meta.repoRoot) {
+        renderAddRoot(
+          useCases.addRoot.execute({
+            id: args[1],
+            kind: meta.kind,
+            repoRoot: meta.repoRoot,
+            repoBase: repo,
+          }),
+        );
+      } else if (args[0] === "bind" && args[1] && meta.localRoot) {
+        renderBindRoot(
+          useCases.bindRoot.execute({ id: args[1], localRoot: meta.localRoot, repoBase: repo }),
+        );
+      } else {
+        throw new Error(
+          "Usage: root add <id> --kind <path|skill> --repo-root <relative-path> | root bind <id> --local-root <absolute-or-~/path>",
+        );
+      }
       break;
     case "track":
-      if (args[0] === "path" && args[1] && meta.root) cmdTrackPathV2(args[1], meta.root, meta.sync ?? true, repo);
-      else if (args[0] === "skill" && args[1] && meta.root && meta.origin) {
-        cmdTrackSkillV2(meta.entryPath ?? args[1], meta.root, {
-          origin: meta.origin, source: meta.from, sourceType: meta.sourceType, install: meta.install,
-          version: meta.version, description: meta.description, sync: meta.sync,
-        }, repo);
-      } else throw new Error("Usage: track path <pattern> --root <id> | track skill <name> --root <id> --origin <authored|external>");
+      if (args[0] === "path" && args[1] && meta.root) {
+        renderTrackPath(
+          useCases.trackPath.execute({
+            pattern: args[1],
+            rootId: meta.root,
+            sync: meta.sync ?? true,
+            repoBase: repo,
+            version: meta.version,
+          }),
+        );
+      } else if (args[0] === "skill" && args[1] && meta.root && meta.origin) {
+        renderTrackSkill(
+          useCases.trackSkill.execute({
+            name: meta.entryPath ?? args[1],
+            rootId: meta.root,
+            metadata: {
+              origin: meta.origin,
+              source: meta.from,
+              sourceType: meta.sourceType,
+              install: meta.install,
+              version: meta.version,
+              description: meta.description,
+              sync: meta.sync,
+            },
+            repoBase: repo,
+          }),
+        );
+      } else {
+        throw new Error(
+          "Usage: track path <pattern> --root <id> | track skill <name> --root <id> --origin <authored|external>",
+        );
+      }
       break;
     case "untrack":
-      if ((args[0] === "path" || args[0] === "skill") && args[1] && meta.root) cmdUntrackV2(args[0] === "path" ? "path" : "skill", args[1], meta.root, repo);
-      else throw new Error("Usage: untrack path <pattern> --root <id> | untrack skill <name> --root <id>");
+      if ((args[0] === "path" || args[0] === "skill") && args[1] && meta.root) {
+        renderUntrack(
+          useCases.untrackEntry.execute({
+            kind: args[0],
+            name: args[1],
+            rootId: meta.root,
+            repoBase: repo,
+          }),
+        );
+      } else {
+        throw new Error(
+          "Usage: untrack path <pattern> --root <id> | untrack skill <name> --root <id>",
+        );
+      }
       break;
     case "migrate-v2":
-      cmdMigrateV2(repo);
+      renderMigrate(useCases.migrateV2.execute({ repoBase: repo }));
       break;
     case "bootstrap":
-    case "restore":
-      cmdBootstrap(repo);
+    case "restore": {
+      const output = useCases.bootstrapInstalls.execute({
+        repoBase: repo,
+        format: opts.format,
+        approveInstall: opts.approveInstall,
+      });
+      renderBootstrap(output);
+      failOnProblem(output.result);
       break;
+    }
     case "discover":
-      cmdDiscover(repo, opts.write === true);
+      renderDiscover(
+        useCases.discoverCandidates.execute({ repoBase: repo, write: opts.write === true }),
+      );
       break;
     default:
-      console.log(`Usage: bun sync.ts [status|discover|diff|resolve|merge|pull|push|init|root|track|untrack|migrate-v2|bootstrap] [repo_path] [--root <id>] [--kind <path|skill>] [--repo-root <path>] [--local-root <path>] [--sync|--no-sync]`);
+      console.log(fallbackUsage);
       process.exit(1);
+  }
+}
+
+if (import.meta.main) {
+  const app = createApp();
+  const parsed = parseArgs(process.argv.slice(2), app.environment.defaultRepo, {
+    home: app.environment.home,
+    pathExists: (candidate: string): boolean => app.fileSystem.exists(candidate),
+  });
+
+  if (
+    parsed.meta.help ||
+    parsed.command === "--help" ||
+    parsed.command === "-h" ||
+    parsed.command === "help"
+  ) {
+    console.log(usageText);
+    process.exit(0);
+  }
+
+  try {
+    await run(app, parsed);
+  } catch (error) {
+    renderFailure(error, parsed.opts.format, canonicalOperation(parsed.command));
+    process.exit(1);
   }
 }
