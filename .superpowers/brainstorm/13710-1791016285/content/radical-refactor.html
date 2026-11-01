@@ -1,0 +1,82 @@
+<h2>Radical Refactor: "Convention Over Configuration"</h2>
+<p class="subtitle">Why manage roots and track commands? Make it as automatic as Git.</p>
+
+<div class="split" style="margin-bottom: 24px;">
+  <!-- Incremental v3 -->
+  <div class="mockup" style="border-color: #cbd5e1;">
+    <div class="mockup-header" style="background: #f1f5f9; color: #475569;">Incremental Refactor (Still Too Many Steps)</div>
+    <div class="mockup-body" style="font-size: 12px; line-height: 1.6;">
+      <ul style="padding-left: 18px; margin: 0; color: #64748b;">
+        <li>Still requires <code>root add</code> and <code>root bind</code></li>
+        <li>Still requires running <code>track &lt;skill&gt;</code> for every new skill</li>
+        <li>Still requires running <code>discover</code> to find forgotten skills</li>
+        <li>Separate <code>push</code> vs <code>pull</code> verbs</li>
+      </ul>
+      <div style="margin-top: 12px; padding: 8px; background: #fef2f2; border-radius: 6px; color: #991b1b;">
+        Still feels like manual administrative work.
+      </div>
+    </div>
+  </div>
+
+  <!-- Radical Zero-Boilerplate v3 -->
+  <div class="mockup" style="border-color: #3b82f6;">
+    <div class="mockup-header" style="background: #eff6ff; color: #1d4ed8;">Radical Zero-Boilerplate (The "Just Works" Model)</div>
+    <div class="mockup-body" style="font-size: 12px; line-height: 1.6;">
+      <div style="color: #2563eb; font-weight: 700; margin-bottom: 8px;">3 Radical Simplifications:</div>
+      <ol style="padding-left: 18px; margin: 0; color: #1e293b;">
+        <li><strong>No more roots:</strong> Automatically maps <code>~/.agents/skills</code> and <code>~/.omp/agent</code>. Zero setup.</li>
+        <li><strong>No more manual <code>track</code>:</strong> Any directory with a <code>SKILL.md</code> is automatically recognized and synced.</li>
+        <li><strong>Unified <code>sync</code> verb:</strong> One smart command previews both incoming and outgoing changes.</li>
+      </ol>
+      <div style="margin-top: 12px; padding: 8px; background: #ecfdf5; border-radius: 6px; color: #065f46;">
+        ✔ Zero setup: run <code>sync</code> in any repo and it works.<br>
+        ✔ Create a folder with SKILL.md → immediately tracked.<br>
+        ✔ 80% less code, 0% administrative overhead.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- What daily use looks like -->
+<div class="mockup" style="margin-bottom: 24px;">
+  <div class="mockup-header">What Daily Life Looks Like with Radical ai-sync</div>
+  <div class="mockup-body" style="padding: 16px;">
+    
+    <div style="font-family: monospace; font-size: 12px; background: #0f172a; color: #f8fafc; padding: 14px; border-radius: 6px; line-height: 1.6;">
+      <span style="color: #94a3b8;">$</span> sync<br>
+      <span style="color: #38bdf8;">ai-sync</span> [3 updates available]<br>
+      &nbsp;&nbsp;▲ <span style="color: #4ade80;">skill-framework</span> &nbsp;v2.1.0 (local) &gt; v2.0.0 (repo) &nbsp;→ will export to repo<br>
+      &nbsp;&nbsp;▼ <span style="color: #facc15;">deep-research</span> &nbsp;&nbsp;&nbsp;v1.0.0 (local) &lt; v1.1.0 (repo) &nbsp;→ will import to local<br>
+      &nbsp;&nbsp;✔ mentor &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;v1.0.0 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[in sync]<br>
+      &nbsp;&nbsp;✖ <span style="color: #f87171;">data-closure</span> &nbsp;&nbsp;&nbsp;&nbsp;v1.0.0 == v1.0.0 (content diff) → conflict<br>
+      <br>
+      <span style="color: #94a3b8;">Run <strong>sync --apply</strong> to transfer safe updates.</span><br>
+      <span style="color: #94a3b8;">Run <strong>sync resolve data-closure --ours|--theirs</strong> for conflicts.</span>
+    </div>
+
+    <div style="margin-top: 14px; display: flex; gap: 12px;">
+      <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 12px;">
+        <strong>Push local updates:</strong><br>
+        <code>sync push --apply</code>
+      </div>
+      <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 12px;">
+        <strong>Pull remote updates:</strong><br>
+        <code>sync pull --apply</code>
+      </div>
+      <div style="flex: 1; background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 12px;">
+        <strong>Resolve conflict safely:</strong><br>
+        <code>sync resolve &lt;skill&gt; --ours</code>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="section" style="padding: 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
+  <h3 style="color: #166534; margin-top: 0;">The Radical Deletion List</h3>
+  <ul style="margin: 0; padding-left: 20px; font-size: 12px; color: #14532d;">
+    <li><strong>DELETE `root add` and `root bind`</strong>: Skills always live in <code>~/.agents/skills</code>, OMP always in <code>~/.omp/agent</code>. Override only if needed in a tiny <code>~/.config/ai-sync/config.json</code>.</li>
+    <li><strong>DELETE `track` and `discover` for authored skills</strong>: If you write a skill folder with a <code>SKILL.md</code>, it is <em>automatically tracked</em>. No discovery command, no registration dance.</li>
+    <li><strong>DELETE `migrate-v2` & text-merge logic</strong>: Clean slate.</li>
+  </ul>
+</div>

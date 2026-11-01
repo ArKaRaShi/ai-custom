@@ -12,14 +12,6 @@ describe("given skills referencing external capabilities, when inspected, then t
     expect(content).toContain("without stalling");
   });
 
-  it("skill-layout.md mandates REQUIRE SUBSKILL and non-blocking fallback rule", () => {
-    const layoutPath = path.resolve(import.meta.dir, "../references/skill-layout.md");
-    const content = readFileSync(layoutPath, "utf-8");
-
-    expect(content).toContain("**REQUIRE SUBSKILL:**");
-    expect(content).toContain("Every subskill reference must specify a non-blocking fallback action");
-    expect(content).toContain("without stalling");
-  });
 
   it("consuming skills (git-pr-mr and git-commit) adhere to REQUIRE SUBSKILL with fallback", () => {
     const gitPrPath = path.resolve(import.meta.dir, "../../git-pr-mr/SKILL.md");

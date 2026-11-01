@@ -1,0 +1,80 @@
+<h2>Grilling Session: Stress-Testing ai-sync v3 (Question 2 of 5)</h2>
+<p class="subtitle">5 critical stress-test questions before implementation. Here is Question 2:</p>
+
+<!-- Progress Bar -->
+<div style="background: #e2e8f0; border-radius: 9999px; height: 8px; margin-bottom: 24px; overflow: hidden;">
+  <div style="background: #3b82f6; width: 40%; height: 100%;"></div>
+</div>
+
+<div class="mockup" style="margin-bottom: 24px; border-color: #f59e0b;">
+  <div class="mockup-header" style="background: #fef3c7; color: #92400e;">
+    🔥 Question 2: Concurrency & Atomic File Swapping (Torn Reads)
+  </div>
+  <div class="mockup-body" style="padding: 16px; font-size: 13px; line-height: 1.6;">
+    <p style="margin-top: 0;">
+      OMP and code editors are <strong>actively running in the background</strong> on your machine.
+    </p>
+    <p>
+      If an AI agent or language server (LSP) reads <code>~/.agents/skills/deep-research/</code> at the exact second you run <code>sync pull --apply</code>:
+    </p>
+    <p style="margin-bottom: 0; color: #b45309; font-weight: 600;">
+      If we copy files one-by-one in-place, the agent could read the new <code>SKILL.md</code> while still reading old helper scripts (a "torn read"), causing unexpected runtime crashes or hallucinated errors!
+    </p>
+  </div>
+</div>
+
+<!-- The 3 Options -->
+<div class="cards">
+  
+  <!-- Option A: Recommended -->
+  <div class="card selected" data-choice="a" onclick="toggleSelect(this)" style="border: 2px solid #10b981;">
+    <div class="card-body">
+      <div style="background: #10b981; color: white; display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-bottom: 8px;">
+        RECOMMENDED (POSIX ATOMIC RENAME)
+      </div>
+      <div class="letter">A</div>
+      <h3>Atomic Staging + POSIX Rename</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">Stage in temp folder, then atomic directory swap</p>
+      
+      <div style="font-size: 12px; line-height: 1.5; color: #334155;">
+        <ul style="padding-left: 18px; margin: 0;">
+          <li>Write files to sibling temp directory: <code>~/.agents/skills/.tmp-deep-research/</code>.</li>
+          <li>Execute atomic rename: <code>fs.renameSync()</code> (POSIX rename is instant: &lt;1ms).</li>
+          <li><strong>Result:</strong> An agent reading the folder either sees 100% old version or 100% new version. Impossible to experience a torn read.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <div class="letter">B</div>
+      <h3>Process File Lock (.lock file)</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">Acquire a lockfile during sync</p>
+      
+      <div style="font-size: 12px; line-height: 1.5; color: #334155;">
+        <ul style="padding-left: 18px; margin: 0;">
+          <li>Create <code>.ai-sync.lock</code> while syncing. Other processes wait.</li>
+          <li><strong>Trade-off:</strong> External tools (like VS Code or simple shell commands) don't check our lockfile, so they can still read partial files.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option C -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <div class="letter">C</div>
+      <h3>Direct In-Place Overwrite (The Old Way)</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">Copy files directly into existing folder</p>
+      
+      <div style="font-size: 12px; line-height: 1.5; color: #334155;">
+        <ul style="padding-left: 18px; margin: 0;">
+          <li>Simplest code, but vulnerable to torn reads if a file transfer is interrupted mid-flight.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>

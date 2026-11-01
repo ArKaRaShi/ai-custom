@@ -1,0 +1,84 @@
+<h2>Grilling Session: Stress-Testing ai-sync v3 (Question 1 of 5)</h2>
+<p class="subtitle">5 critical stress-test questions before implementation. Here is Question 1:</p>
+
+<!-- Progress Bar -->
+<div style="background: #e2e8f0; border-radius: 9999px; height: 8px; margin-bottom: 24px; overflow: hidden;">
+  <div style="background: #3b82f6; width: 20%; height: 100%;"></div>
+</div>
+
+<div class="mockup" style="margin-bottom: 24px; border-color: #f59e0b;">
+  <div class="mockup-header" style="background: #fef3c7; color: #92400e;">
+    🔥 Question 1: The Multi-Machine Upgrade Paradox (Chicken-and-Egg)
+  </div>
+  <div class="mockup-body" style="padding: 16px; font-size: 13px; line-height: 1.6;">
+    <p style="margin-top: 0;">
+      Because we are doing a clean break with <strong>zero backward compatibility</strong>:
+    </p>
+    <p>
+      When you push the new v3 manifest (<code>manifest.json</code> version 3) from this Mac to GitHub, your <strong>other PCs still have the old v2 ai-sync script installed</strong> in their local folders.
+    </p>
+    <p style="margin-bottom: 0; color: #b45309; font-weight: 600;">
+      When you sit at your other PC and run <code>sync pull</code>, the old v2 script will see the new v3 manifest, fail to parse it, and crash before it can even pull the new v3 code!
+    </p>
+  </div>
+</div>
+
+<!-- The 3 Options -->
+<div class="cards">
+  
+  <!-- Option A: Recommended -->
+  <div class="card selected" data-choice="a" onclick="toggleSelect(this)" style="border: 2px solid #10b981;">
+    <div class="card-body">
+      <div style="background: #10b981; color: white; display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-bottom: 8px;">
+        RECOMMENDED (OPTION A + B)
+      </div>
+      <div class="letter">A</div>
+      <h3>Tool-First Self-Update + 1-Liner Bootstrap</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">Automatic self-upgrade with fallback</p>
+      
+      <div style="font-size: 12px; line-height: 1.5; color: #334155;">
+        <ul style="padding-left: 18px; margin: 0;">
+          <li><code>sync pull</code> detects if <code>ai-sync</code> itself is newer in the repo and copies the new engine first.</li>
+          <li>For old machines that crash, we document a simple 1-line manual bootstrap:</li>
+        </ul>
+        <div style="background: #0f172a; color: #f8fafc; padding: 8px; border-radius: 4px; font-family: monospace; font-size: 11px; margin-top: 8px;">
+          bun ~/Disk/ai-custom/.agents/skills/ai-sync/scripts/sync.ts bootstrap --apply
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <div class="letter">B</div>
+      <h3>Pure Manual Git Pull on Other PCs</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">No self-update code inside the tool</p>
+      
+      <div style="font-size: 12px; line-height: 1.5; color: #334155;">
+        <ul style="padding-left: 18px; margin: 0;">
+          <li>You explicitly run <code>git pull</code> inside <code>~/Disk/ai-custom</code> on other PCs.</li>
+          <li>Then copy the updated skill to <code>~/.agents/skills/ai-sync</code> once.</li>
+          <li>Zero magic, but requires manual intervention on each PC.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option C -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <div class="letter">C</div>
+      <h3>Temporary Transition Guard in v2</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">Patch the existing v2 code before pushing v3</p>
+      
+      <div style="font-size: 12px; line-height: 1.5; color: #334155;">
+        <ul style="padding-left: 18px; margin: 0;">
+          <li>We push a quick commit that teaches v2: <em>"If version === 3, auto-run the v3 script"</em>.</li>
+          <li>Guarantees existing v2 clones on other PCs gracefully transition.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>

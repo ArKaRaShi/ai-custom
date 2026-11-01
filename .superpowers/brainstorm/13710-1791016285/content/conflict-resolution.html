@@ -1,0 +1,112 @@
+<h2>Conflict Resolution Strategy: My Vote & Comparison</h2>
+<p class="subtitle">Comparing how ai-sync v3 should handle conflicting skill edits across machines</p>
+
+<div class="cards">
+  <!-- Option B: Recommended -->
+  <div class="card selected" data-choice="b" onclick="toggleSelect(this)" style="border: 2px solid var(--accent, #3b82f6); position: relative;">
+    <div style="position: absolute; top: 12px; right: 12px; background: #10b981; color: white; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700;">
+      MY VOTE (RECOMMENDED)
+    </div>
+    <div class="card-body">
+      <div class="letter">Option B</div>
+      <h3>Safety-Snapshot + Atomic Skill Winner</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">Automated backup + zero broken syntax</p>
+      
+      <div style="background: rgba(0,0,0,0.04); padding: 10px; border-radius: 6px; font-family: monospace; font-size: 12px; margin-bottom: 12px;">
+        ~/.config/ai-sync/backups/ai-sync-20261003-1530/<br>
+        ✔ 100% snapshot before any overwrite
+      </div>
+
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Why this wins</h4>
+          <ul>
+            <li><strong>Zero broken code:</strong> Never injects &lt;&lt;&lt;&lt;&lt;&lt;&lt; conflict markers into tests or scripts.</li>
+            <li><strong>Zero data loss:</strong> Overwritten side is immediately restorable from local backup snapshot.</li>
+            <li><strong>Frictionless:</strong> Deterministic; resolve with simple <code>sync pull --theirs &lt;skill&gt;</code> or <code>sync push --ours &lt;skill&gt;</code>.</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Trade-off</h4>
+          <ul>
+            <li>Whole skill moves together (you can't automatically merge half of file A and half of file B).</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option A -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <div class="letter">Option A</div>
+      <h3>Strict Manual Prompt (Ours vs Theirs)</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">Halt on conflict and ask in terminal</p>
+      
+      <div style="background: rgba(0,0,0,0.04); padding: 10px; border-radius: 6px; font-family: monospace; font-size: 12px; margin-bottom: 12px;">
+        ⚠ Conflict in deep-research (v1.0.0 vs v1.0.0)<br>
+        [1] Keep Local (ours)  [2] Take Repo (theirs)  [s] Skip
+      </div>
+
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Pros</h4>
+          <ul>
+            <li>Explicit control: never overwrites without direct terminal approval.</li>
+            <li>Simple mental model.</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Cons</h4>
+          <ul>
+            <li>Blocks automated background or batch syncs until a user types an answer.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option C -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <div class="letter">Option C</div>
+      <h3>Line-by-Line 3-Way Merge (The Old Way)</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">Text-level diff3 insertion</p>
+      
+      <div style="background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 6px; font-family: monospace; font-size: 12px; margin-bottom: 12px; color: #dc2626;">
+        &lt;&lt;&lt;&lt;&lt;&lt;&lt; ours<br>
+        export function sync() { ... }<br>
+        =======<br>
+        export async function sync() { ... }<br>
+        &gt;&gt;&gt;&gt;&gt;&gt;&gt; theirs
+      </div>
+
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Pros</h4>
+          <ul>
+            <li>Allows granular line-level blending within a single file.</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Why I vote AGAINST this</h4>
+          <ul>
+            <li><strong>Syntax disaster:</strong> Conflict markers break TypeScript builds and unit tests.</li>
+            <li><strong>File mismatch:</strong> Merging file A while file B was deleted or renamed breaks the whole skill.</li>
+            <li>The root cause of why ai-sync feels confusing today.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 24px; padding: 16px; background: rgba(59, 130, 246, 0.08); border-radius: 8px;">
+  <h3 style="margin-top: 0;">Summary of Recommendation</h3>
+  <p>
+    Skills are <strong>cohesive software packages</strong> (a script, its tests, and its documentation form a unit). Treating them like isolated text files and injecting diff markers causes fragile runtime errors.
+  </p>
+  <p style="margin-bottom: 0;">
+    <strong>My recommendation:</strong> Treat skills as <strong>atomic units</strong>. Version bumps fast-forward automatically; true conflicts create a safety snapshot in <code>~/.config/ai-sync/backups/</code> so you never lose code, with clear <code>--ours</code> or <code>--theirs</code> override commands.
+  </p>
+</div>

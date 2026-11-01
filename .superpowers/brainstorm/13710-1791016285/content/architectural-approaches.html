@@ -1,0 +1,97 @@
+<h2>ai-sync v3: Architectural Approaches</h2>
+<p class="subtitle">Comparing 3 clean-break architectures to eliminate complexity and conflict pain</p>
+
+<div class="cards">
+  <!-- Approach 1: Package Manager Model (Recommended) -->
+  <div class="card selected" data-choice="1" onclick="toggleSelect(this)" style="border: 2px solid var(--accent, #3b82f6); position: relative;">
+    <div style="position: absolute; top: 12px; right: 12px; background: #10b981; color: white; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700;">
+      RECOMMENDED
+    </div>
+    <div class="card-body">
+      <div class="letter">1</div>
+      <h3>Package Manager Model</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">Skills as cohesive versioned packages (Cargo / Homebrew style)</p>
+      
+      <div style="background: rgba(0,0,0,0.04); padding: 10px; border-radius: 6px; font-family: monospace; font-size: 12px; margin-bottom: 12px;">
+        • SKILL.md version + Merkle tree hash<br>
+        • Automatic high-level [▲ LOCAL] [▼ REPO] preview<br>
+        • Safety snapshots in ~/.config/ai-sync/backups/
+      </div>
+
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Why this wins</h4>
+          <ul>
+            <li><strong>Zero manual inspection:</strong> Status prints exact upgrade/downgrade verdicts per skill.</li>
+            <li><strong>Deletes ~60% legacy code:</strong> Drops v1/v2 path glob complexity and raw text merge.</li>
+            <li><strong>Safety first:</strong> Snapshot backup before any overwrite guarantees zero lost edits.</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Trade-off</h4>
+          <ul>
+            <li>Clean break: requires a clean new v3 manifest schema.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Approach 2: Git Subtree Model -->
+  <div class="card" data-choice="2" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <div class="letter">2</div>
+      <h3>Git-Native Tree SHA Model</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">Track Git tree object IDs directly</p>
+      
+      <div style="background: rgba(0,0,0,0.04); padding: 10px; border-radius: 6px; font-family: monospace; font-size: 12px; margin-bottom: 12px;">
+        • Tracks commit SHA + git ls-tree hashes<br>
+        • Delegates versioning entirely to Git history
+      </div>
+
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Pros</h4>
+          <ul>
+            <li>No version strings needed; Git commits define history.</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Cons</h4>
+          <ul>
+            <li>Local directories (~/.agents/skills) are not Git repos, requiring complex temporary git index queries.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Approach 3: Journal / Ledger Model -->
+  <div class="card" data-choice="3" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <div class="letter">3</div>
+      <h3>Sync Journal & Ledger</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">Append-only transaction log across machines</p>
+      
+      <div style="background: rgba(0,0,0,0.04); padding: 10px; border-radius: 6px; font-family: monospace; font-size: 12px; margin-bottom: 12px;">
+        • .ai-sync/journal.jsonl records every push/pull<br>
+        • Vector clocks track causality
+      </div>
+
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Pros</h4>
+          <ul>
+            <li>Full audit log of every change across all devices.</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Cons</h4>
+          <ul>
+            <li>Over-engineered for personal backup; journal compaction and clock drift management.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

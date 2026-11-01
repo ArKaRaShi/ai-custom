@@ -1,0 +1,235 @@
+<h2>ai-sync v3: Final Architecture Proposal</h2>
+<p class="subtitle">A complete, extensible AI workspace synchronizer built from first principles (No backward-compat debt)</p>
+
+<!-- 1. Executive Summary Chips -->
+<div style="display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap;">
+  <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 6px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; color: #1e40af;">
+    🧩 Extensible Provider Pattern
+  </div>
+  <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 6px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; color: #166534;">
+    ⚡ Automated Version & Tree-Hash Previews
+  </div>
+  <div style="background: #faf5ff; border: 1px solid #e9d5ff; padding: 6px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; color: #6b21a8;">
+    🛡️ Zero-Data-Loss Safety Snapshots
+  </div>
+  <div style="background: #fef2f2; border: 1px solid #fecdd3; padding: 6px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; color: #991b1b;">
+    🗑️ 60% Legacy Code Deleted
+  </div>
+</div>
+
+<!-- 2. System Architecture -->
+<div class="mockup" style="margin-bottom: 24px;">
+  <div class="mockup-header">System Architecture: Pluggable SyncModule Providers</div>
+  <div class="mockup-body" style="padding: 16px;">
+    
+    <div style="background: #0f172a; color: white; padding: 14px; border-radius: 8px; text-align: center; margin-bottom: 16px;">
+      <div style="font-size: 14px; font-weight: 700; color: #38bdf8;">Core Sync Engine (Generic)</div>
+      <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">
+        Diffing · SemVer & Merkle Hashing · Safety Snapshots · Multi-PC Scopes · Git Automation
+      </div>
+    </div>
+
+    <div style="text-align: center; color: #64748b; font-weight: bold; margin-bottom: 14px; font-size: 12px;">
+      ▼ Communicates with all AI resources through a single typed interface: <code>SyncModule</code> ▼
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+      
+      <div style="background: #eff6ff; border: 1px solid #3b82f6; border-radius: 6px; padding: 12px;">
+        <strong style="color: #1d4ed8; font-size: 13px;">1. SkillsModule</strong>
+        <p style="font-size: 11px; color: #475569; margin: 4px 0 0;">
+          • <code>~/.agents/skills/</code><br>
+          • <code>SKILL.md</code> SemVer + Merkle directory tree hash
+        </p>
+      </div>
+
+      <div style="background: #f0fdf4; border: 1px solid #10b981; border-radius: 6px; padding: 12px;">
+        <strong style="color: #047857; font-size: 13px;">2. RulesModule</strong>
+        <p style="font-size: 11px; color: #475569; margin: 4px 0 0;">
+          • <code>~/.omp/agent/rules/</code><br>
+          • <code>*.md</code> coding standards with content hashes
+        </p>
+      </div>
+
+      <div style="background: #faf5ff; border: 1px solid #8b5cf6; border-radius: 6px; padding: 12px;">
+        <strong style="color: #6d28d9; font-size: 13px;">3. AgentsModule</strong>
+        <p style="font-size: 11px; color: #475569; margin: 4px 0 0;">
+          • <code>~/.omp/agent/agents/</code><br>
+          • Subagent personas (e.g. <code>sonic.md</code>, <code>reviewer.md</code>)
+        </p>
+      </div>
+
+      <div style="background: #fffbeb; border: 1px solid #f59e0b; border-radius: 6px; padding: 12px;">
+        <strong style="color: #b45309; font-size: 13px;">4. HooksModule</strong>
+        <p style="font-size: 11px; color: #475569; margin: 4px 0 0;">
+          • <code>~/.omp/agent/hooks/</code><br>
+          • Guard & notification scripts (<code>guard-destructive.ts</code>)
+        </p>
+      </div>
+
+      <div style="background: #fef2f2; border: 1px solid #ef4444; border-radius: 6px; padding: 12px;">
+        <strong style="color: #b91c1c; font-size: 13px;">5. ConfigsModule</strong>
+        <p style="font-size: 11px; color: #475569; margin: 4px 0 0;">
+          • <code>~/.omp/agent/</code><br>
+          • Shared: <code>mcp.json</code>, <code>models.yml</code><br>
+          • Machine-isolated: <code>config.yml</code>
+        </p>
+      </div>
+
+      <div style="background: #f8fafc; border: 2px dashed #94a3b8; border-radius: 6px; padding: 12px;">
+        <strong style="color: #475569; font-size: 13px;">+ Future Extensions</strong>
+        <p style="font-size: 11px; color: #94a3b8; margin: 4px 0 0;">
+          Add <code>modules/cursor.ts</code>, <code>modules/prompts.ts</code>, or <code>modules/claude.ts</code> anytime without touching the core engine.
+        </p>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- 3. Clean Data Model: Shared vs Local -->
+<div class="split" style="margin-bottom: 24px;">
+  
+  <div class="mockup">
+    <div class="mockup-header" style="background: #eff6ff; color: #1e40af;">
+      Shared Repository Policy (.ai-sync/manifest.json)
+    </div>
+    <div class="mockup-body" style="font-size: 11px; font-family: monospace; line-height: 1.5; background: #0f172a; color: #f8fafc;">
+<pre style="margin: 0; padding: 10px;">{
+  "version": 3,
+  "skills": {
+    "deep-research": { "origin": "authored" },
+    "skill-framework": { "origin": "authored" },
+    "archify": {
+      "origin": "external",
+      "install": "npx -y skills add tt-a1i/archify -g",
+      "version": "2.17.0"
+    }
+  },
+  "rules": { "sync": true },
+  "agents": { "sync": true },
+  "hooks": { "sync": true },
+  "configs": {
+    "shared": ["mcp.json", "models.yml"]
+  }
+}</pre>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header" style="background: #faf5ff; color: #6b21a8;">
+      Machine-Local Privacy (~/.config/ai-sync/locations.json)
+    </div>
+    <div class="mockup-body" style="font-size: 11px; font-family: monospace; line-height: 1.5; background: #0f172a; color: #f8fafc;">
+<pre style="margin: 0; padding: 10px;">{
+  "version": 3,
+  "roots": {
+    "skills": "/Users/ponthep/.agents/skills",
+    "omp": "/Users/ponthep/.omp/agent"
+  },
+  "excludes": [
+    "configs:config.yml"
+  ]
+}
+
+<span style="color: #94a3b8;">/* Lives strictly on this Mac.
+   Never committed to Git.
+   Protects local models & secrets. */</span></pre>
+    </div>
+  </div>
+
+</div>
+
+<!-- 4. Complete CLI Suite -->
+<div class="mockup" style="margin-bottom: 24px;">
+  <div class="mockup-header">Complete CLI Command Reference</div>
+  <div class="mockup-body" style="padding: 12px;">
+    
+    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+      <thead>
+        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; text-align: left;">
+          <th style="padding: 8px;">Command</th>
+          <th style="padding: 8px;">Scope & Safety</th>
+          <th style="padding: 8px;">Action Executed</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync status</td>
+          <td style="padding: 8px; color: #0284c7;">Read-only (Default)</td>
+          <td style="padding: 8px;">High-level automated preview of drift across skills, rules, agents, configs.</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync push [--apply] [--git]</td>
+          <td style="padding: 8px; color: #16a34a;">Preview by default</td>
+          <td style="padding: 8px;">Exports newer local items into backup repo. Optional <code>--git</code> commits & pushes.</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync pull [--apply] [--git]</td>
+          <td style="padding: 8px; color: #16a34a;">Preview by default</td>
+          <td style="padding: 8px;">Imports newer repo items to this machine. Optional <code>--git</code> pulls remote first.</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0; background: #fff5f5;">
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync resolve &lt;item&gt; --ours|--theirs</td>
+          <td style="padding: 8px; color: #dc2626;">Safety snapshot first</td>
+          <td style="padding: 8px;">Atomic resolution: backs up replaced version to <code>~/.config/ai-sync/backups/</code> then updates.</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync add &lt;module&gt; &lt;item&gt;</td>
+          <td style="padding: 8px; color: #2563eb;">Shared (Git manifest)</td>
+          <td style="padding: 8px;">Registers an item (e.g. <code>sync add skill my-tool</code> or <code>sync add rule ts-no-any</code>).</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync remove &lt;module&gt; &lt;item&gt;</td>
+          <td style="padding: 8px; color: #2563eb;">Shared (Git manifest)</td>
+          <td style="padding: 8px;">Unregisters an item from the shared policy (never deletes local files).</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0; background: #fdf4ff;">
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync ignore &lt;path&gt; --local</td>
+          <td style="padding: 8px; color: #7c3aed;">Local (This PC only)</td>
+          <td style="padding: 8px;">Protects local private files (e.g. <code>config.yml</code>) from being synced or overwritten.</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync list [--local|--shared]</td>
+          <td style="padding: 8px;">Inspection</td>
+          <td style="padding: 8px;">Displays active shared ecosystem items or machine-local exclusions.</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync init [repo]</td>
+          <td style="padding: 8px;">Setup</td>
+          <td style="padding: 8px;">Creates clean v3 manifest in backup repository.</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync bootstrap [--apply]</td>
+          <td style="padding: 8px; color: #059669;">Disaster Recovery</td>
+          <td style="padding: 8px;">Restores all skills, rules, agents, and installs external tools on a fresh PC.</td>
+        </tr>
+      </tbody>
+    </table>
+
+  </div>
+</div>
+
+<!-- 5. Deletion & Cleanup Ledger -->
+<div class="section" style="padding: 16px; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px;">
+  <h3 style="color: #9f1239; margin-top: 0;">Dead Weight Permanently Removed in v3</h3>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; font-size: 12px; color: #881337;">
+    <div>
+      <strong>❌ No more &lt;&lt;&lt;&lt;&lt;&lt;&lt; text corruption:</strong><br>
+      Deleted <code>plainMergeFiles</code> and raw line diff3 merging.
+    </div>
+    <div>
+      <strong>❌ No backward compatibility debt:</strong><br>
+      Deleted <code>migrate-v2</code>, <code>readLegacySkillEntries</code>, and v1/v2 schema conversion.
+    </div>
+    <div>
+      <strong>❌ No redundant aliases:</strong><br>
+      Deleted <code>scan</code>, <code>apply</code>, <code>backup</code>, <code>save</code>, <code>review</code>, <code>combine</code>, <code>restore</code>.
+    </div>
+    <div>
+      <strong>❌ No awkward "roots" & path globs:</strong><br>
+      Deleted `--root omp --kind path` ceremony; replaced with natural domain nouns.
+    </div>
+  </div>
+</div>

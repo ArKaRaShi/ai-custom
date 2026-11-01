@@ -1,0 +1,23 @@
+{
+  "name": "spec-visual-review",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "biome lint .",
+    "format:check": "biome format .",
+    "check": "bun run typecheck && bun run lint && bun run format:check",
+    "fix": "biome check --write .",
+    "test": "bun test tests/",
+    "cli": "bun scripts/cli.ts"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@types/bun": "1.4.2",
+    "typescript": "7.0.2"
+  },
+  "dependencies": {
+    "marked": "^18.1.2",
+    "zod": "^4.6.7"
+  }
+}

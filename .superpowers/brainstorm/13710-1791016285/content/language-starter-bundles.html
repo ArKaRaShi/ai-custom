@@ -1,0 +1,105 @@
+<style>
+.starter-proposal { --ink:#173047; --muted:#52687a; --line:#ccd7e1; --ts:#1266a6; --py:#796014; color:var(--ink); font-family:system-ui,sans-serif; }
+.starter-proposal h2 { font-size:30px; letter-spacing:-.6px; margin:0 0 8px; }
+.starter-proposal h3 { font-size:19px; margin:0 0 12px; }
+.starter-proposal p { line-height:1.55; max-width:85ch; }
+.starter-proposal .intro { color:var(--muted); margin-bottom:26px; }
+.starter-proposal .columns { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:22px; }
+.starter-proposal .pane { border:1px solid var(--line); border-top:4px solid var(--ts); padding:20px; background:white; }
+.starter-proposal .pane.python { border-top-color:var(--py); }
+.starter-proposal .tree { background:#eef3f7; border:1px solid var(--line); padding:16px; font:13px/1.8 ui-monospace,SFMono-Regular,monospace; white-space:pre; overflow-x:auto; }
+.starter-proposal code { font-family:ui-monospace,SFMono-Regular,monospace; font-size:.9em; }
+.starter-proposal .route { padding:16px 0; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.starter-proposal .route span { padding:9px 12px; border:1px solid var(--line); background:#f7fafc; }
+.starter-proposal .route b { color:var(--muted); }
+.starter-proposal section { margin:28px 0; }
+.starter-proposal .checks { width:100%; border-collapse:collapse; font-size:14px; }
+.starter-proposal .checks td,.starter-proposal .checks th { text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+.starter-proposal .checks th { background:#eef3f7; }
+.starter-proposal .note { border-left:4px solid #b58a22; padding:10px 16px; background:#fff8e6; }
+.starter-proposal .options { margin:18px 0; }
+.starter-proposal button.option { display:flex; width:100%; text-align:left; font:inherit; color:inherit; cursor:pointer; }
+.starter-proposal button.option:focus-visible { outline:3px solid var(--ts); outline-offset:3px; }
+.starter-proposal .option .content p { margin:5px 0 0; }
+.starter-proposal .sources { font-size:13px; color:var(--muted); }
+@media(max-width:760px) { .starter-proposal .columns { grid-template-columns:1fr; } .starter-proposal .pane { padding:14px; } .starter-proposal h2 { font-size:25px; } }
+</style>
+<div class="starter-proposal">
+<h2>Language starters, copied into each skill</h2>
+<p class="intro">Proposal only. Keep the verification contract generic; supply concrete, tested starter files for each supported language. No starter files have been implemented.</p>
+<section>
+<h3>Where the framework keeps them</h3>
+<pre class="tree">skill-framework/
+├── SKILL.md
+├── references/
+│   ├── primitives/verification.md   ← language-neutral contract
+│   └── starters.md                  ← selection + copy/merge guide
+├── assets/
+│   └── starters/
+│       ├── typescript-bun/
+│       │   ├── package.json         ← dev tools + check/test/fix scripts
+│       │   ├── tsconfig.json        ← strict types + Bun declarations
+│       │   ├── biome.json           ← correctness lint + formatting
+│       │   └── .gitignore           ← local dependencies/artifacts
+│       └── python/
+│           ├── pyproject.toml       ← dev tools + Pyright/Ruff settings
+│           └── .gitignore           ← environments/caches
+└── tests/
+    └── starter checks              ← isolated valid/invalid fixtures</pre>
+<p><code>assets/</code> contains files to copy. <code>references/</code> explains their use. <code>primitives/</code> contains reusable contracts, not language-specific configuration.</p>
+<div class="route"><span>Choose matching starter</span><b>→</b><span>Copy into new skill, or merge existing config</span><b>→</b><span>Approve installation</span><b>→</b><span>Generate consumer lockfile + run checks</span></div>
+<p><strong>Copy once, own locally.</strong> Consuming skills do not import framework files at runtime. Existing tooling takes precedence; no automatic overwrites, global installs, background migrations, or mass retrofit.</p>
+</section>
+<section class="columns">
+<div class="pane">
+<h3>TypeScript · Bun + TypeScript + Biome</h3>
+<pre class="tree">my-ts-skill/
+├── SKILL.md
+├── package.json
+├── bun.lock             ← generated for this skill
+├── tsconfig.json
+├── biome.json
+├── .gitignore
+├── scripts/             ← actual tools
+├── tests/               ← actual behavior checks
+└── examples/            ← only if needed</pre>
+<p><strong>Bun:</strong> runtime, dependency installation, behavior tests.<br><strong>TypeScript:</strong> compiler diagnostics.<br><strong>Biome:</strong> correctness lint and formatting.</p>
+<table class="checks"><tr><th>Operation</th><th>Declared commands</th></tr><tr><td>Check</td><td><code>tsc --noEmit</code><br><code>biome check .</code><br>exposed as <code>bun run check</code></td></tr><tr><td>Test</td><td><code>bun test</code> + changed-path smoke</td></tr><tr><td>Fix</td><td><code>biome check --write .</code><br>explicit action; no unsafe fixes by default</td></tr></table>
+<p>Cover scripts, tests, and executable examples. Start with strict types and correctness rules, not a large collection of stylistic rules. No separate Prettier when Biome covers the code.</p>
+</div>
+<div class="pane python">
+<h3>Python · isolated environment + Pyright + Ruff</h3>
+<pre class="tree">my-python-skill/
+├── SKILL.md
+├── pyproject.toml
+├── uv.lock              ← when using uv
+├── .gitignore
+├── scripts/             ← actual tools
+├── tests/               ← actual behavior checks
+└── examples/            ← only if needed</pre>
+<p><strong>Environment:</strong> uv for a new starter; respect existing project manager.<br><strong>Pyright:</strong> static type checking.<br><strong>Ruff:</strong> correctness lint and formatting.</p>
+<table class="checks"><tr><th>Operation</th><th>Inside the prepared environment</th></tr><tr><td>Check</td><td><code>pyright</code><br><code>ruff check .</code><br><code>ruff format --check .</code><br>document the sequence; no runner framework</td></tr><tr><td>Test</td><td><code>python -m unittest discover -s tests</code><br>or the existing test runner + changed-path smoke</td></tr><tr><td>Fix</td><td><code>ruff check --fix .</code><br><code>ruff format .</code><br>explicit, separate operation</td></tr></table>
+<p>Declare tool versions and check all included Python code. Use strict types and explicit annotations. No pytest dependency unless behavior tests need it.</p>
+<p class="note"><strong>Pyright prerequisite:</strong> its engine uses Node.js. The Python package is a community wrapper and may provision Node. Document that dependency and require approved setup; do not hide network/bootstrap work inside a “read-only” check.</p>
+</div>
+</section>
+<section>
+<h3>What stays common</h3>
+<table class="checks"><tr><th>Both starters</th><th>Boundary</th></tr><tr><td>Local dev tools, pinned compatible versions, consumer lockfile</td><td>No tracking <code>node_modules/</code>, <code>.venv/</code>, or caches</td></tr><tr><td>Read-only check; explicit fix; real behavior test</td><td>No fake success script or generated placeholder tool</td></tr><tr><td>Metadata, layout, Markdown, and local-link verification</td><td>Document required Markdown checker and honest fallback</td></tr><tr><td>Document prerequisites, install/recovery, scope, outcomes</td><td>A missing checker remains an unverified limit</td></tr></table>
+<p>Documentation-only skills keep a documentation verification procedure and can remain <code>SKILL.md</code> alone. Mixed-language skills combine only the required configuration. Consumer lockfiles are generated after merging dependencies, not copied over existing locks.</p>
+</section>
+<section>
+<h3>Acceptance before shipping the starters</h3>
+<p>Copy each starter into a disposable skill. Confirm valid code passes, a syntax error fails, a type mismatch fails, a correctness defect fails, and formatting drift fails without changing files. Verify the explicit fix affects only its fixture and rerun checks. Record tool versions and outcomes.</p>
+</section>
+<section>
+<h3>Choose the organization</h3>
+<div class="options">
+<button type="button" class="option" data-choice="copyable-language-starters" onclick="toggleSelect(this)"><div class="letter">A</div><div class="content"><h3>Copyable language starters — recommended</h3><p>Concrete configs in assets/starters/, one selection guide, independent consumer skills. Small, testable bundle without a distribution system.</p></div></button>
+<button type="button" class="option" data-choice="guidance-only" onclick="toggleSelect(this)"><div class="letter">B</div><div class="content"><h3>Guidance only</h3><p>Keep tool recipes in references. Fewer files, but each skill rebuilds its configuration and can drift.</p></div></button>
+<button type="button" class="option" data-choice="starter-generator" onclick="toggleSelect(this)"><div class="letter">C</div><div class="content"><h3>Generator or shared toolchain</h3><p>Automatic setup and updates, but adds overwrite/merge policy, coupling, and maintenance. Not recommended for two starter bundles.</p></div></button>
+</div>
+<p>Click an option if useful, then reply in the terminal with your choice or changes. This screen is a design proposal, not installation approval.</p>
+</section>
+<p class="sources">Tool boundaries checked against <a href="https://biomejs.dev/guides/getting-started/" target="_blank" rel="noopener noreferrer">Biome</a>, <a href="https://github.com/microsoft/pyright/blob/main/docs/installation.md" target="_blank" rel="noopener noreferrer">Pyright installation</a>, and <a href="https://docs.astral.sh/ruff/" target="_blank" rel="noopener noreferrer">Ruff</a>.</p>
+</div>

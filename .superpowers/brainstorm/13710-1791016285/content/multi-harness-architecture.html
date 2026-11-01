@@ -1,0 +1,101 @@
+<h2>Universal Multi-Harness Architecture</h2>
+<p class="subtitle">Supporting OMP, Claude Code, Cursor, OpenCode, and any future AI coding tool seamlessly</p>
+
+<!-- The Insight -->
+<div class="mockup" style="margin-bottom: 24px; border-color: #3b82f6;">
+  <div class="mockup-header" style="background: #eff6ff; color: #1e40af;">First-Principles Insight: The "Target" Abstraction</div>
+  <div class="mockup-body" style="padding: 14px; font-size: 12px; line-height: 1.6;">
+    <p style="margin: 0 0 8px;">
+      Hardcoding <code>"omp"</code> into the schema makes the same mistake as v2. An AI developer uses multiple tools across different machines:
+    </p>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <span style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-family: monospace;">OMP (~/.omp)</span>
+      <span style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-family: monospace;">Claude Code (~/.claude)</span>
+      <span style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-family: monospace;">Cursor (~/.cursor)</span>
+      <span style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-family: monospace;">OpenCode (~/.opencode)</span>
+      <span style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-family: monospace;">Agent Skills (~/.agents)</span>
+    </div>
+    <p style="margin: 8px 0 0; color: #1e40af; font-weight: 600;">
+      👉 Every tool is simply a <strong>Target Workspace</strong> that contains resources (rules, skills, configs).
+    </p>
+  </div>
+</div>
+
+<!-- Side-by-Side Schema -->
+<div class="split" style="margin-bottom: 24px;">
+  
+  <div class="mockup">
+    <div class="mockup-header" style="background: #f8fafc; color: #0f172a;">
+      manifest.json (Shared in Git)
+    </div>
+    <div class="mockup-body" style="font-size: 11px; font-family: monospace; line-height: 1.5; background: #0f172a; color: #f8fafc;">
+<pre style="margin: 0; padding: 10px;">{
+  "version": 3,
+  "targets": {
+    "agents": {
+      "repoRoot": ".agents",
+      "skills": {
+        "deep-research": { "origin": "authored" },
+        "archify": {
+          "origin": "external",
+          "install": "npx -y skills add tt-a1i/archify -g"
+        }
+      }
+    },
+    "omp": {
+      "repoRoot": ".omp",
+      "rules": true,
+      "agents": true,
+      "hooks": true,
+      "configs": ["mcp.json", "models.yml"]
+    },
+    "cursor": {
+      "repoRoot": ".cursor",
+      "rules": true
+    },
+    "claude": {
+      "repoRoot": ".claude",
+      "configs": ["settings.json"]
+    }
+  }
+}</pre>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header" style="background: #f8fafc; color: #0f172a;">
+      locations.json (Local to THIS Machine)
+    </div>
+    <div class="mockup-body" style="font-size: 11px; font-family: monospace; line-height: 1.5; background: #0f172a; color: #f8fafc;">
+<pre style="margin: 0; padding: 10px;">{
+  "version": 3,
+  "targets": {
+    "agents": "~/.agents",
+    "omp": "~/.omp/agent",
+    "cursor": "~/.cursor",
+    "claude": "~/.claude"
+  },
+  "excludes": [
+    "omp/config.yml",
+    "claude/credentials.json"
+  ]
+}
+
+<span style="color: #94a3b8;">/* 100% 1:1 match:
+   targets.omp &lt;--&gt; targets.omp
+   Excludes are naturally scoped:
+   "&lt;target-id&gt;/&lt;relative-path&gt;" */</span></pre>
+    </div>
+  </div>
+
+</div>
+
+<!-- Why This Solves Everything -->
+<div class="section" style="padding: 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
+  <h3 style="color: #166534; margin-top: 0;">Why This Scales Indefinitely</h3>
+  <ul style="margin: 0; padding-left: 20px; font-size: 12px; color: #14532d; line-height: 1.6;">
+    <li><strong>Universal 1:1 Keys</strong>: <code>manifest.targets[id]</code> maps cleanly to <code>locations.targets[id]</code>. Zero mismatch.</li>
+    <li><strong>Crystal-Clear Exclusions</strong>: <code>excludes: ["omp/config.yml", "claude/local.json"]</code> unambiguously identifies the target and the file.</li>
+    <li><strong>Future-Proof for any AI Tool</strong>: Tomorrow if you start using <em>OpenCode</em>, <em>Aider</em>, or <em>Codex</em>, you just add an entry under <code>targets</code>. No rewrites, no schema breaks.</li>
+  </ul>
+</div>

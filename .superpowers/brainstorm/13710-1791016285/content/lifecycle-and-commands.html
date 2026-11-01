@@ -1,0 +1,200 @@
+<h2>ai-sync v3: Complete Lifecycle & Commands</h2>
+<p class="subtitle">A clean package-manager lifecycle: from setup to daily preview, sync, and conflict resolution</p>
+
+<!-- 1. Lifecycle Diagram -->
+<div class="mockup" style="margin-bottom: 24px;">
+  <div class="mockup-header">Phase-by-Phase Lifecycle Flow</div>
+  <div class="mockup-body" style="padding: 16px;">
+    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: space-between; font-size: 13px;">
+      <div style="background: #e0f2fe; border: 1px solid #38bdf8; padding: 10px 14px; border-radius: 8px; text-align: center; flex: 1; min-width: 140px;">
+        <strong>1. Setup</strong><br>
+        <span style="font-size: 11px; color: #0369a1;">init & bind roots</span>
+      </div>
+      <div style="font-weight: bold; color: #94a3b8;">➔</div>
+      <div style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 10px 14px; border-radius: 8px; text-align: center; flex: 1; min-width: 140px;">
+        <strong>2. Configure</strong><br>
+        <span style="font-size: 11px; color: #475569;">track & exclude</span>
+      </div>
+      <div style="font-weight: bold; color: #94a3b8;">➔</div>
+      <div style="background: #fef3c7; border: 1px solid #fcd34d; padding: 10px 14px; border-radius: 8px; text-align: center; flex: 1; min-width: 140px;">
+        <strong>3. Daily Preview</strong><br>
+        <span style="font-size: 11px; color: #b45309;">status & preview</span>
+      </div>
+      <div style="font-weight: bold; color: #94a3b8;">➔</div>
+      <div style="background: #dcfce7; border: 1px solid #4ade80; padding: 10px 14px; border-radius: 8px; text-align: center; flex: 1; min-width: 140px;">
+        <strong>4. Sync</strong><br>
+        <span style="font-size: 11px; color: #15803d;">push & pull</span>
+      </div>
+      <div style="font-weight: bold; color: #94a3b8;">➔</div>
+      <div style="background: #fee2e2; border: 1px solid #f87171; padding: 10px 14px; border-radius: 8px; text-align: center; flex: 1; min-width: 140px;">
+        <strong>5. Resolve</strong><br>
+        <span style="font-size: 11px; color: #b91c1c;">snapshot & win</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 2. Command Reference Table by Phase -->
+<div class="section">
+  <h3>All Available Commands by Phase</h3>
+
+  <!-- Phase 1: Setup & Initialization -->
+  <div style="margin-bottom: 20px;">
+    <div style="font-size: 12px; font-weight: 700; color: #0284c7; text-transform: uppercase; margin-bottom: 6px;">Phase 1: Setup & Machine Binding</div>
+    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+      <thead>
+        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; text-align: left;">
+          <th style="padding: 8px;">Command</th>
+          <th style="padding: 8px;">Target File Modified</th>
+          <th style="padding: 8px;">What It Does</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync init [repo]</td>
+          <td style="padding: 8px;">.ai-sync/manifest.json (shared)</td>
+          <td style="padding: 8px;">Initializes clean v3 manifest in backup repository.</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync root add &lt;id&gt; --repo-root &lt;path&gt;</td>
+          <td style="padding: 8px;">.ai-sync/manifest.json (shared)</td>
+          <td style="padding: 8px;">Registers a shared root (e.g. <code>omp</code> or <code>skills</code>) in backup policy.</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync root bind &lt;id&gt; --local-root &lt;path&gt;</td>
+          <td style="padding: 8px;">~/.config/ai-sync/locations.json (local)</td>
+          <td style="padding: 8px;">Binds the root ID to this machine's folder (e.g. <code>~/.agents/skills</code>).</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Phase 2: Policy & Exclusion -->
+  <div style="margin-bottom: 20px;">
+    <div style="font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 6px;">Phase 2: Tracking & Machine Exclusions</div>
+    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+      <thead>
+        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; text-align: left;">
+          <th style="padding: 8px;">Command</th>
+          <th style="padding: 8px;">Target File Modified</th>
+          <th style="padding: 8px;">What It Does</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync track &lt;skill&gt;</td>
+          <td style="padding: 8px;">.ai-sync/manifest.json (shared)</td>
+          <td style="padding: 8px;">Registers an authored skill to be backed up and version-tracked.</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync track &lt;skill&gt; --external --install "&lt;cmd&gt;"</td>
+          <td style="padding: 8px;">.ai-sync/manifest.json (shared)</td>
+          <td style="padding: 8px;">Registers an external skill with installer command (files not copied).</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync untrack &lt;skill&gt;</td>
+          <td style="padding: 8px;">.ai-sync/manifest.json (shared)</td>
+          <td style="padding: 8px;">Removes skill from shared policy (safe: never deletes local files).</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0; background: #faf5ff;">
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync exclude add &lt;root&gt; &lt;pattern&gt;</td>
+          <td style="padding: 8px;">~/.config/ai-sync/locations.json (local)</td>
+          <td style="padding: 8px;">Excludes path on this Mac only (e.g. <code>omp /config.yml</code>). Zero Git conflicts.</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0; background: #faf5ff;">
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync exclude list</td>
+          <td style="padding: 8px;">Reads locations.json</td>
+          <td style="padding: 8px;">Lists all active machine-local exclusions.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Phase 3: Daily Preview & Status -->
+  <div style="margin-bottom: 20px;">
+    <div style="font-size: 12px; font-weight: 700; color: #b45309; text-transform: uppercase; margin-bottom: 6px;">Phase 3: Automated Preview & Discovery</div>
+    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+      <thead>
+        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; text-align: left;">
+          <th style="padding: 8px;">Command</th>
+          <th style="padding: 8px;">Output Displayed</th>
+          <th style="padding: 8px;">What It Does</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync status [repo]</td>
+          <td style="padding: 8px;">High-level skill version table</td>
+          <td style="padding: 8px;">Displays which skills are <code>[▲ LOCAL NEWER]</code>, <code>[▼ REPO NEWER]</code>, or <code>[✔ IN SYNC]</code>.</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync diff [repo] [&lt;skill&gt;]</td>
+          <td style="padding: 8px;">Unified diffs</td>
+          <td style="padding: 8px;">Shows exact code/text differences between local and repo copies.</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync discover [repo]</td>
+          <td style="padding: 8px;">Unlisted skill candidates</td>
+          <td style="padding: 8px;">Scans local directory for newly created skills not yet tracked.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Phase 4: Sync & Mutations -->
+  <div style="margin-bottom: 20px;">
+    <div style="font-size: 12px; font-weight: 700; color: #15803d; text-transform: uppercase; margin-bottom: 6px;">Phase 4: Sync Transfers (Safe-by-Default)</div>
+    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+      <thead>
+        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; text-align: left;">
+          <th style="padding: 8px;">Command</th>
+          <th style="padding: 8px;">Default Behavior</th>
+          <th style="padding: 8px;">With --apply</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync push [repo]</td>
+          <td style="padding: 8px;">Safe preview of local skills to export</td>
+          <td style="padding: 8px;">Exports newer local skills into backup repo. (Optional: <code>--git-push</code>).</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync pull [repo]</td>
+          <td style="padding: 8px;">Safe preview of repo skills to import</td>
+          <td style="padding: 8px;">Imports newer repo skills into local machine. (Optional: <code>--git-pull</code>).</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync bootstrap [repo]</td>
+          <td style="padding: 8px;">Reports skills to restore & install</td>
+          <td style="padding: 8px;">Pulls all synced skills and runs external installer commands on fresh machine.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Phase 5: Conflict Resolution -->
+  <div style="margin-bottom: 20px;">
+    <div style="font-size: 12px; font-weight: 700; color: #b91c1c; text-transform: uppercase; margin-bottom: 6px;">Phase 5: Conflict Resolution with Safety Snapshot</div>
+    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+      <thead>
+        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; text-align: left;">
+          <th style="padding: 8px;">Command</th>
+          <th style="padding: 8px;">Safety Action</th>
+          <th style="padding: 8px;">Resolution Effect</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync resolve --ours &lt;skill&gt;</td>
+          <td style="padding: 8px;">Snapshots repo skill to backup dir</td>
+          <td style="padding: 8px;">Local version wins: overwrites repo version with local.</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px; font-family: monospace; font-weight: 600;">sync resolve --theirs &lt;skill&gt;</td>
+          <td style="padding: 8px;">Snapshots local skill to ~/.config/ai-sync/backups/</td>
+          <td style="padding: 8px;">Repo version wins: overwrites local version with repo.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

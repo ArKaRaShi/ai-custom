@@ -1,0 +1,89 @@
+<h2>How "ai-sync" is Initialized on Another Mac / PC</h2>
+<p class="subtitle">Zero manual copying: How a fresh workstation gets the global CLI in 1 command</p>
+
+<!-- The 3-Step Flow -->
+<div class="mockup" style="margin-bottom: 24px;">
+  <div class="mockup-header">The 1-Step Onboarding Flow on Any New Machine</div>
+  <div class="mockup-body" style="padding: 16px;">
+    
+    <div style="display: flex; gap: 12px; align-items: flex-start; margin-bottom: 16px;">
+      <div style="background: #3b82f6; color: white; font-weight: bold; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        1
+      </div>
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; flex: 1;">
+        <strong>Clone your private backup repo:</strong>
+        <div style="background: #0f172a; color: #f8fafc; padding: 8px 12px; border-radius: 4px; font-family: monospace; font-size: 11px; margin-top: 6px;">
+          git clone https://github.com/ArKaRaShi/ai-custom.git ~/Disk/ai-custom
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 12px; align-items: flex-start; margin-bottom: 16px;">
+      <div style="background: #10b981; color: white; font-weight: bold; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        2
+      </div>
+      <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 12px; flex: 1;">
+        <strong style="color: #047857;">Run the 1-Line Setup Script:</strong>
+        <div style="background: #0f172a; color: #f8fafc; padding: 8px 12px; border-radius: 4px; font-family: monospace; font-size: 11px; margin-top: 6px;">
+          ~/Disk/ai-custom/setup.sh
+        </div>
+        <p style="font-size: 11px; color: #065f46; margin: 6px 0 0;">
+          The script is located directly inside the repo root. You just run it once.
+        </p>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 12px; align-items: flex-start;">
+      <div style="background: #8b5cf6; color: white; font-weight: bold; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        3
+      </div>
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; flex: 1;">
+        <strong>What setup.sh does automatically (Behind the scenes):</strong>
+        <ul style="font-size: 11px; color: #334155; margin: 6px 0 0; padding-left: 18px; line-height: 1.6;">
+          <li>Creates <code>~/.local/bin</code> if missing.</li>
+          <li>Symlinks <code>~/Disk/ai-custom/.agents/skills/ai-sync/bin/ai-sync</code> ➔ <code>~/.local/bin/ai-sync</code>.</li>
+          <li>Runs <code>ai-sync bootstrap --apply</code> to restore all your skills, rules, and agents.</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- The Code of setup.sh -->
+<div class="mockup" style="margin-bottom: 24px;">
+  <div class="mockup-header">The Code: ~/Disk/ai-custom/setup.sh (Committed to Repo Root)</div>
+  <div class="mockup-body" style="padding: 14px; background: #0f172a; color: #f8fafc; font-family: monospace; font-size: 11px; line-height: 1.6;">
+<pre style="margin: 0;">#!/usr/bin/env bash
+set -e
+
+REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
+BIN_SRC="$REPO_DIR/.agents/skills/ai-sync/bin/ai-sync"
+BIN_DEST="$HOME/.local/bin/ai-sync"
+
+<span style="color: #94a3b8;"># 1. Ensure ~/.local/bin exists</span>
+mkdir -p "$HOME/.local/bin"
+
+<span style="color: #4ade80;"># 2. Symlink the trampoline runner so 'ai-sync' works everywhere</span>
+chmod +x "$BIN_SRC"
+ln -sf "$BIN_SRC" "$BIN_DEST"
+echo "✔ Linked ai-sync to $BIN_DEST"
+
+<span style="color: #38bdf8;"># 3. Bootstrap this machine's skills, rules, and agents</span>
+"$BIN_DEST" bootstrap --apply
+
+echo "🎉 Workstation initialized! 'ai-sync' is now active globally."</pre>
+  </div>
+</div>
+
+<!-- Why This is Bulletproof -->
+<div class="section" style="padding: 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
+  <h3 style="color: #166534; margin-top: 0;">The Self-Healing Hook (Even if you never ran setup.sh!)</h3>
+  <p style="font-size: 12px; color: #14532d; line-height: 1.6; margin: 0;">
+    If someone ever runs <code>ai-sync</code> directly via Bun (e.g. <code>bun ~/Disk/ai-custom/.../cli.ts</code>), the engine has a built-in check:
+    <br>
+    <em>"Is <code>~/.local/bin/ai-sync</code> present? If not, automatically create the symlink now!"</em>
+    <br>
+    So the moment <code>ai-sync</code> runs anywhere by anyone, it auto-registers itself globally in <code>~/.local/bin/</code>.
+  </p>
+</div>

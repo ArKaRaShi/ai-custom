@@ -1,0 +1,97 @@
+<h2>Extensible Architecture: The SyncModule Provider Pattern</h2>
+<p class="subtitle">Open for extension, closed for modification: how ai-sync v3 scales to any future resource</p>
+
+<!-- Architecture Diagram -->
+<div class="mockup" style="margin-bottom: 24px;">
+  <div class="mockup-header">The Modular Provider Architecture</div>
+  <div class="mockup-body" style="padding: 16px;">
+    
+    <div style="background: #1e293b; color: white; padding: 12px; border-radius: 6px; text-align: center; font-weight: 700; margin-bottom: 16px;">
+      Core Sync Engine (Generic)
+      <div style="font-size: 11px; font-weight: normal; color: #94a3b8; margin-top: 4px;">
+        Diffing · High-Level Preview · Safety Backups · Multi-PC Exclusions · Git Remote Integration
+      </div>
+    </div>
+
+    <div style="text-align: center; color: #64748b; font-weight: bold; margin-bottom: 12px;">
+      ▼ talks to any resource through a unified interface: <code>SyncModule</code> ▼
+    </div>
+
+    <!-- The Modules Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; font-size: 11px;">
+      
+      <div style="border: 2px solid #3b82f6; border-radius: 6px; padding: 10px; background: #eff6ff;">
+        <strong style="color: #1d4ed8; font-size: 12px;">SkillsModule</strong>
+        <p style="margin: 4px 0 0; color: #475569;">SKILL.md version + Merkle tree hash</p>
+      </div>
+
+      <div style="border: 2px solid #10b981; border-radius: 6px; padding: 10px; background: #ecfdf5;">
+        <strong style="color: #047857; font-size: 12px;">RulesModule</strong>
+        <p style="margin: 4px 0 0; color: #475569;">Markdown rule files + content hashes</p>
+      </div>
+
+      <div style="border: 2px solid #8b5cf6; border-radius: 6px; padding: 10px; background: #f5f3ff;">
+        <strong style="color: #6d28d9; font-size: 12px;">AgentsModule</strong>
+        <p style="margin: 4px 0 0; color: #475569;">Subagent markdown specs</p>
+      </div>
+
+      <div style="border: 2px solid #f59e0b; border-radius: 6px; padding: 10px; background: #fffbeb;">
+        <strong style="color: #b45309; font-size: 12px;">HooksModule</strong>
+        <p style="margin: 4px 0 0; color: #475569;">TypeScript guard & notification scripts</p>
+      </div>
+
+      <div style="border: 2px solid #ef4444; border-radius: 6px; padding: 10px; background: #fef2f2;">
+        <strong style="color: #b91c1c; font-size: 12px;">ConfigsModule</strong>
+        <p style="margin: 4px 0 0; color: #475569;">YAML/JSON settings + host overrides</p>
+      </div>
+
+      <!-- Future extension slot -->
+      <div style="border: 2px dashed #94a3b8; border-radius: 6px; padding: 10px; background: #f8fafc;">
+        <strong style="color: #475569; font-size: 12px;">+ Future Module</strong>
+        <p style="margin: 4px 0 0; color: #94a3b8;">Prompts, Cursor rules, Claude plugins, etc.</p>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- The Interface Specification -->
+<div class="mockup" style="margin-bottom: 24px;">
+  <div class="mockup-header">The Generic Interface: SyncModule</div>
+  <div class="mockup-body" style="padding: 16px;">
+    
+    <p style="font-size: 12px; color: #475569; margin-top: 0;">
+      To add any new resource in the future, you implement just ONE interface. The core engine never needs to change:
+    </p>
+
+    <pre style="background: #0f172a; color: #f8fafc; padding: 14px; border-radius: 6px; font-size: 12px; overflow-x: auto; line-height: 1.5;">
+export interface SyncModule {
+  readonly id: string;               // e.g. "skills", "rules", "configs"
+  readonly defaultLocalPath: string; // e.g. "~/.agents/skills"
+  readonly defaultRepoPath: string;  // e.g. ".agents/skills"
+
+  // 1. Inventory: find all items of this kind
+  scan(directory: string): Promise&lt;ResourceItem[]&gt;;
+
+  // 2. Versioning: compute version & hash (no manual inspection needed!)
+  getVersion(item: ResourceItem): Promise&lt;VersionInfo&gt;;
+
+  // 3. Transfer: how an item moves to/from disk
+  export(item: ResourceItem, repoDir: string): Promise&lt;void&gt;;
+  import(item: ResourceItem, localDir: string): Promise&lt;void&gt;;
+}
+</pre>
+
+  </div>
+</div>
+
+<!-- Why This Guarantees Future Extensibility -->
+<div class="section" style="padding: 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
+  <h3 style="color: #166534; margin-top: 0;">How Adding Future Resources Works in Practice</h3>
+  <ol style="margin: 0; padding-left: 20px; font-size: 12px; color: #14532d; line-height: 1.6;">
+    <li><strong>Need to sync Cursor rules tomorrow?</strong> Create <code>modules/cursor.ts</code> implementing <code>SyncModule</code>. Done.</li>
+    <li><strong>Need to sync system shell dotfiles?</strong> Create <code>modules/dotfiles.ts</code>. Done.</li>
+    <li><strong>Zero changes to the CLI or sync engine</strong>: <code>sync status</code>, <code>sync push</code>, and <code>sync pull</code> automatically discover and sync the new module.</li>
+  </ol>
+</div>

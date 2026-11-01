@@ -1,0 +1,119 @@
+<h2>Universal Resource Versioning: Beyond Skills</h2>
+<p class="subtitle">How ai-sync v3 versions Rules, Agents, Hooks, and Configs alongside Skills</p>
+
+<!-- 1. The 5 Resource Versioning Strategies -->
+<div class="mockup" style="margin-bottom: 24px;">
+  <div class="mockup-header">How Each Resource Type Determines Version & Freshness</div>
+  <div class="mockup-body" style="padding: 16px;">
+    
+    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+      <thead>
+        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; text-align: left;">
+          <th style="padding: 8px;">Resource Module</th>
+          <th style="padding: 8px;">Path Example</th>
+          <th style="padding: 8px;">Version Source</th>
+          <th style="padding: 8px;">Hash Algorithm</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Skills -->
+        <tr style="border-bottom: 1px solid #e2e8f0; background: #eff6ff;">
+          <td style="padding: 10px; font-weight: 700; color: #1e40af;">1. Skills</td>
+          <td style="padding: 10px; font-family: monospace;">skills/deep-research/</td>
+          <td style="padding: 10px;"><code>SKILL.md</code> frontmatter (e.g. <code>version: 1.2.0</code>)</td>
+          <td style="padding: 10px; color: #0284c7;">Merkle tree hash of folder</td>
+        </tr>
+
+        <!-- Rules -->
+        <tr style="border-bottom: 1px solid #e2e8f0; background: #f0fdf4;">
+          <td style="padding: 10px; font-weight: 700; color: #166534;">2. Rules</td>
+          <td style="padding: 10px; font-family: monospace;">rules/ts-no-any.md</td>
+          <td style="padding: 10px;">YAML frontmatter <code>version: 1.1.0</code> (if present) or <code>0.0.0</code></td>
+          <td style="padding: 10px; color: #16a34a;">SHA-256 of file</td>
+        </tr>
+
+        <!-- Agents -->
+        <tr style="border-bottom: 1px solid #e2e8f0; background: #faf5ff;">
+          <td style="padding: 10px; font-weight: 700; color: #6b21a8;">3. Agents</td>
+          <td style="padding: 10px; font-family: monospace;">agents/sonic.md</td>
+          <td style="padding: 10px;">YAML frontmatter <code>version: 2.0.0</code> (if present) or <code>0.0.0</code></td>
+          <td style="padding: 10px; color: #9333ea;">SHA-256 of file</td>
+        </tr>
+
+        <!-- Hooks -->
+        <tr style="border-bottom: 1px solid #e2e8f0; background: #fffbeb;">
+          <td style="padding: 10px; font-weight: 700; color: #b45309;">4. Hooks</td>
+          <td style="padding: 10px; font-family: monospace;">hooks/guard-destructive.ts</td>
+          <td style="padding: 10px;">Code header comment (e.g. <code>// v1.0.0</code>) or <code>0.0.0</code></td>
+          <td style="padding: 10px; color: #d97706;">SHA-256 of file</td>
+        </tr>
+
+        <!-- Configs -->
+        <tr style="background: #fef2f2;">
+          <td style="padding: 10px; font-weight: 700; color: #991b1b;">5. Configs</td>
+          <td style="padding: 10px; font-family: monospace;">mcp.json, models.yml</td>
+          <td style="padding: 10px;">Pure content hash (semver not needed for configs)</td>
+          <td style="padding: 10px; color: #dc2626;">SHA-256 of file</td>
+        </tr>
+      </tbody>
+    </table>
+
+  </div>
+</div>
+
+<!-- 2. Side-by-Side: Frontmatter in Rules & Agents -->
+<div class="split" style="margin-bottom: 24px;">
+  
+  <div class="mockup">
+    <div class="mockup-header" style="background: #f0fdf4; color: #166534;">Rules Can Have Versions Too! (rules/ts-no-any.md)</div>
+    <div class="mockup-body" style="padding: 12px; font-size: 11px; font-family: monospace; background: #0f172a; color: #f8fafc; line-height: 1.5;">
+<pre style="margin: 0;">---
+name: ts-no-any
+<span style="color: #4ade80;">version: "1.2.0"</span>
+description: Prohibit any assertions
+---
+
+# ts-no-any
+Never use : any or as any in TypeScript...</pre>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header" style="background: #faf5ff; color: #6b21a8;">Agents Can Have Versions Too! (agents/sonic.md)</div>
+    <div class="mockup-body" style="padding: 12px; font-size: 11px; font-family: monospace; background: #0f172a; color: #f8fafc; line-height: 1.5;">
+<pre style="margin: 0;">---
+name: sonic
+<span style="color: #c084fc;">version: "2.0.0"</span>
+description: Mechanical task implementer
+---
+
+# Sonic Agent
+Fast, zero-overhead task execution...</pre>
+    </div>
+  </div>
+
+</div>
+
+<!-- 3. What the Unified Status Output Looks Like -->
+<div class="mockup">
+  <div class="mockup-header">Terminal Preview: Universal Versioning in Action</div>
+  <div class="mockup-body" style="padding: 14px; background: #0f172a; color: #f8fafc; font-family: monospace; font-size: 11px; line-height: 1.6;">
+    <span style="color: #94a3b8;">$ sync status</span><br>
+    <span style="color: #38bdf8;">ai-sync:status</span> [3 updates available]<br>
+    <br>
+    &nbsp;&nbsp;<span style="color: #60a5fa; font-weight: bold;">[SKILLS]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;▲ <span style="color: #4ade80;">skill-framework</span> &nbsp;&nbsp;&nbsp;v2.1.0 &gt; v2.0.0 &nbsp;&nbsp;[▲ LOCAL NEWER → push]<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;✔ deep-research &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;v1.0.0 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[✔ IN SYNC]<br>
+    <br>
+    &nbsp;&nbsp;<span style="color: #4ade80; font-weight: bold;">[RULES]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;▲ <span style="color: #4ade80;">ts-no-any.md</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;v1.2.0 &gt; v1.1.0 &nbsp;&nbsp;[▲ LOCAL NEWER → push]<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;✔ py-type-annotations.md &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[✔ IN SYNC]<br>
+    <br>
+    &nbsp;&nbsp;<span style="color: #c084fc; font-weight: bold;">[AGENTS]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;▼ <span style="color: #facc15;">sonic.md</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;v1.0.0 &lt; v2.0.0 &nbsp;&nbsp;[▼ REPO NEWER → pull]<br>
+    <br>
+    &nbsp;&nbsp;<span style="color: #f87171; font-weight: bold;">[CONFIGS]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;✔ mcp.json &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(hash matches) &nbsp;&nbsp;&nbsp;[✔ IN SYNC]<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;⊘ config.yml &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(local exclude) &nbsp;&nbsp;[SKIPPED on this Mac]
+  </div>
+</div>

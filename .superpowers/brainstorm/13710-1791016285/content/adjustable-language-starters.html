@@ -1,0 +1,113 @@
+<style>
+.adjustable { color:#183248; font-family:system-ui,sans-serif; }
+.adjustable h2 { font-size:29px; letter-spacing:-.5px; margin:0 0 8px; }
+.adjustable h3 { font-size:20px; margin:0 0 12px; }
+.adjustable p { line-height:1.55; max-width:88ch; }
+.adjustable section { margin:26px 0; }
+.adjustable .intro { color:#52697a; }
+.adjustable .layers { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:20px 0; }
+.adjustable .layer { padding:15px; border:1px solid #c9d7e1; background:#f0f5f8; }
+.adjustable .layer strong { display:block; margin-bottom:8px; }
+.adjustable .grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:22px; }
+.adjustable .pane { padding:20px; border:1px solid #c9d7e1; border-top:4px solid #1b6fa4; background:white; }
+.adjustable .pane.python { border-top-color:#927023; }
+.adjustable pre { padding:16px; background:#edf3f7; border:1px solid #d2dce4; font:13px/1.8 ui-monospace,SFMono-Regular,monospace; overflow-x:auto; }
+.adjustable code { font-family:ui-monospace,SFMono-Regular,monospace; font-size:.9em; }
+.adjustable table { width:100%; border-collapse:collapse; font-size:14px; }
+.adjustable th,.adjustable td { text-align:left; border-bottom:1px solid #d2dce4; padding:10px 8px; vertical-align:top; }
+.adjustable th { background:#edf3f7; }
+.adjustable details { border-bottom:1px solid #d2dce4; padding:12px 0; }
+.adjustable summary { cursor:pointer; font-weight:600; }
+.adjustable summary:focus-visible { outline:3px solid #1b6fa4; outline-offset:3px; }
+.adjustable .notice { border-left:4px solid #927023; background:#fff8e6; padding:12px 16px; }
+.adjustable .options button { width:100%; text-align:left; font:inherit; color:inherit; cursor:pointer; }
+.adjustable .options button:focus-visible { outline:3px solid #1b6fa4; outline-offset:3px; }
+.adjustable .sources { font-size:13px; color:#52697a; }
+@media(max-width:800px) { .adjustable .layers { grid-template-columns:repeat(2,minmax(0,1fr)); } .adjustable .grid { grid-template-columns:1fr; } }
+</style>
+<div class="adjustable">
+<h2>One language starter. Your package manager.</h2>
+<p class="intro">Revised proposal: keep tool configuration independent from installation and command execution. Adjust existing skills in place without copying a second set of configs.</p>
+<div class="layers">
+<div class="layer"><strong>Language</strong>TypeScript or Python<br>Determines which files need checking.</div>
+<div class="layer"><strong>Quality tools</strong>TS: TypeScript + Biome<br>Python: Pyright + Ruff</div>
+<div class="layer"><strong>Runtime</strong>Bun for the initial TS starter<br>Python for Python tools</div>
+<div class="layer"><strong>Package manager</strong>Bun / pnpm / npm<br>uv / pip + .venv / existing manager</div>
+</div>
+<p class="notice"><strong>Important distinction:</strong> Bun is both a runtime and a package manager. pnpm and npm are package managers. Using pnpm does not remove a Bun runtime prerequisite. Changing the runtime means adapting execution/test scripts, not just changing the install command.</p>
+<section>
+<h3>Directory organization</h3>
+<pre>skill-framework/
+├── SKILL.md
+├── references/
+│   ├── primitives/
+│   │   ├── verification.md     ← generic required capabilities
+│   │   └── dependencies.md     ← install/privacy/recovery rules
+│   └── starters/
+│       ├── typescript.md       ← runtime + manager recipes
+│       └── python.md           ← uv / pip / existing-manager recipes
+├── assets/
+│   └── starters/
+│       ├── typescript/
+│       │   ├── package.json    ← shared dependencies + scripts
+│       │   ├── tsconfig.json   ← compiler configuration
+│       │   ├── biome.json     ← lint + format configuration
+│       │   └── .gitignore
+│       └── python/
+│           ├── pyproject.toml ← shared dev group + Pyright/Ruff settings
+│           └── .gitignore
+└── tests/
+    └── isolated starter acceptance checks</pre>
+<p>No <code>typescript-bun/</code>, <code>typescript-pnpm/</code>, and <code>typescript-npm/</code> duplication. Manager differences belong in recipes unless they genuinely require different files. The starter references are short, independently routed documents explicitly required by the framework.</p>
+</section>
+<section class="grid">
+<div class="pane">
+<h3>TypeScript: same files, different runner</h3>
+<pre>my-ts-skill/
+├── SKILL.md
+├── package.json
+├── tsconfig.json
+├── biome.json
+├── .gitignore
+├── ONE manager lockfile
+├── scripts/     ← real code
+└── tests/       ← real behavior checks</pre>
+<table><tr><th>Manager</th><th>Lockfile</th><th>Check</th></tr><tr><td>Bun</td><td><code>bun.lock</code></td><td><code>bun run check</code></td></tr><tr><td>pnpm</td><td><code>pnpm-lock.yaml</code></td><td><code>pnpm run check</code></td></tr><tr><td>npm</td><td><code>package-lock.json</code></td><td><code>npm run check</code></td></tr></table>
+<p>The package scripts stay the same: <code>typecheck</code>, <code>lint</code>, <code>format:check</code>, and <code>check</code>. <code>check</code> uses the local TypeScript and Biome binaries and never auto-installs them. <code>fix</code> is explicit; <code>test</code> uses the selected runtime.</p>
+<details><summary>Can I switch from Bun install to pnpm later?</summary><p>Yes. Keep the dependency manifest and quality configs. Approve the manager switch, regenerate the dependency resolution with pnpm, replace the old lockfile intentionally, and rerun checks and behavior tests. Versions or lifecycle behavior can differ, so a manager switch is not assumed equivalent.</p></details>
+<details><summary>Can I use Node instead of Bun?</summary><p>Yes, as a runtime adaptation. Update the runtime requirements and real execution/test scripts. Preserve existing Node tooling instead of forcing Bun. The initial copyable starter targets Bun; no Node starter is claimed implemented.</p></details>
+</div>
+<div class="pane python">
+<h3>Python: same config, isolated environment</h3>
+<pre>my-python-skill/
+├── SKILL.md
+├── pyproject.toml
+├── .gitignore
+├── manager-specific lock/pins
+├── .venv/       ← ignored, machine-local
+├── scripts/     ← real code
+└── tests/       ← real behavior checks</pre>
+<p><code>pyproject.toml</code> is the source for the dev dependency group and both tools' settings. Avoid maintaining duplicated dev-tool lists in both TOML and requirements files.</p>
+<details open><summary>uv</summary><p>Approved setup resolves dependencies and produces <code>uv.lock</code>. Subsequent reproducible setup uses the lock. Run installed tools from <code>.venv</code> after setup so checking does not silently sync or download packages.</p></details>
+<details><summary>pip inside .venv</summary><p>Create the environment explicitly with <code>python -m venv .venv</code>. A pip version supporting dependency groups can install the same dev group with <code>.venv/bin/python -m pip install --group dev</code>. Document the required pip version and Windows command equivalents. A dependency-group install is not a transitive lock: use a reviewed pinned snapshot or documented locking procedure for repeatable installs.</p></details>
+<details><summary>Other existing manager</summary><p>Keep an existing supported manager and lockfile. Adapt only the setup/runner instructions. Poetry or another manager may require a dependency-group translation; do not claim every manager accepts the same TOML syntax.</p></details>
+<p>Quality checks remain <code>pyright</code>, <code>ruff check .</code>, and <code>ruff format --check .</code>. Their installation path changes, not their purpose.</p>
+<p class="notice">Pyright uses Node.js internally. Document that prerequisite and the Python wrapper's provisioning behavior. Setup needs approval; checking should not bootstrap a missing runtime.</p>
+</div>
+</section>
+<section>
+<h3>Selection and adjustment rules</h3>
+<table><tr><th>Situation</th><th>Decision</th></tr><tr><td>Existing skill</td><td>Reuse its runtime, manager, lockfile, and quality setup. Merge missing checks; never overwrite blindly.</td></tr><tr><td>New skill</td><td>Honor the user's choice. Suggested defaults: TypeScript + Bun + Biome; Python + uv + Pyright + Ruff.</td></tr><tr><td>One lockfile</td><td>Use its manager. Missing manager means report setup requirements; do not fall back and generate a competing lock.</td></tr><tr><td>Conflicting lockfiles</td><td>Ask which manager owns the skill before installation.</td></tr><tr><td>Mixed-language skill</td><td>Combine only the necessary language profiles, each with its declared scope and environment.</td></tr><tr><td>Documentation-only skill</td><td>Keep documentation/metadata/link checks. No code starter or empty package manifest.</td></tr></table>
+<p><strong>No extra profile registry or generator.</strong> Existing manifests, lockfiles, tool configs, and the skill's Verification section record the choices. Copied configs belong to the consuming skill; nothing imports the framework at runtime.</p>
+</section>
+<section>
+<h3>What I propose to ship first</h3>
+<p>Two copyable starters, language-specific manager recipes, and isolated acceptance checks. Validate TS execution through Bun/pnpm/npm script runners and Python setup through uv/pip+.venv. Preserve existing toolchains; require approved setup, read-only checks, separate fixes, and real behavior evidence.</p>
+<div class="options">
+<button type="button" class="option" data-choice="manager-independent-starters" onclick="toggleSelect(this)"><div class="letter">A</div><div class="content"><h3>Language starters + manager recipes — recommended</h3><p>One config source per language. Adjust commands and setup, not duplicated configuration folders.</p></div></button>
+<button type="button" class="option" data-choice="language-manager-bundles" onclick="toggleSelect(this)"><div class="letter">B</div><div class="content"><h3>Separate folder for every language × manager</h3><p>Easy copying, but repeated configs and a growing test matrix. Only split when files actually differ.</p></div></button>
+</div>
+<p>Reply in the terminal with your choice or changes. Proposal only; no starter files or additional packages installed.</p>
+</section>
+<p class="sources">References: <a href="https://biomejs.dev/guides/getting-started/" target="_blank" rel="noopener noreferrer">Biome</a> · <a href="https://pip.pypa.io/en/stable/user_guide/#dependency-groups" target="_blank" rel="noopener noreferrer">pip dependency groups</a> · <a href="https://docs.astral.sh/uv/concepts/projects/dependencies/" target="_blank" rel="noopener noreferrer">uv dependencies</a> · <a href="https://github.com/microsoft/pyright/blob/main/docs/installation.md" target="_blank" rel="noopener noreferrer">Pyright prerequisites</a></p>
+</div>

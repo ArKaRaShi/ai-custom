@@ -1,0 +1,49 @@
+<h2>Shell Path Integration: How ai-sync Works in Terminal</h2>
+<p class="subtitle">Why ~/.local/bin/ai-sync works globally, and how setup.sh ensures it on new machines</p>
+
+<!-- 1. The Current State on THIS Mac -->
+<div class="mockup" style="margin-bottom: 24px; border-color: #10b981;">
+  <div class="mockup-header" style="background: #ecfdf5; color: #065f46;">
+    On Your Current Mac Right Now: Already Configured in ~/.zshrc!
+  </div>
+  <div class="mockup-body" style="padding: 16px; font-size: 12px; line-height: 1.6;">
+    <p style="margin-top: 0;">
+      I checked your machine's shell configuration:
+    </p>
+    <div style="background: #0f172a; color: #f8fafc; padding: 10px 14px; border-radius: 6px; font-family: monospace; font-size: 11px;">
+      <span style="color: #94a3b8;"># In /Users/ponthep/.zshrc at line 139:</span><br>
+      <span style="color: #4ade80;">export PATH="$HOME/.local/bin:$PATH"</span>
+    </div>
+    <p style="margin: 8px 0 0; color: #065f46; font-weight: 600;">
+      ✔ <code>~/.local/bin</code> is already in your active <code>$PATH</code>! Any binary linked there is immediately callable from anywhere in your terminal.
+    </p>
+  </div>
+</div>
+
+<!-- 2. On a Brand New Mac / PC -->
+<div class="mockup" style="margin-bottom: 24px;">
+  <div class="mockup-header">What Happens on a Brand-New Mac / PC?</div>
+  <div class="mockup-body" style="padding: 16px; font-size: 12px; line-height: 1.6;">
+    <p style="margin-top: 0;">
+      If you clone to a brand-new Mac that doesn't have <code>~/.local/bin</code> in its <code>$PATH</code> yet:
+    </p>
+    <div style="background: #0f172a; color: #f8fafc; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 11px; line-height: 1.6;">
+      <span style="color: #94a3b8;"># Inside ~/Disk/ai-custom/setup.sh:</span><br>
+      <br>
+      <span style="color: #60a5fa;"># 1. Symlink the binary:</span><br>
+      mkdir -p "$HOME/.local/bin"<br>
+      ln -sf "$PWD/.agents/skills/ai-sync/bin/ai-sync" "$HOME/.local/bin/ai-sync"<br>
+      <br>
+      <span style="color: #facc15;"># 2. Check if ~/.local/bin is in $PATH:</span><br>
+      if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then<br>
+      &nbsp;&nbsp;SHELL_RC="$HOME/.zshrc"<br>
+      &nbsp;&nbsp;[ -n "$BASH_VERSION" ] && SHELL_RC="$HOME/.bashrc"<br>
+      &nbsp;&nbsp;echo 'export PATH="$HOME/.local/bin:$PATH"' &gt;&gt; "$SHELL_RC"<br>
+      &nbsp;&nbsp;echo "✔ Added ~/.local/bin to $SHELL_RC"<br>
+      fi
+    </div>
+    <p style="margin: 8px 0 0; color: #334155;">
+      Just like <code>brew</code>, <code>rustup</code>, or <code>pnpm setup</code>, it ensures <code>~/.local/bin</code> is in your shell configuration automatically.
+    </p>
+  </div>
+</div>

@@ -1,0 +1,88 @@
+<h2>Multi-PC Architecture: Unified Flags vs Subcommands</h2>
+<p class="subtitle">Managing several PCs with different configs: how to make tracking & exclusions clean</p>
+
+<div class="cards">
+  <!-- Option 1: Scope Flags (--local vs --shared) -->
+  <div class="card selected" data-choice="1" onclick="toggleSelect(this)" style="border: 2px solid #3b82f6;">
+    <div class="card-body">
+      <div class="letter">A</div>
+      <h3>Scope Flags on Unified Verbs</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">One mental model: everything is track or ignore, scoped with flags</p>
+      
+      <div style="background: #f8fafc; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 12px; margin-bottom: 12px; border: 1px solid #e2e8f0; line-height: 1.6;">
+        <span style="color: #64748b;"># Share across ALL your PCs (Git manifest):</span><br>
+        <strong>sync track &lt;skill&gt;</strong> &nbsp;<span style="color: #0284c7;"># default: --shared</span><br>
+        <br>
+        <span style="color: #64748b;"># Ignore on THIS PC only (local ~/.config):</span><br>
+        <strong>sync ignore &lt;path&gt; --local</strong><br>
+        <br>
+        <span style="color: #64748b;"># Check active settings:</span><br>
+        <strong>sync list [--local|--shared]</strong>
+      </div>
+
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Why this is clean</h4>
+          <ul>
+            <li>Follows <code>git config --global</code> vs <code>--local</code> pattern: familiar to every engineer.</li>
+            <li>No separate <code>exclude add/rm/list</code> mini-CLI: just <code>sync ignore</code> with <code>--local</code>.</li>
+            <li>Eliminates duplicate verbs completely.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option 2: Machine Host Profiles -->
+  <div class="card" data-choice="2" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <div class="letter">B</div>
+      <h3>Machine Profiles (Hosts in Git)</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">Track all PCs' configs in Git under dedicated host folders</p>
+      
+      <div style="background: #f8fafc; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 12px; margin-bottom: 12px; border: 1px solid #e2e8f0; line-height: 1.6;">
+        <span style="color: #64748b;"># Repo stores per-machine configs:</span><br>
+        .omp/hosts/macbook-pro/config.yml<br>
+        .omp/hosts/desktop-pc/config.yml<br>
+        <br>
+        <span style="color: #64748b;"># Machine selects its identity once:</span><br>
+        <strong>sync profile use macbook-pro</strong>
+      </div>
+
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Why this is powerful</h4>
+          <ul>
+            <li>Nothing is lost: even machine-specific configs are backed up in Git!</li>
+            <li>No manual exclude rules needed: each PC maps to its own host folder in the repo.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option 3: Action-First Flags -->
+  <div class="card" data-choice="3" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <div class="letter">C</div>
+      <h3>Single-Verb `sync` with Modifier Flags</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">One command does everything via flags</p>
+      
+      <div style="background: #f8fafc; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 12px; margin-bottom: 12px; border: 1px solid #e2e8f0; line-height: 1.6;">
+        <strong>sync --track &lt;skill&gt;</strong><br>
+        <strong>sync --ignore &lt;path&gt; --local</strong><br>
+        <strong>sync --push --git</strong><br>
+        <strong>sync --pull</strong>
+      </div>
+
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Trade-off</h4>
+          <ul>
+            <li>Only <code>sync</code> binary, but flags get long and easy to mistype.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

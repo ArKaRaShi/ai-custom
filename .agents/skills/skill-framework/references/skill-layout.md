@@ -17,8 +17,7 @@ executable code out of `SKILL.md` preserves context space.
 
 The `skill-framework` defines this reference (see `references/skill-layout.md`)
 and applies to all authored skills placed under `<skills-root>/<skill-name>/`.
-The framework's other guidance and examples are self-contained and generic.
-Authors may externally reference only `skill://writing-skills` and `skill://markdown-quality`.
+Authors may reference relevant external skills when needed, such as `writing-skills`, `markdown-quality`, or `brainstorming`.
 
 ## Tree
 
@@ -153,7 +152,7 @@ Auditing or cloning an existing skill:
 - Authored skills must declare a verification path under `primitives/verification.md` when created or modified. External skills keep their upstream files.
 - Consuming skills bundle copied primitives and do not import code from
   `skill-framework` at runtime.
-- Authors may externally reference only `skill://writing-skills` and `skill://markdown-quality`. All other guidance and examples must be self-contained and generic.
+- Authors may reference relevant external skills when needed, such as `writing-skills`, `markdown-quality`, or `brainstorming`. These names are examples, not an allowlist.
 - External skill cross-references (scripts or `skill://` links) must start with `**REQUIRE SUBSKILL:** <name>`.
 - Every sub-skill reference must specify a non-blocking fallback action if missing or unreadable. Workflows must proceed without stalling.
 - Mutating and destructive tools must preview actions by default and require explicit flags (such as `--apply` or `--confirm`) to execute mutations.

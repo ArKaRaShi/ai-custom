@@ -1,0 +1,150 @@
+<h2>Pattern 1: The Trampoline Runner (Deep-Dive)</h2>
+<p class="subtitle">How Homebrew, Cargo, and Rustup update themselves without breaking or crashing</p>
+
+<!-- 1. The Core Architecture Diagram -->
+<div class="mockup" style="margin-bottom: 24px;">
+  <div class="mockup-header">The Two-Stage Architecture</div>
+  <div class="mockup-body" style="padding: 16px;">
+    
+    <div style="display: flex; gap: 16px; align-items: stretch; flex-wrap: wrap;">
+      
+      <!-- Stage 1: The Trampoline Wrapper -->
+      <div style="flex: 1; min-width: 260px; background: #f0fdf4; border: 2px solid #22c55e; border-radius: 8px; padding: 14px;">
+        <div style="background: #22c55e; color: white; display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-bottom: 8px;">
+          STAGE 1: THE TRAMPOLINE WRAPPER
+        </div>
+        <h4 style="margin: 0 0 6px; color: #15803d;">~/.local/bin/sync (or shell function)</h4>
+        <p style="font-size: 11px; color: #475569; margin: 0 0 10px;">
+          • Tiny 15-line POSIX shell script<br>
+          • <strong>Never changes</strong> (immutable)<br>
+          • Runs in 2 milliseconds
+        </p>
+        <div style="background: white; border: 1px solid #bbf7d0; border-radius: 6px; padding: 10px; font-size: 11px; color: #166534;">
+          <strong>Job:</strong> Check if backup repo has a newer version of ai-sync. If so, fast-copy it to local <em>before</em> TypeScript boots!
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; justify-content: center; font-size: 24px; color: #94a3b8; font-weight: bold;">
+        ➔
+      </div>
+
+      <!-- Stage 2: The Main Engine -->
+      <div style="flex: 1; min-width: 260px; background: #eff6ff; border: 2px solid #3b82f6; border-radius: 8px; padding: 14px;">
+        <div style="background: #3b82f6; color: white; display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-bottom: 8px;">
+          STAGE 2: THE MAIN ENGINE
+        </div>
+        <h4 style="margin: 0 0 6px; color: #1d4ed8;">~/.agents/skills/ai-sync/scripts/cli.ts</h4>
+        <p style="font-size: 11px; color: #475569; margin: 0 0 10px;">
+          • Heavy TypeScript / Bun engine<br>
+          • Can change from v3 ➔ v4 ➔ v10 with breaking changes<br>
+          • Always executed fresh
+        </p>
+        <div style="background: white; border: 1px solid #bfdbfe; border-radius: 6px; padding: 10px; font-size: 11px; color: #1e40af;">
+          <strong>Job:</strong> Parse manifest, calculate Merkle tree hashes, preview status, and execute sync transfers.
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- 2. Step-by-Step Execution Flow (Millisecond Timeline) -->
+<div class="mockup" style="margin-bottom: 24px;">
+  <div class="mockup-header">Execution Timeline: What Happens When You Type "sync" on PC #2</div>
+  <div class="mockup-body" style="padding: 16px;">
+    
+    <div style="display: flex; flex-direction: column; gap: 12px; font-size: 12px;">
+      
+      <!-- Step 1 -->
+      <div style="display: flex; gap: 12px; align-items: flex-start;">
+        <div style="background: #3b82f6; color: white; font-weight: bold; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px;">
+          1
+        </div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; flex: 1;">
+          <strong>0ms: You type <code>sync</code> in terminal</strong>
+          <p style="margin: 4px 0 0; color: #64748b;">The shell invokes the lightweight trampoline runner at <code>~/.local/bin/sync</code>.</p>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div style="display: flex; gap: 12px; align-items: flex-start;">
+        <div style="background: #3b82f6; color: white; font-weight: bold; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px;">
+          2
+        </div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; flex: 1;">
+          <strong>2ms: Trampoline checks Git remote (if --git flag is present)</strong>
+          <p style="margin: 4px 0 0; color: #64748b;">If you passed <code>sync pull --git</code>, the wrapper runs <code>git pull</code> in <code>~/Disk/ai-custom</code> so the repo has the latest code from GitHub.</p>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div style="display: flex; gap: 12px; align-items: flex-start;">
+        <div style="background: #10b981; color: white; font-weight: bold; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px;">
+          3
+        </div>
+        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 10px; flex: 1;">
+          <strong style="color: #047857;">4ms: The Self-Update Check (The Magic Step!)</strong>
+          <p style="margin: 4px 0 0; color: #065f46;">
+            The trampoline compares timestamps: Is <code>~/Disk/ai-custom/.agents/skills/ai-sync</code> newer than <code>~/.agents/skills/ai-sync</code>?
+            <br>
+            <strong>If YES:</strong> It copies the new files over in 5ms. Now your machine has the new v3 engine on disk <em>before</em> Bun/Node even starts!
+          </p>
+        </div>
+      </div>
+
+      <!-- Step 4 -->
+      <div style="display: flex; gap: 12px; align-items: flex-start;">
+        <div style="background: #3b82f6; color: white; font-weight: bold; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px;">
+          4
+        </div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; flex: 1;">
+          <strong>10ms: Execute the Engine (exec)</strong>
+          <p style="margin: 4px 0 0; color: #64748b;">
+            The trampoline executes <code>exec bun ~/.agents/skills/ai-sync/scripts/cli.ts "$@"</code>.
+            The fresh, upgraded v3 engine runs without any errors!
+          </p>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- 3. The Exact Code of the Trampoline -->
+<div class="mockup" style="margin-bottom: 24px;">
+  <div class="mockup-header">The Complete Code: ~/.local/bin/sync (Only 18 Lines!)</div>
+  <div class="mockup-body" style="padding: 14px; background: #0f172a; color: #f8fafc; font-family: monospace; font-size: 11px; line-height: 1.6;">
+<pre style="margin: 0;">#!/usr/bin/env bash
+set -e
+
+REPO="${AI_CUSTOM_REPO:-$HOME/Disk/ai-custom}"
+LOCAL_SKILL="${AI_SYNC_DIR:-$HOME/.agents/skills/ai-sync}"
+REPO_SKILL="$REPO/.agents/skills/ai-sync"
+
+<span style="color: #94a3b8;"># 1. Pull Git first if requested via --git</span>
+if [[ "$*" == *"--git"* && "$*" == *"pull"* ]]; then
+  git -C "$REPO" pull --ff-only 2>/dev/null || true
+fi
+
+<span style="color: #4ade80;"># 2. Self-Bootstrap: If repo has a newer ai-sync, update local BEFORE booting engine</span>
+if [ -d "$REPO_SKILL" ] && [ "$REPO_SKILL" -nt "$LOCAL_SKILL" ]; then
+  mkdir -p "$(dirname "$LOCAL_SKILL")"
+  cp -R "$REPO_SKILL/" "$LOCAL_SKILL/"
+fi
+
+<span style="color: #38bdf8;"># 3. Hand off to the freshly updated TypeScript engine</span>
+exec bun "$LOCAL_SKILL/scripts/cli.ts" "$@"</pre>
+  </div>
+</div>
+
+<!-- 4. Why This Never Breaks -->
+<div class="section" style="padding: 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
+  <h3 style="color: #166534; margin-top: 0;">Why Pattern 1 is the Ultimate Long-Term Fix</h3>
+  <ul style="margin: 0; padding-left: 20px; font-size: 12px; color: #14532d; line-height: 1.6;">
+    <li><strong>Immune to Breaking Changes:</strong> You can completely rewrite the TypeScript engine, change the manifest format, or add new flags. The bash wrapper doesn't parse JSON or know anything about manifests — it just ensures the local files match the repo before launching.</li>
+    <li><strong>Zero Runtime Lag:</strong> File timestamp check (<code>-nt</code>) takes 0.001 seconds.</li>
+    <li><strong>Standard Practice:</strong> This is how <code>brew</code> works (<code>brew.sh</code> updates Homebrew before running Ruby), and how <code>rustup</code> updates the Rust compiler.</li>
+  </ul>
+</div>

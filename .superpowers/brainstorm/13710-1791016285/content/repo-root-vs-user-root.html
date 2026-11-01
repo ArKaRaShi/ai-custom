@@ -1,0 +1,75 @@
+<h2>Path Mapping: Git Backup Repo vs User Home (~)</h2>
+<p class="subtitle">Clarifying what repoRoot vs localRoot mean with exact real-world paths</p>
+
+<!-- Side-by-Side Path Mapping -->
+<div class="split" style="margin-bottom: 24px;">
+  
+  <!-- Left: Git Backup Repo -->
+  <div class="card" style="border: 2px solid #3b82f6;">
+    <div class="card-body">
+      <div style="background: #3b82f6; color: white; display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-bottom: 8px;">
+        GIT BACKUP REPO (repoRoot)
+      </div>
+      <h3>Inside ~/Disk/ai-custom</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">Relative to the Git repository root</p>
+      
+      <div style="background: #0f172a; color: #f8fafc; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 11px; line-height: 1.6;">
+        ~/Disk/ai-custom/<br>
+        ├── <span style="color: #60a5fa;">.agents/</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #94a3b8;">← repoRoot: ".agents"</span><br>
+        │ &nbsp; └── skills/<br>
+        ├── <span style="color: #4ade80;">.omp/</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #94a3b8;">← repoRoot: ".omp"</span><br>
+        │ &nbsp; ├── rules/<br>
+        │ &nbsp; ├── agents/<br>
+        │ &nbsp; ├── hooks/<br>
+        │ &nbsp; └── config.yml<br>
+        └── .ai-sync/<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;└── manifest.json
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Local Machine User Home -->
+  <div class="card" style="border: 2px solid #10b981;">
+    <div class="card-body">
+      <div style="background: #10b981; color: white; display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-bottom: 8px;">
+        USER HOME (~) (localRoot)
+      </div>
+      <h3>Inside /Users/ponthep/ (~)</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">Relative to your user home directory (~)</p>
+      
+      <div style="background: #0f172a; color: #f8fafc; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 11px; line-height: 1.6;">
+        ~/<br>
+        ├── <span style="color: #60a5fa;">.agents/skills/</span> &nbsp;&nbsp;&nbsp;<span style="color: #94a3b8;">← local: "~/.agents"</span><br>
+        ├── <span style="color: #4ade80;">.omp/agent/</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #94a3b8;">← local: "~/.omp/agent"</span><br>
+        │ &nbsp; ├── rules/<br>
+        │ &nbsp; ├── agents/<br>
+        │ &nbsp; ├── hooks/<br>
+        │ &nbsp; └── config.yml<br>
+        └── .config/ai-sync/<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;└── locations.json
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Explanation -->
+<div class="mockup">
+  <div class="mockup-header">How the Transfer Works</div>
+  <div class="mockup-body" style="padding: 16px; font-size: 12px; line-height: 1.6;">
+    <p style="margin-top: 0;">
+      <strong><code>repoRoot</code></strong> is relative to your <strong>Git repository</strong>:
+      <br>
+      <code>repoRoot: ".omp"</code> means <code>~/Disk/ai-custom/.omp/</code>
+    </p>
+    <p>
+      <strong><code>locations.json</code></strong> defines where that target lives in your <strong>user home directory (<code>~</code>)</strong>:
+      <br>
+      <code>"omp": "~/.omp/agent"</code> means <code>/Users/ponthep/.omp/agent/</code>
+    </p>
+    <p style="margin-bottom: 0; padding: 10px; background: #eff6ff; border-radius: 6px; color: #1e40af;">
+      <strong>The Sync Bridge:</strong><br>
+      <code>~/Disk/ai-custom/.omp/</code> (Git repo) &nbsp;⟷&nbsp; <code>~/.omp/agent/</code> (Live Mac user home)
+    </p>
+  </div>
+</div>

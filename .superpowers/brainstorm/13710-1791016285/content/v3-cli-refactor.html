@@ -1,0 +1,124 @@
+<h2>ai-sync v3: Full CLI & Lifecycle Refactor</h2>
+<p class="subtitle">Cutting the bloat: Before (v2) vs Clean Re-architected (v3)</p>
+
+<!-- 1. Before vs After Comparison -->
+<div class="split" style="margin-bottom: 24px;">
+  <!-- Left: Old v2 -->
+  <div class="mockup" style="border-color: #fca5a5;">
+    <div class="mockup-header" style="background: #fee2e2; color: #991b1b;">Old v2 (Bloated & Confusing)</div>
+    <div class="mockup-body" style="font-size: 12px; line-height: 1.6;">
+      <div style="color: #dc2626; font-weight: 700; margin-bottom: 8px;">14+ Verbs & Aliases:</div>
+      <ul style="padding-left: 18px; margin: 0; color: #64748b;">
+        <li><code>status</code>, <code>scan</code> (alias)</li>
+        <li><code>diff</code></li>
+        <li><code>push</code>, <code>backup</code> (alias), <code>save</code> (alias)</li>
+        <li><code>pull</code>, <code>apply</code> (alias)</li>
+        <li><code>resolve</code>, <code>review</code> (alias)</li>
+        <li><code>merge</code>, <code>combine</code> (alias) <span style="color: #dc2626;">← corrupts files with &lt;&lt;&lt;&lt;&lt;&lt;&lt;</span></li>
+        <li><code>root add</code>, <code>root bind</code></li>
+        <li><code>track path</code>, <code>track skill</code> (polymorphic)</li>
+        <li><code>untrack path</code>, <code>untrack skill</code></li>
+        <li><code>migrate-v2</code> <span style="color: #dc2626;">← legacy migration debt</span></li>
+        <li><code>bootstrap</code>, <code>restore</code> (alias)</li>
+        <li><code>discover</code></li>
+        <li><code>exclude</code></li>
+      </ul>
+      <div style="margin-top: 12px; padding: 8px; background: #fff1f2; border-radius: 6px; color: #9f1239;">
+        ✖ Binary sha256 only (can't tell who is newer)<br>
+        ✖ Fragile text-merging<br>
+        ✖ ~1,200 lines of glue code
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Clean v3 -->
+  <div class="mockup" style="border-color: #86efac;">
+    <div class="mockup-header" style="background: #dcfce7; color: #166534;">Clean v3 Refactor (Package-Manager Model)</div>
+    <div class="mockup-body" style="font-size: 12px; line-height: 1.6;">
+      <div style="color: #16a34a; font-weight: 700; margin-bottom: 8px;">6 Focused Core Commands:</div>
+      <ul style="padding-left: 18px; margin: 0; color: #334155;">
+        <li><code>sync status</code> <span style="color: #16a34a;">→ [▲ LOCAL] [▼ REPO] [✔ IN SYNC] [✖ CONFLICT]</span></li>
+        <li><code>sync push [--apply] [--git]</code> <span style="color: #16a34a;">→ export newer local skills</span></li>
+        <li><code>sync pull [--apply] [--git]</code> <span style="color: #16a34a;">→ import newer repo skills</span></li>
+        <li><code>sync resolve &lt;skill&gt; [--ours|--theirs]</code> <span style="color: #16a34a;">→ with safety snapshot</span></li>
+        <li><code>sync track|untrack &lt;skill&gt;</code> <span style="color: #16a34a;">→ clean package registry</span></li>
+        <li><code>sync exclude add|list|rm &lt;root&gt; &lt;path&gt;</code> <span style="color: #16a34a;">→ machine isolation</span></li>
+      </ul>
+      <div style="margin-top: 12px; padding: 8px; background: #f0fdf4; border-radius: 6px; color: #14532d;">
+        ✔ Automatic version & Merkle tree hash<br>
+        ✔ Atomic skill moves (zero broken code)<br>
+        ✔ ~450 lines of clean TypeScript (60% smaller!)
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 2. The Complete v3 Lifecycle Diagram -->
+<div class="mockup" style="margin-bottom: 24px;">
+  <div class="mockup-header">The Unified v3 Lifecycle Flow</div>
+  <div class="mockup-body" style="padding: 16px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+      
+      <!-- Step 1 -->
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+        <div style="color: #0284c7; font-weight: 700; font-size: 12px; margin-bottom: 4px;">STEP 1: ONBOARDING</div>
+        <div style="font-family: monospace; font-size: 11px; background: #fff; padding: 6px; border-radius: 4px; border: 1px solid #cbd5e1; margin-bottom: 8px;">
+          sync init [repo]<br>
+          sync bind omp ~/.omp/agent<br>
+          sync bind agents ~/.agents/skills
+        </div>
+        <p style="font-size: 11px; color: #64748b; margin: 0;">Sets up v3 manifest and binds machine-specific local directories.</p>
+      </div>
+
+      <!-- Step 2 -->
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+        <div style="color: #7c3aed; font-weight: 700; font-size: 12px; margin-bottom: 4px;">STEP 2: LOCAL PRIVACY</div>
+        <div style="font-family: monospace; font-size: 11px; background: #fff; padding: 6px; border-radius: 4px; border: 1px solid #cbd5e1; margin-bottom: 8px;">
+          sync exclude add omp /config.yml
+        </div>
+        <p style="font-size: 11px; color: #64748b; margin: 0;">Keeps machine-specific configs (like this Mac's models) out of Git completely.</p>
+      </div>
+
+      <!-- Step 3 -->
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+        <div style="color: #b45309; font-weight: 700; font-size: 12px; margin-bottom: 4px;">STEP 3: DAILY PREVIEW</div>
+        <div style="font-family: monospace; font-size: 11px; background: #fff; padding: 6px; border-radius: 4px; border: 1px solid #cbd5e1; margin-bottom: 8px;">
+          sync status [repo]
+        </div>
+        <p style="font-size: 11px; color: #64748b; margin: 0;">Calculates skill versions and tree hashes. Shows high-level drift without inspecting files.</p>
+      </div>
+
+      <!-- Step 4 -->
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+        <div style="color: #15803d; font-weight: 700; font-size: 12px; margin-bottom: 4px;">STEP 4: SYNC TRANSFERS</div>
+        <div style="font-family: monospace; font-size: 11px; background: #fff; padding: 6px; border-radius: 4px; border: 1px solid #cbd5e1; margin-bottom: 8px;">
+          sync push --apply [--git]<br>
+          sync pull --apply [--git]
+        </div>
+        <p style="font-size: 11px; color: #64748b; margin: 0;">Exports newer local skills or imports newer repo skills. Optional <code>--git</code> syncs GitHub.</p>
+      </div>
+
+      <!-- Step 5 -->
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+        <div style="color: #dc2626; font-weight: 700; font-size: 12px; margin-bottom: 4px;">STEP 5: SAFE CONFLICTS</div>
+        <div style="font-family: monospace; font-size: 11px; background: #fff; padding: 6px; border-radius: 4px; border: 1px solid #cbd5e1; margin-bottom: 8px;">
+          sync resolve --ours &lt;skill&gt;<br>
+          sync resolve --theirs &lt;skill&gt;
+        </div>
+        <p style="font-size: 11px; color: #64748b; margin: 0;">Saves safety backup snapshot to <code>~/.config/ai-sync/backups/</code> then applies the winner.</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- 3. Deletion Ledger -->
+<div class="section" style="padding: 16px; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px;">
+  <h3 style="color: #9f1239; margin-top: 0;">What Gets Permanently Deleted (Dead Weight Removed)</h3>
+  <ul style="margin: 0; padding-left: 20px; font-size: 12px; color: #881337;">
+    <li><strong><code>migrate-v2</code> & legacy parsers</strong>: Drop all v1/v2 conversion functions and backward compatibility shims.</li>
+    <li><strong><code>plainMergeFiles</code> & diff3 text merging</strong>: Never insert <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code> into code.</li>
+    <li><strong>Redundant aliases</strong>: Remove <code>scan</code>, <code>apply</code>, <code>backup</code>, <code>save</code>, <code>review</code>, <code>combine</code>, <code>restore</code>.</li>
+    <li><strong>Loose file tracking inside skills</strong>: Skills are tracked as atomic packages, not loose files.</li>
+  </ul>
+</div>

@@ -1,0 +1,99 @@
+<h2>track vs exclude: How They Differ</h2>
+<p class="subtitle">The boundary between shared repository policy and machine-local privacy</p>
+
+<div class="split" style="margin-bottom: 24px;">
+  <!-- Track Card -->
+  <div class="card" style="border: 2px solid #3b82f6;">
+    <div class="card-body">
+      <div style="background: #3b82f6; color: white; display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-bottom: 8px;">
+        SHARED REPO POLICY (GIT)
+      </div>
+      <h3>sync track / untrack &lt;skill&gt;</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">"What skills exist in my ecosystem?"</p>
+      
+      <div style="background: #f8fafc; padding: 10px; border-radius: 6px; font-size: 12px; margin-bottom: 12px; border: 1px solid #e2e8f0;">
+        <strong>Where it's saved:</strong><br>
+        <code>&lt;repo&gt;/.ai-sync/manifest.json</code><br>
+        <span style="color: #2563eb;">✔ Committed to Git · Shared across ALL PCs/Macs</span>
+      </div>
+
+      <div style="font-size: 12px; line-height: 1.6;">
+        <strong>What it does:</strong>
+        <ul style="padding-left: 18px; margin: 6px 0;">
+          <li>Adds a skill (e.g. <code>deep-research</code>) to your backup.</li>
+          <li>Every machine that pulls this repo gets the skill.</li>
+          <li>For external skills, stores the installer command so any machine can bootstrap it.</li>
+        </ul>
+      </div>
+
+      <div style="background: #eff6ff; padding: 8px; border-radius: 6px; font-family: monospace; font-size: 11px; margin-top: 10px;">
+        $ sync track deep-research<br>
+        ✔ Registered 'deep-research' in .ai-sync/manifest.json
+      </div>
+    </div>
+  </div>
+
+  <!-- Exclude Card -->
+  <div class="card" style="border: 2px solid #8b5cf6;">
+    <div class="card-body">
+      <div style="background: #8b5cf6; color: white; display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-bottom: 8px;">
+        MACHINE-LOCAL PRIVACY (THIS DEVICE ONLY)
+      </div>
+      <h3>sync exclude add/rm &lt;root&gt; &lt;path&gt;</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">"What should Git ignore on THIS specific machine?"</p>
+      
+      <div style="background: #f8fafc; padding: 10px; border-radius: 6px; font-size: 12px; margin-bottom: 12px; border: 1px solid #e2e8f0;">
+        <strong>Where it's saved:</strong><br>
+        <code>~/.config/ai-sync/locations.json</code><br>
+        <span style="color: #7c3aed;">✔ Stays on THIS Mac · NEVER committed to Git</span>
+      </div>
+
+      <div style="font-size: 12px; line-height: 1.6;">
+        <strong>What it does:</strong>
+        <ul style="padding-left: 18px; margin: 6px 0;">
+          <li>Prevents local files (e.g. <code>omp /config.yml</code>) from being synced or overwritten.</li>
+          <li>Your Mac keeps its local settings/models intact.</li>
+          <li>Other PCs/Macs continue tracking that file normally in Git!</li>
+        </ul>
+      </div>
+
+      <div style="background: #f5f3ff; padding: 8px; border-radius: 6px; font-family: monospace; font-size: 11px; margin-top: 10px;">
+        $ sync exclude add omp /config.yml<br>
+        ✔ Excluded 'omp:/config.yml' on this machine only
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mockup">
+  <div class="mockup-header">Summary Comparison</div>
+  <div class="mockup-body" style="padding: 12px;">
+    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+      <tr style="border-bottom: 1px solid #e2e8f0;">
+        <th style="padding: 6px; text-align: left;">Dimension</th>
+        <th style="padding: 6px; text-align: left; color: #2563eb;">sync track</th>
+        <th style="padding: 6px; text-align: left; color: #7c3aed;">sync exclude</th>
+      </tr>
+      <tr style="border-bottom: 1px solid #e2e8f0;">
+        <td style="padding: 6px; font-weight: 600;">Scope</td>
+        <td style="padding: 6px;">Global (All devices)</td>
+        <td style="padding: 6px;">Local (This workstation only)</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #e2e8f0;">
+        <td style="padding: 6px; font-weight: 600;">Git Status</td>
+        <td style="padding: 6px;">Committed to Git repo</td>
+        <td style="padding: 6px;">Never committed (in ~/.config)</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #e2e8f0;">
+        <td style="padding: 6px; font-weight: 600;">Granularity</td>
+        <td style="padding: 6px;">Whole skill package (e.g. <code>deep-research</code>)</td>
+        <td style="padding: 6px;">Specific file/path (e.g. <code>/config.yml</code>)</td>
+      </tr>
+      <tr>
+        <td style="padding: 6px; font-weight: 600;">Use Case</td>
+        <td style="padding: 6px;">"Add this skill to my shared backup"</td>
+        <td style="padding: 6px;">"Don't overwrite my Mac's local config during sync"</td>
+      </tr>
+    </table>
+  </div>
+</div>

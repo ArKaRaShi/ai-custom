@@ -1,0 +1,74 @@
+<style>
+.ts-wrap { font-size: 14px; line-height: 1.5; }
+.ts-wrap pre { background:#0f172a; color:#e2e8f0; padding:14px 16px; border-radius:8px; font-size:12.5px; line-height:1.55; overflow:auto; margin:8px 0 0; }
+.ts-wrap .g { color:#4ade80; } .ts-wrap .y { color:#fbbf24; } .ts-wrap .d { color:#94a3b8; } .ts-wrap .r { color:#f87171; }
+.ts-wrap table { border-collapse:collapse; width:100%; font-size:13px; }
+.ts-wrap th, .ts-wrap td { border:1px solid #475569; padding:7px 9px; color:inherit; text-align:left; vertical-align:top; }
+.ts-wrap th { background:rgba(148,163,184,.18); }
+.ts-wrap .tag { display:inline-block; font-size:11px; padding:1px 7px; border-radius:99px; background:#e2e8f0; margin-left:6px; }
+.ts-wrap .ok { background:rgba(74,222,128,.14); }
+.ts-wrap .note { border-left:4px solid #f59e0b; background:rgba(245,158,11,.12); padding:8px 12px; margin:12px 0; font-size:13px; }
+</style>
+<div class="ts-wrap">
+<h2>Go + Bun only, with two scopes</h2>
+<p class="subtitle">Everything below was run on this Mac (Bun 1.4.2, Biome 2.5.15, TypeScript 7.0.2, Go 1.27.1). Nothing is written into your skills yet.</p>
+
+<div class="section">
+<h3>1. What changes versus the current plan</h3>
+<div class="split">
+<div class="mockup"><div class="mockup-header">Removed</div><div class="mockup-body">
+<ul>
+<li>Python starter: assets, recipe, 8 acceptance tests, spec section, plan Task 2</li>
+<li>pnpm and npm recipes and tests (Bun is the only package manager)</li>
+<li>The per-skill <code>node_modules</code> copy (about 94 MB each)</li>
+</ul></div></div>
+<div class="mockup"><div class="mockup-header">Kept / new</div><div class="mockup-body">
+<ul>
+<li>TypeScript on Bun + Biome + tsc</li>
+<li>Go with only the toolchain: <code>gofmt</code>, <code>go vet</code>, <code>go test</code></li>
+<li>Scope 1 (global) and Scope 2 (per skill), below</li>
+</ul></div></div>
+</div>
+</div>
+
+<div class="section">
+<h3>2. The two scopes, as files on disk</h3>
+<pre><span class="d">~/.agents/skills/</span>
+<span class="g">├── package.json     </span><span class="d"> SCOPE 1 (global, TypeScript): Biome + TypeScript + @types/bun, declared once</span>
+<span class="g">├── biome.json       </span><span class="d"> "root": true : shared lint and format rules</span>
+<span class="g">├── tsconfig.json    </span><span class="d"> shared compiler settings (Bun types)</span>
+<span class="g">├── node_modules/    </span><span class="d"> 94 MB, measured, shared by every skill</span>
+│
+├── <span class="y">notes-ts/</span>          <span class="d"> inherits everything: only index.ts + tsconfig.json (extends ../tsconfig.json)</span>
+├── <span class="y">strict-ts/</span>         <span class="d"> SCOPE 2 (override): adds biome.json {"root": false, "extends": "//", ...}</span>
+│   <span class="d"> measured: tabs instead of spaces, noExplicitAny off. Same skill folder, 0 extra MB</span>
+└── <span class="y">sync-go/</span>           <span class="d"> SCOPE 2 (own toolchain): only go.mod + main.go. Never touches the root</span>
+    <span class="d"> measured: go vet ok, gofmt clean, 2.4 MB binary, no node_modules, no setup</span></pre>
+</div>
+
+<div class="section">
+<h3>3. What "different rules" can mean, per language</h3>
+<table>
+<tr><th></th><th>Inherit global</th><th>Override rules (same version)</th><th>Own dependencies (different version)</th></tr>
+<tr><td><b>TypeScript</b></td>
+<td class="ok">Nothing extra. Measured: root <code>any</code> rule flagged <code>bad.ts</code>.</td>
+<td class="ok">Child <code>biome.json</code> with <code>extends "//"</code>. Measured: passes with <code>any</code> and tabs while the sibling still fails. Biome version stays the root's.</td>
+<td>Child <code>package.json</code> + its own <code>node_modules</code> (about 94 MB). Only way to pin another Biome or tsc.</td></tr>
+<tr><td><b>Go</b></td>
+<td class="ok">No global layer. The toolchain on PATH is the shared part.</td>
+<td>Not configurable: <code>gofmt</code> has no config file. A different rule = different flags in that skill's check command, or adding golangci-lint (not installed here).</td>
+<td class="ok"><code>go.mod</code> is the whole per-skill scope. Its <code>go</code> line pins the language version.</td></tr>
+</table>
+</div>
+
+<div class="note">
+<b>Two corrections to the research, both measured here.</b><br>
+1. TypeScript 5.9.3 is stale. Latest published is <b>7.0.2</b>. Pin the root to it; <code>paths</code> works but <code>baseUrl</code> does not in 7.<br>
+2. <code>"recommended": true</code> in the research's <code>biome.json</code> is deprecated in Biome 2.5. Use <code>"preset": "recommended"</code>. Also <code>biome lint --write</code> does not format; the check command is <code>biome check</code>.
+</div>
+
+<div class="section">
+<h3>4. Rule for which scope a skill is in</h3>
+<p>Nearest file wins, no registry. Skill has <code>go.mod</code> → Go, standalone. Has <code>biome.json</code> with <code>"root": false</code> → TypeScript override. Has its own <code>package.json</code> → TypeScript standalone. Has none of those → TypeScript inheriting the global root.</p>
+</div>
+</div>

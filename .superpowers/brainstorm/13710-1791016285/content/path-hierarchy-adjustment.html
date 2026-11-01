@@ -1,0 +1,100 @@
+<h2>Path & Naming Adjustment: Aligning Manifest with Locations</h2>
+<p class="subtitle">Resolving the discrepancy between physical disk folders and logical modules</p>
+
+<!-- The Conflict / Discrepancy Found -->
+<div class="mockup" style="margin-bottom: 24px; border-color: #f87171;">
+  <div class="mockup-header" style="background: #fef2f2; color: #991b1b;">The Discrepancy You Spotted</div>
+  <div class="mockup-body" style="padding: 14px; font-size: 12px; line-height: 1.6;">
+    <div style="color: #b91c1c; font-weight: 700; margin-bottom: 6px;">Why the previous draft was confusing:</div>
+    <ul style="margin: 0; padding-left: 20px; color: #334155;">
+      <li><code>locations.json</code> defined the root as <code>"omp": "~/.omp/agent"</code></li>
+      <li><code>manifest.json</code> defined the modules as <code>"rules"</code>, <code>"agents"</code>, <code>"hooks"</code>, <code>"configs"</code></li>
+      <li><code>excludes</code> wrote <code>"configs:config.yml"</code></li>
+    </ul>
+    <p style="margin: 8px 0 0; color: #991b1b; font-weight: 600;">
+      👉 Disconnect: In reality, rules, agents, hooks, and configs all physically live inside <code>~/.omp/agent/</code>!
+    </p>
+  </div>
+</div>
+
+<!-- Two Ways to Align -->
+<div class="split" style="margin-bottom: 24px;">
+  
+  <!-- Approach A: Hierarchical Bases (Cleanest & Recommended) -->
+  <div class="card selected" style="border: 2px solid #10b981;">
+    <div class="card-body">
+      <div style="background: #10b981; color: white; display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-bottom: 8px;">
+        RECOMMENDED (100% CONSISTENT)
+      </div>
+      <h3>Approach A: 2 Base Workspaces (omp & agents)</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">Mirror the exact physical folder hierarchy</p>
+      
+      <div style="background: #0f172a; color: #f8fafc; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 11px; line-height: 1.5; margin-bottom: 10px;">
+        <strong>manifest.json (shared):</strong>
+<pre style="margin: 4px 0 8px;">{
+  "version": 3,
+  "agents": {
+    "skills": {
+      "deep-research": { "origin": "authored" }
+    }
+  },
+  "omp": {
+    "rules": true,
+    "agents": true,
+    "hooks": true,
+    "configs": ["mcp.json", "models.yml"]
+  }
+}</pre>
+        <strong>locations.json (local):</strong>
+<pre style="margin: 4px 0;">{
+  "version": 3,
+  "bases": {
+    "agents": "~/.agents",
+    "omp": "~/.omp/agent"
+  },
+  "excludes": [
+    "omp/config.yml"
+  ]
+}</pre>
+      </div>
+
+      <div style="font-size: 11px; color: #166534;">
+        ✔ <code>omp/config.yml</code> matches the exact relative path in Git and on disk.<br>
+        ✔ Zero ambiguity: everything under <code>omp</code> is organized under <code>omp</code>.
+      </div>
+    </div>
+  </div>
+
+  <!-- Approach B: Flat Module IDs -->
+  <div class="card">
+    <div class="card-body">
+      <div style="background: #64748b; color: white; display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-bottom: 8px;">
+        ALTERNATIVE (FLAT)
+      </div>
+      <h3>Approach B: Explicit Module Paths</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">Declare the full path for each module</p>
+      
+      <div style="background: #0f172a; color: #f8fafc; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 11px; line-height: 1.5; margin-bottom: 10px;">
+        <strong>locations.json:</strong>
+<pre style="margin: 4px 0;">{
+  "version": 3,
+  "modules": {
+    "skills": "~/.agents/skills",
+    "rules": "~/.omp/agent/rules",
+    "agents": "~/.omp/agent/agents",
+    "hooks": "~/.omp/agent/hooks",
+    "configs": "~/.omp/agent"
+  },
+  "excludes": [
+    "configs/config.yml"
+  ]
+}</pre>
+      </div>
+
+      <div style="font-size: 11px; color: #475569;">
+        • Every module is flat, but requires defining 5 paths instead of 2 bases.
+      </div>
+    </div>
+  </div>
+
+</div>

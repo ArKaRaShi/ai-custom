@@ -1,0 +1,86 @@
+<h2>Grilling Session: Stress-Testing ai-sync v3 (Question 5 of 5)</h2>
+<p class="subtitle">5 critical stress-test questions before implementation. Here is the final question:</p>
+
+<!-- Progress Bar -->
+<div style="background: #e2e8f0; border-radius: 9999px; height: 8px; margin-bottom: 24px; overflow: hidden;">
+  <div style="background: #10b981; width: 100%; height: 100%;"></div>
+</div>
+
+<div class="mockup" style="margin-bottom: 24px; border-color: #ef4444;">
+  <div class="mockup-header" style="background: #fef2f2; color: #991b1b;">
+    🔒 Question 5: Secret Leakage & Private Config Guardrails
+  </div>
+  <div class="mockup-body" style="padding: 16px; font-size: 13px; line-height: 1.6;">
+    <p style="margin-top: 0;">
+      In an AI developer workspace, local files often contain <strong>API keys, tokens, and private credentials</strong>:
+    </p>
+    <ul style="margin: 0; padding-left: 20px; color: #334155;">
+      <li><code>~/.omp/secrets.env</code> (OpenAI, Anthropic, Gemini API keys)</li>
+      <li>Local proxy tokens in <code>config.yml</code></li>
+      <li>Private <code>.env</code> files inside custom skills or hooks</li>
+    </ul>
+    <p style="margin: 8px 0 0; color: #b91c1c; font-weight: 700;">
+      When an agent or user runs <code>sync push --apply --git</code>, how does ai-sync guarantee that private credentials NEVER get pushed to GitHub?
+    </p>
+  </div>
+</div>
+
+<!-- The 3 Options -->
+<div class="cards">
+  
+  <!-- Option A: Recommended -->
+  <div class="card selected" data-choice="a" onclick="toggleSelect(this)" style="border: 2px solid #10b981;">
+    <div class="card-body">
+      <div style="background: #10b981; color: white; display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-bottom: 8px;">
+        RECOMMENDED (MULTI-LAYER SECRET SHIELD)
+      </div>
+      <div class="letter">A</div>
+      <h3>Pre-Flight Secret Scanner + Hard Block</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">Automated pattern checks halt before Git commit</p>
+      
+      <div style="font-size: 12px; line-height: 1.5; color: #334155;">
+        <ul style="padding-left: 18px; margin: 0;">
+          <li><strong>Layer 1 (File patterns):</strong> <code>*.env</code>, <code>secrets.*</code>, <code>*credential*</code>, <code>id_rsa*</code> are banned by default.</li>
+          <li><strong>Layer 2 (Secret scanner):</strong> Scans text for high-risk token signatures (<code>sk-proj-</code>, <code>ghp_</code>, <code>AIzaSy</code>, <code>Bearer </code>).</li>
+          <li><strong>Hard Stop:</strong> If a secret is detected, <code>sync push</code> immediately aborts with non-zero exit code:
+            <br>
+            <code style="color: #b91c1c;">✖ ABORTED: Potential API key detected in 'config.yml'. Use 'sync ignore config.yml --local' to protect it.</code>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <div class="letter">B</div>
+      <h3>Manual User Responsibility</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">Rely solely on user's manual ignore rules</p>
+      
+      <div style="font-size: 12px; line-height: 1.5; color: #334155;">
+        <ul style="padding-left: 18px; margin: 0;">
+          <li>No automated scanners. If a user forgets to run <code>sync ignore</code>, the file is pushed.</li>
+          <li><strong>High risk:</strong> Accidental key leak on GitHub leads to revoked credentials or unauthorized API spend.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option C -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <div class="letter">C</div>
+      <h3>Interactive Warning Prompt</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">Ask user to confirm on detected secret</p>
+      
+      <div style="font-size: 12px; line-height: 1.5; color: #334155;">
+        <ul style="padding-left: 18px; margin: 0;">
+          <li>Prompts: <code>[y/N] Potential key found. Push anyway?</code></li>
+          <li><strong>Trade-off:</strong> Dangerous if typed reflexively, and blocks unattended agent tasks.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>

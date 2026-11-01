@@ -1,0 +1,132 @@
+<h2>First-Principles Rethink: AI Workspace Sync</h2>
+<p class="subtitle">It's not just skills — it's your entire multi-machine AI developer environment</p>
+
+<!-- The 5 Resource Types -->
+<div class="mockup" style="margin-bottom: 24px;">
+  <div class="mockup-header">The 5 Core AI Workspace Resources</div>
+  <div class="mockup-body" style="padding: 16px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; font-size: 12px;">
+      
+      <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px;">
+        <strong style="color: #1e40af; font-size: 13px;">1. Skills</strong><br>
+        <span style="color: #64748b; font-size: 11px;">~/.agents/skills/</span>
+        <ul style="margin: 8px 0 0; padding-left: 16px; color: #334155;">
+          <li>Authored tools</li>
+          <li>External installers</li>
+          <li>Version tracked</li>
+        </ul>
+      </div>
+
+      <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px;">
+        <strong style="color: #166534; font-size: 13px;">2. Rules</strong><br>
+        <span style="color: #64748b; font-size: 11px;">~/.omp/agent/rules/</span>
+        <ul style="margin: 8px 0 0; padding-left: 16px; color: #334155;">
+          <li>ts-no-any.md</li>
+          <li>py-type-annotations.md</li>
+          <li>test-driven-dev.md</li>
+        </ul>
+      </div>
+
+      <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 8px; padding: 12px;">
+        <strong style="color: #6b21a8; font-size: 13px;">3. Agents</strong><br>
+        <span style="color: #64748b; font-size: 11px;">~/.omp/agent/agents/</span>
+        <ul style="margin: 8px 0 0; padding-left: 16px; color: #334155;">
+          <li>sonic.md</li>
+          <li>boilerplate-free.md</li>
+          <li>reviewer.md</li>
+        </ul>
+      </div>
+
+      <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 12px;">
+        <strong style="color: #9a3412; font-size: 13px;">4. Hooks</strong><br>
+        <span style="color: #64748b; font-size: 11px;">~/.omp/agent/hooks/</span>
+        <ul style="margin: 8px 0 0; padding-left: 16px; color: #334155;">
+          <li>guard-destructive.ts</li>
+          <li>redact-secrets.ts</li>
+          <li>terminal-notifier.ts</li>
+        </ul>
+      </div>
+
+      <div style="background: #fef2f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 12px;">
+        <strong style="color: #991b1b; font-size: 13px;">5. Configs</strong><br>
+        <span style="color: #64748b; font-size: 11px;">~/.omp/agent/</span>
+        <ul style="margin: 8px 0 0; padding-left: 16px; color: #334155;">
+          <li>mcp.json (shared)</li>
+          <li>models.yml (shared)</li>
+          <li>config.yml (per-machine!)</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Comparison of Architecture Models -->
+<div class="split" style="margin-bottom: 24px;">
+  
+  <!-- Left: The Old Way -->
+  <div class="mockup" style="border-color: #cbd5e1;">
+    <div class="mockup-header" style="background: #f1f5f9; color: #475569;">The Old Flawed Model (Roots & Path Globs)</div>
+    <div class="mockup-body" style="font-size: 12px; line-height: 1.6;">
+      <p style="color: #64748b;">Treated everything as two artificial "roots" (<code>omp</code> path root vs <code>agents</code> skill root). Forced complex syntax:</p>
+      <div style="background: #fef2f2; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 11px; color: #991b1b; margin-bottom: 8px;">
+        $ sync track path extensions --root omp --sync<br>
+        $ sync track path extensions/orca-* --root omp --no-sync<br>
+        $ sync track skill mentor --root agents --origin authored
+      </div>
+      <p style="color: #dc2626; margin: 0;">✖ Verbose, unintuitive, and constantly confusing about what belongs where.</p>
+    </div>
+  </div>
+
+  <!-- Right: The Declarative Module Model -->
+  <div class="mockup" style="border-color: #3b82f6;">
+    <div class="mockup-header" style="background: #eff6ff; color: #1d4ed8;">Rethought: Declarative Workspace Modules</div>
+    <div class="mockup-body" style="font-size: 12px; line-height: 1.6;">
+      <p style="color: #1e40af;">First-class awareness of AI modules. Natural, clean commands:</p>
+      <div style="background: #f0fdf4; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 11px; color: #166534; margin-bottom: 8px;">
+        $ sync add skill my-skill<br>
+        $ sync add rule ts-no-any<br>
+        $ sync add agent sonic<br>
+        $ sync ignore config.yml --local
+      </div>
+      <p style="color: #16a34a; margin: 0;">✔ Clean nouns that match what you actually build.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- Multi-Machine Config Architecture -->
+<div class="mockup">
+  <div class="mockup-header">How Multi-PC Configuration Works Cleanly</div>
+  <div class="mockup-body" style="padding: 16px;">
+    
+    <div class="pros-cons">
+      <div class="pros">
+        <h4>1. Shared by Default (All your PCs get them)</h4>
+        <p style="font-size: 12px; color: #334155; margin-bottom: 8px;">Your tools and standards should be identical everywhere:</p>
+        <ul style="font-size: 12px;">
+          <li>All your <strong>skills</strong> (deep-research, skill-framework, etc.)</li>
+          <li>All your <strong>rules</strong> (coding standards, formatting)</li>
+          <li>All your <strong>agents</strong> (custom subagents)</li>
+          <li>All your <strong>hooks</strong> (safety guards)</li>
+          <li>Shared <strong>mcp.json</strong> (Context7, TablePlus)</li>
+        </ul>
+      </div>
+
+      <div class="cons" style="border-left: 3px solid #8b5cf6;">
+        <h4 style="color: #6b21a8;">2. Machine-Specific Overrides (This PC only)</h4>
+        <p style="font-size: 12px; color: #334155; margin-bottom: 8px;">Hardware, GPU, and local credentials stay isolated:</p>
+        <ul style="font-size: 12px;">
+          <li><strong>Local models:</strong> Mac uses Apple Metal / local Ollama; PC uses Nvidia CUDA.</li>
+          <li><strong>config.yml:</strong> Each machine has its own model routing.</li>
+          <li><strong>How it's controlled:</strong><br>
+            <code>sync ignore config.yml --local</code> (Private to this machine)<br>
+            <em>OR</em><br>
+            <code>hosts/macbook/config.yml</code> (Each PC backs up its own config in Git).
+          </li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>

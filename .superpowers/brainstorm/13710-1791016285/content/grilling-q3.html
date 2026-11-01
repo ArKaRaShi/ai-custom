@@ -1,0 +1,87 @@
+<h2>Grilling Session: Stress-Testing ai-sync v3 (Question 3 of 5)</h2>
+<p class="subtitle">5 critical stress-test questions before implementation. Here is Question 3:</p>
+
+<!-- Progress Bar -->
+<div style="background: #e2e8f0; border-radius: 9999px; height: 8px; margin-bottom: 24px; overflow: hidden;">
+  <div style="background: #3b82f6; width: 60%; height: 100%;"></div>
+</div>
+
+<div class="mockup" style="margin-bottom: 24px; border-color: #f59e0b;">
+  <div class="mockup-header" style="background: #fef3c7; color: #92400e;">
+    🔥 Question 3: Partial Target Failures & Transaction Boundaries
+  </div>
+  <div class="mockup-body" style="padding: 16px; font-size: 13px; line-height: 1.6;">
+    <p style="margin-top: 0;">
+      A sync operation covers multiple targets: <code>agents</code>, <code>omp</code>, <code>cursor</code>, <code>claude</code>.
+    </p>
+    <p>
+      Suppose Target 1 (<code>agents/skills</code>) copies successfully, but Target 2 (<code>omp</code>) fails halfway through due to a file permission issue or locked socket.
+    </p>
+    <p style="margin-bottom: 0; color: #b45309; font-weight: 600;">
+      Should the entire sync transaction roll back and undo Target 1, or should Target 1 stay synced while Target 2 reports an error?
+    </p>
+  </div>
+</div>
+
+<!-- The 3 Options -->
+<div class="cards">
+  
+  <!-- Option A: Recommended -->
+  <div class="card selected" data-choice="a" onclick="toggleSelect(this)" style="border: 2px solid #10b981;">
+    <div class="card-body">
+      <div style="background: #10b981; color: white; display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-bottom: 8px;">
+        RECOMMENDED (BEST-EFFORT PER TARGET)
+      </div>
+      <div class="letter">A</div>
+      <h3>Isolated Target Transactions + Summary Report</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">Successful targets stay synced; failures exit code 1</p>
+      
+      <div style="font-size: 12px; line-height: 1.5; color: #334155;">
+        <ul style="padding-left: 18px; margin: 0;">
+          <li>Each target is an atomic unit. If <code>agents</code> succeeds, it commits.</li>
+          <li>If <code>omp</code> fails, its staging folder is rolled back without corrupting <code>omp</code>.</li>
+          <li>CLI exits with code <code>1</code> and clearly lists:
+            <br>
+            <code>✔ agents: 4 skills synced</code>
+            <br>
+            <code>✖ omp: permission denied on hooks/notifier.ts (aborted)</code>
+          </li>
+          <li>Next time you run <code>sync</code>, it only needs to sync the remaining <code>omp</code> files!</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <div class="letter">B</div>
+      <h3>Global Multi-Target Rollback (All-or-Nothing)</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">Undo everything if any target fails</p>
+      
+      <div style="font-size: 12px; line-height: 1.5; color: #334155;">
+        <ul style="padding-left: 18px; margin: 0;">
+          <li>If any target fails, restore backups for all preceding targets to leave zero changes on disk.</li>
+          <li><strong>Trade-off:</strong> Highly complex two-phase commit logic; if rollback itself fails, leaves system in an unknown partial state.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option C -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <div class="letter">C</div>
+      <h3>Interactive Halt on Error</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">Pause terminal and ask what to do</p>
+      
+      <div style="font-size: 12px; line-height: 1.5; color: #334155;">
+        <ul style="padding-left: 18px; margin: 0;">
+          <li>Pauses terminal: <code>[r] Retry  [s] Skip this target  [a] Abort</code>.</li>
+          <li><strong>Trade-off:</strong> Breaks automated agent scripts and background syncs.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>

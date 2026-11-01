@@ -1,0 +1,74 @@
+<h2>Collision Safety & Atomic Rename Deep-Dive</h2>
+<p class="subtitle">Why ~/.local/bin/ai-sync avoids UNIX collisions, and how Atomic Staging prevents torn reads</p>
+
+<!-- Part 1: The Binary Name Collision Fix -->
+<div class="mockup" style="margin-bottom: 24px; border-color: #f59e0b;">
+  <div class="mockup-header" style="background: #fef3c7; color: #92400e;">
+    Part 1: The Collision Catch — sync vs ai-sync
+  </div>
+  <div class="mockup-body" style="padding: 16px; font-size: 12px; line-height: 1.6;">
+    <p style="margin-top: 0;">
+      You caught a vital UNIX pitfall: <strong><code>/bin/sync</code> is a 50-year-old native POSIX utility</strong> that flushes filesystem cache buffers to disk.
+    </p>
+    <div style="background: #fee2e2; border-left: 3px solid #ef4444; padding: 10px; margin: 10px 0; border-radius: 4px; color: #991b1b;">
+      Naming the binary <code>~/.local/bin/sync</code> could hijack system buffer flushing scripts if <code>~/.local/bin</code> is first in <code>$PATH</code>!
+    </div>
+    <div style="background: #ecfdf5; border-left: 3px solid #10b981; padding: 10px; margin: 10px 0; border-radius: 4px; color: #065f46;">
+      <strong>The Clean Solution:</strong><br>
+      • Name the binary <strong><code>~/.local/bin/ai-sync</code></strong> (100% collision-free).<br>
+      • You can optionally add a shell alias <code>alias sync="ai-sync"</code> in your interactive <code>.zshrc</code>, but the actual binary remains <code>ai-sync</code>.
+    </div>
+  </div>
+</div>
+
+<!-- Part 2: Question 2, Option A Deep-Dive -->
+<div class="mockup" style="margin-bottom: 24px;">
+  <div class="mockup-header">Part 2: How Option A (Atomic Staging + POSIX Rename) Works Visually</div>
+  <div class="mockup-body" style="padding: 16px;">
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;">
+      
+      <!-- Step 1 -->
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px;">
+        <div style="color: #0284c7; font-weight: 700; font-size: 12px; margin-bottom: 6px;">STEP 1: BACKGROUND STAGING</div>
+        <p style="font-size: 11px; color: #64748b; margin: 0 0 10px;">
+          The active folder remains untouched while files download or transfer into a hidden sibling directory:
+        </p>
+        <div style="background: #0f172a; color: #f8fafc; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 11px; line-height: 1.5;">
+          ~/.agents/skills/<br>
+          ├── <span style="color: #4ade80;">deep-research/</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #94a3b8;">← Active (readers use this)</span><br>
+          └── <span style="color: #facc15;">.tmp-deep-research/</span> &nbsp;&nbsp;<span style="color: #94a3b8;">← Staging new files</span>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px;">
+        <div style="color: #10b981; font-weight: 700; font-size: 12px; margin-bottom: 6px;">STEP 2: POSIX ATOMIC SWAP</div>
+        <p style="font-size: 11px; color: #64748b; margin: 0 0 10px;">
+          Once all files are verified on disk, a single OS kernel syscall executes in &lt;1 millisecond:
+        </p>
+        <div style="background: #0f172a; color: #f8fafc; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 11px; line-height: 1.5;">
+          <span style="color: #94a3b8;">// Node / Bun fs.renameSync:</span><br>
+          <span style="color: #38bdf8;">fs.renameSync(</span><br>
+          &nbsp;&nbsp;".tmp-deep-research",<br>
+          &nbsp;&nbsp;"deep-research"<br>
+          <span style="color: #38bdf8;">);</span>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px;">
+        <div style="color: #8b5cf6; font-weight: 700; font-size: 12px; margin-bottom: 6px;">STEP 3: ZERO TORN READS</div>
+        <p style="font-size: 11px; color: #64748b; margin: 0 0 10px;">
+          In the POSIX filesystem table, the directory inode pointer flips instantly:
+        </p>
+        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 4px; padding: 10px; font-size: 11px; color: #065f46; line-height: 1.5;">
+          ✔ A running AI agent or LSP either reads 100% old version or 100% new version.<br>
+          ✔ If transfer is killed mid-way, staging folder is deleted and active skill is never corrupted!
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>

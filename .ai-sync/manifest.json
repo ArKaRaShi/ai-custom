@@ -257,12 +257,6 @@
     {
       "kind": "path",
       "root": "omp",
-      "path": "config.yml",
-      "sync": true
-    },
-    {
-      "kind": "path",
-      "root": "omp",
       "path": "RULES.md",
       "sync": true
     },
@@ -299,20 +293,6 @@
     {
       "kind": "skill",
       "root": "agents",
-      "path": "diagram-design",
-      "sync": false,
-      "skill": {
-        "origin": "external",
-        "source": "cathrynlavery/diagram-design",
-        "sourceType": "github",
-        "version": "2.6",
-        "install": "npx skills add cathrynlavery/diagram-design -g -y",
-        "description": "Editorial diagrams in self-contained HTML/SVG"
-      }
-    },
-    {
-      "kind": "skill",
-      "root": "agents",
       "path": "e2e-smoke-qa",
       "sync": true,
       "skill": {
@@ -336,6 +316,46 @@
       "skill": {
         "origin": "authored"
       }
+    },
+    {
+      "kind": "path",
+      "root": "omp",
+      "path": "config.yml",
+      "sync": false
+    },
+    {
+      "kind": "path",
+      "root": "omp",
+      "path": "model-presets.yml",
+      "sync": true
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "spec-visual-review",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "diagram-design",
+      "sync": false,
+      "skill": {
+        "origin": "external",
+        "source": "cathrynlavery/diagram-design",
+        "sourceType": "github",
+        "version": "2.6",
+        "install": "npx -y skills add cathrynlavery/diagram-design --skill diagram-design --global --agent codex --yes"
+      }
+    },
+    {
+      "kind": "path",
+      "root": "omp",
+      "path": "rules",
+      "sync": true
     }
   ]
 }

@@ -1,0 +1,129 @@
+<h2>The Self-Hosting Lifecycle Paradox: Long-Term Architecture</h2>
+<p class="subtitle">How ai-sync upgrades itself across multiple machines without breaking or requiring ad-hoc fixes</p>
+
+<!-- The Core Paradox -->
+<div class="mockup" style="margin-bottom: 24px; border-color: #ef4444;">
+  <div class="mockup-header" style="background: #fef2f2; color: #991b1b;">The Problem: A Tool Synchronizing Its Own Source Code</div>
+  <div class="mockup-body" style="padding: 16px; font-size: 12px; line-height: 1.6;">
+    <p style="margin-top: 0;">
+      When you update <code>ai-sync</code> on your Mac (v2 ➔ v3) and push to GitHub:
+    </p>
+    <ol style="margin: 0; padding-left: 20px; color: #334155;">
+      <li>Your other PC pulls the Git repo (so <code>~/Disk/ai-custom</code> has the <strong>v3 code</strong>).</li>
+      <li>But in your PC's <code>~/.agents/skills/ai-sync/</code>, the installed tool is still running the <strong>old v2 code</strong>!</li>
+      <li>When you type <code>sync</code> on that PC, the <strong>old v2 binary wakes up</strong>, tries to parse the new v3 manifest, and crashes. It can't even run the pull command to upgrade itself.</li>
+    </ol>
+    <p style="margin: 8px 0 0; color: #dc2626; font-weight: 700;">
+      👉 This is the exact problem Homebrew, Rustup, and Git had to solve: self-bootstrapping.
+    </p>
+  </div>
+</div>
+
+<!-- 3 Long-Term Architectural Solutions -->
+<div class="cards">
+  
+  <!-- Solution 1: Trampoline Wrapper (Recommended) -->
+  <div class="card selected" style="border: 2px solid #10b981;">
+    <div class="card-body">
+      <div style="background: #10b981; color: white; display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-bottom: 8px;">
+        RECOMMENDED (HOMEBREW / RUSTUP STYLE)
+      </div>
+      <h3>Pattern 1: The Immutable Trampoline Runner</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">A 10-line wrapper that checks for self-updates before running</p>
+      
+      <div style="background: #0f172a; color: #f8fafc; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 11px; line-height: 1.6; margin-bottom: 10px;">
+        <span style="color: #94a3b8;"># ~/.local/bin/sync or shell function:</span><br>
+        sync() {<br>
+        &nbsp;&nbsp;<span style="color: #60a5fa;"># 1. If repo has a newer ai-sync, fast-copy it first:</span><br>
+        &nbsp;&nbsp;if [ "$REPO/ai-sync" -nt "$LOCAL/ai-sync" ]; then<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;cp -R "$REPO/ai-sync" "$LOCAL/ai-sync"<br>
+        &nbsp;&nbsp;fi<br>
+        &nbsp;&nbsp;<span style="color: #4ade80;"># 2. Execute the engine (always runs latest code):</span><br>
+        &nbsp;&nbsp;bun "$LOCAL/ai-sync/scripts/sync.ts" "$@"<br>
+        }
+      </div>
+
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Why this is a permanent solution</h4>
+          <ul>
+            <li><strong>Zero chicken-and-egg:</strong> The wrapper checks the repo file mtime <em>before</em> TypeScript even loads.</li>
+            <li><strong>Works across breaking versions:</strong> Even v2 ➔ v10 will never crash because the engine is updated before execution.</li>
+            <li>Standard practice used by Homebrew (<code>brew.sh</code>) and Cargo.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Solution 2: Direct Repo Execution -->
+  <div class="card">
+    <div class="card-body">
+      <div style="background: #3b82f6; color: white; display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-bottom: 8px;">
+        ALTERNATIVE (GO / CHEZMOI STYLE)
+      </div>
+      <h3>Pattern 2: Run Directly from Backup Repo</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">Eliminate the two-copy problem entirely for ai-sync</p>
+      
+      <div style="background: #0f172a; color: #f8fafc; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 11px; line-height: 1.6; margin-bottom: 10px;">
+        <span style="color: #94a3b8;"># ai-sync is never copied to ~/.agents/skills/ai-sync</span><br>
+        <span style="color: #94a3b8;"># It lives ONLY in ~/Disk/ai-custom/</span><br>
+        <br>
+        alias sync="bun ~/Disk/ai-custom/.agents/skills/ai-sync/scripts/sync.ts"
+      </div>
+
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Why this works</h4>
+          <ul>
+            <li>Whenever Git pulls, the tool is <em>instantly</em> the latest version.</li>
+            <li>No copying, no sync lag, no chicken-and-egg paradox.</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Trade-off</h4>
+          <ul>
+            <li><code>ai-sync</code> does not live in <code>~/.agents/skills</code>, so it cannot be inspected as a regular local skill by OMP unless symlinked.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Solution 3: In-Process Re-exec (Self-Update Hook) -->
+  <div class="card">
+    <div class="card-body">
+      <div style="background: #8b5cf6; color: white; display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-bottom: 8px;">
+        ALTERNATIVE (RUSTUP / NPM STYLE)
+      </div>
+      <h3>Pattern 3: In-Process Re-Execution</h3>
+      <p class="subtitle" style="margin-bottom: 12px;">TypeScript engine updates itself before reading manifest</p>
+      
+      <div style="background: #0f172a; color: #f8fafc; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 11px; line-height: 1.6; margin-bottom: 10px;">
+        <span style="color: #94a3b8;">// Top of sync.ts, before any manifest parsing:</span><br>
+        if (isRepoSelfNewer(repoBase)) {<br>
+        &nbsp;&nbsp;copySelfFromRepo(repoBase);<br>
+        &nbsp;&nbsp;<span style="color: #c084fc;">// Re-spawn process with the newly copied script and exit:</span><br>
+        &nbsp;&nbsp;Bun.spawnSync([process.argv0, ...process.argv]);<br>
+        &nbsp;&nbsp;process.exit(0);<br>
+        }
+      </div>
+
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Why this works</h4>
+          <ul>
+            <li>Contained entirely in TypeScript; no shell script or wrapper needed.</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Trade-off</h4>
+          <ul>
+            <li>Only protects future updates (v3 ➔ v4), but requires one-time bootstrap to get from old v2 ➔ v3.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

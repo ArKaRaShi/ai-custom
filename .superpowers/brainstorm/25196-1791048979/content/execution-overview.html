@@ -1,0 +1,96 @@
+<h2>ai-sync v3: the overall picture</h2>
+<p class="subtitle">What gets built, how it is shaped, who builds it. Nothing runs until you say go.</p>
+
+<div class="section">
+  <h3>1. The shape: four layers, one wiring file</h3>
+  <div class="mockup">
+    <div class="mockup-header">Imports point down only. Checked by layer-guard.ts</div>
+    <div class="mockup-body" style="font-family:monospace;font-size:13px;line-height:1.7">
+      <div style="padding:8px;border:2px solid #6366f1;border-radius:6px;margin-bottom:6px"><b>cli.ts</b> (composition root): builds objects, runs ONE use case, prints. No decisions.</div>
+      <div style="padding:8px;border:2px solid #0ea5e9;border-radius:6px;margin-bottom:6px"><b>presentation/</b>: parse args, render tree or JSON</div>
+      <div style="padding:8px;border:2px solid #10b981;border-radius:6px;margin-bottom:6px"><b>application/</b>: use-cases (one class, one <code>execute</code>) + services (TransferRunner) + interfaces</div>
+      <div style="padding:8px;border:2px solid #f59e0b;border-radius:6px;margin-bottom:6px"><b>infrastructure/</b>: NodeFileStore, git adapter, config files, installer, snapshots, 5 resource modules</div>
+      <div style="padding:8px;border:2px solid #ef4444;border-radius:6px"><b>domain/</b>: pure rules. versioning, schema, secrets, paths, errors. No I/O.</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>2. What you get when it is done</h3>
+  <div class="split">
+    <div class="mockup"><div class="mockup-header">Commands</div><div class="mockup-body" style="font-size:13px">
+      <code>status</code> / <code>push</code> / <code>pull</code> (preview by default, <code>--apply</code> to write)<br>
+      <code>resolve</code> (snapshot first, then ours/theirs)<br>
+      <code>bootstrap</code> (fresh machine restore)<br>
+      <code>init</code> / <code>add</code> / <code>remove</code> / <code>ignore</code>
+    </div></div>
+    <div class="mockup"><div class="mockup-header">Safety</div><div class="mockup-body" style="font-size:13px">
+      Atomic rename, no torn reads<br>
+      Rollback per target<br>
+      Secret scan blocks push<br>
+      Per-machine excludes<br>
+      Overlapping paths rejected<br>
+      SemVer + hash verdicts
+    </div></div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>3. The 12 tasks, in order</h3>
+  <div class="mockup"><div class="mockup-body" style="font-size:13px;line-height:1.8">
+    <b>Foundation (1-3):</b> entities + errors, pure rules, file store + fake<br>
+    <b>Adapters (4-6):</b> resource modules, config/git/excludes, atomic installer + snapshots<br>
+    <b>Core (7-9):</b> PlanSync, push/pull + TransferRunner, resolve/status/bootstrap<br>
+    <b>Surface (10-11):</b> manifest edit commands, CLI + end-to-end smoke<br>
+    <b>Cutover (12):</b> trampoline, delete legacy files, SKILL.md, final review
+  </div></div>
+</div>
+
+<div class="section">
+  <h3>4. Who does what (per task loop)</h3>
+  <div class="mockup"><div class="mockup-body" style="font-family:monospace;font-size:13px;line-height:1.9">
+    <b>me</b>: write task brief from plan<br>
+    &nbsp;&nbsp;&rarr; <b style="color:#0ea5e9">scout</b> (read-only): map files the task touches, report conflicts<br>
+    &nbsp;&nbsp;&rarr; <b style="color:#10b981">sonic</b>: write failing test, implement, run tests, report<br>
+    &nbsp;&nbsp;&rarr; <b>me</b>: check diff + run tests myself<br>
+    &nbsp;&nbsp;&rarr; <b style="color:#f59e0b">reviewer</b>: spec + quality check<br>
+    &nbsp;&nbsp;&rarr; fix loop if needed, then record in <code>progress.md</code>, next task<br>
+    <b>end</b>: whole-branch reviewer pass, then full suite + layer-guard
+  </div></div>
+  <p class="subtitle">Per your instruction: sonic and scout run with the <code>@free</code> model override. Reviewer uses the default model. Tasks run one at a time (each builds on the last).</p>
+</div>
+
+<div class="section">
+  <h3>5. Where code goes, and what stays untouched</h3>
+  <div class="split">
+    <div class="mockup"><div class="mockup-header">Written</div><div class="mockup-body" style="font-size:13px">
+      New layered files in <code>~/.agents/skills/ai-sync/scripts/</code> and <code>tests/</code>.<br>
+      Old flat files deleted only in Task 12.
+    </div></div>
+    <div class="mockup"><div class="mockup-header">Not committed</div><div class="mockup-body" style="font-size:13px">
+      Spec and plan stay uncommitted in <code>~/Disk/ai-custom</code>.<br>
+      Skill dir is not a git repo, so no commits there either.
+    </div></div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>6. Known risks</h3>
+  <div class="mockup"><div class="mockup-body" style="font-size:13px;line-height:1.8">
+    Plan code is unrun: expect small syntax fixes at each RED/GREEN.<br>
+    Sonic workers corrupted a file once earlier. Mitigation: small tasks, I verify every diff.<br>
+    Hard crash mid directory-swap can leave a dir missing (restorable from snapshot). Documented.
+  </div></div>
+</div>
+
+<h3>Decision for you</h3>
+<div class="options">
+  <div class="option" data-choice="go" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content"><h3>Go as shown</h3><p>Start Task 1 now, sequential, scout then sonic then reviewer per task.</p></div>
+  </div>
+  <div class="option" data-choice="change" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content"><h3>Change something first</h3><p>Tell me what in the terminal.</p></div>
+  </div>
+</div>

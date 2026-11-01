@@ -1,0 +1,124 @@
+<h2>ai-sync v3: Full CLI Command Lifecycle Deep-Dive</h2>
+<p class="subtitle">From Day 1 onboarding to daily synchronization, multi-PC privacy, and disaster recovery</p>
+
+<!-- 5-Stage Stepper -->
+<div class="mockup" style="margin-bottom: 24px;">
+  <div class="mockup-header">The End-to-End Lifecycle</div>
+  <div class="mockup-body" style="padding: 16px;">
+    
+    <!-- Stage 1 -->
+    <div style="margin-bottom: 20px; border-left: 3px solid #0284c7; padding-left: 14px;">
+      <div style="font-weight: 700; color: #0284c7; font-size: 13px;">STAGE 1: Setup & First Machine Onboarding</div>
+      <p style="font-size: 12px; color: #475569; margin: 4px 0 8px;">Run once to initialize the backup repository and link your local directories.</p>
+      
+      <div style="background: #0f172a; color: #f8fafc; padding: 10px 14px; border-radius: 6px; font-family: monospace; font-size: 11px; line-height: 1.6;">
+        <span style="color: #94a3b8;"># In your backup repository (e.g. ~/Disk/ai-custom):</span><br>
+        <span style="color: #38bdf8;">$ sync init</span><br>
+        ✔ Initialized ai-sync v3 manifest in .ai-sync/manifest.json<br>
+        <br>
+        <span style="color: #94a3b8;"># Verify default paths (or customize in ~/.config/ai-sync/locations.json):</span><br>
+        <span style="color: #38bdf8;">$ sync status</span><br>
+        ai-sync [ready · 0 items tracked]<br>
+        &nbsp;&nbsp;├─ skills  → ~/.agents/skills<br>
+        &nbsp;&nbsp;├─ omp     → ~/.omp/agent<br>
+        &nbsp;&nbsp;└─ status  ✔ cleanly bound
+      </div>
+    </div>
+
+    <!-- Stage 2 -->
+    <div style="margin-bottom: 20px; border-left: 3px solid #7c3aed; padding-left: 14px;">
+      <div style="font-weight: 700; color: #7c3aed; font-size: 13px;">STAGE 2: Adding Resources & Machine-Local Privacy</div>
+      <p style="font-size: 12px; color: #475569; margin: 4px 0 8px;">Declare what is shared across all PCs vs what stays private to this machine.</p>
+      
+      <div style="background: #0f172a; color: #f8fafc; padding: 10px 14px; border-radius: 6px; font-family: monospace; font-size: 11px; line-height: 1.6;">
+        <span style="color: #94a3b8;"># Track an authored skill (files will sync to Git):</span><br>
+        <span style="color: #38bdf8;">$ sync add skill deep-research</span><br>
+        ✔ Tracked authored skill 'deep-research'<br>
+        <br>
+        <span style="color: #94a3b8;"># Track an external skill with installer (only install command synced):</span><br>
+        <span style="color: #38bdf8;">$ sync add skill archify --external --install "npx -y skills add tt-a1i/archify -g"</span><br>
+        ✔ Tracked external skill 'archify'<br>
+        <br>
+        <span style="color: #94a3b8;"># Track rules, subagents, or hooks:</span><br>
+        <span style="color: #38bdf8;">$ sync add rule ts-no-any</span><br>
+        <span style="color: #38bdf8;">$ sync add agent sonic</span><br>
+        <br>
+        <span style="color: #94a3b8;"># PRIVACY: Ignore local model config on THIS Mac only:</span><br>
+        <span style="color: #38bdf8;">$ sync ignore config.yml --local</span><br>
+        ✔ Excluded 'config.yml' on this machine only (stored in ~/.config/ai-sync/locations.json)
+      </div>
+    </div>
+
+    <!-- Stage 3 -->
+    <div style="margin-bottom: 20px; border-left: 3px solid #16a34a; padding-left: 14px;">
+      <div style="font-weight: 700; color: #16a34a; font-size: 13px;">STAGE 3: The Daily Workflow (Automated Status & Sync)</div>
+      <p style="font-size: 12px; color: #475569; margin: 4px 0 8px;">Check differences across modules and sync with safe previews.</p>
+      
+      <div style="background: #0f172a; color: #f8fafc; padding: 10px 14px; border-radius: 6px; font-family: monospace; font-size: 11px; line-height: 1.6;">
+        <span style="color: #94a3b8;"># 1. Inspect status (aggregates all modules automatically):</span><br>
+        <span style="color: #38bdf8;">$ sync</span><br>
+        ai-sync:status [2 updates available across 5 modules]<br>
+        &nbsp;&nbsp;[SKILLS]<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;▲ skill-framework  v2.1.0 (local) &gt; v2.0.0 (repo)  [LOCAL NEWER → push]<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;✔ deep-research    v1.0.0                          [IN SYNC]<br>
+        &nbsp;&nbsp;[RULES]<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;▼ ts-no-any.md     (local modified &lt; repo commit)  [REPO NEWER → pull]<br>
+        &nbsp;&nbsp;[CONFIGS]<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;⊘ config.yml       (local excluded on this Mac)   [SKIPPED]<br>
+        <br>
+        <span style="color: #94a3b8;"># 2. Push local newer updates to backup repo + GitHub:</span><br>
+        <span style="color: #38bdf8;">$ sync push --apply --git</span><br>
+        ✔ Exported 1 newer skill: skill-framework<br>
+        ✔ Committed and pushed to GitHub main.<br>
+        <br>
+        <span style="color: #94a3b8;"># 3. Pull incoming updates from GitHub + backup repo:</span><br>
+        <span style="color: #38bdf8;">$ sync pull --apply --git</span><br>
+        ✔ Pulled latest commits from GitHub.<br>
+        ✔ Imported 1 updated rule: ts-no-any.md
+      </div>
+    </div>
+
+    <!-- Stage 4 -->
+    <div style="margin-bottom: 20px; border-left: 3px solid #dc2626; padding-left: 14px;">
+      <div style="font-weight: 700; color: #dc2626; font-size: 13px;">STAGE 4: Handling Divergence (Zero-Data-Loss Conflict Resolution)</div>
+      <p style="font-size: 12px; color: #475569; margin: 4px 0 8px;">When two machines edited the same skill at the same version without syncing first.</p>
+      
+      <div style="background: #0f172a; color: #f8fafc; padding: 10px 14px; border-radius: 6px; font-family: monospace; font-size: 11px; line-height: 1.6;">
+        <span style="color: #94a3b8;"># Status flags divergence:</span><br>
+        <span style="color: #f87171;">✖ CONFLICT: data-closure</span> (both sides are v1.0.0 with different hashes)<br>
+        <br>
+        <span style="color: #94a3b8;"># Option A: You want Local version to win:</span><br>
+        <span style="color: #38bdf8;">$ sync resolve data-closure --ours</span><br>
+        ✔ Saved safety snapshot to ~/.config/ai-sync/backups/data-closure-20261003-1540/<br>
+        ✔ Overwrote repo copy with your local version.<br>
+        <br>
+        <span style="color: #94a3b8;"># Option B: You want Repo version to win:</span><br>
+        <span style="color: #38bdf8;">$ sync resolve data-closure --theirs</span><br>
+        ✔ Saved safety snapshot of your local version to ~/.config/ai-sync/backups/data-closure-20261003-1540/<br>
+        ✔ Overwrote local copy with repo version. (Zero code lost; restorable anytime!)
+      </div>
+    </div>
+
+    <!-- Stage 5 -->
+    <div style="border-left: 3px solid #059669; padding-left: 14px;">
+      <div style="font-weight: 700; color: #059669; font-size: 13px;">STAGE 5: Bootstrapping a Fresh Machine</div>
+      <p style="font-size: 12px; color: #475569; margin: 4px 0 8px;">Setting up a brand new Mac, PC, or Linux workstation in seconds.</p>
+      
+      <div style="background: #0f172a; color: #f8fafc; padding: 10px 14px; border-radius: 6px; font-family: monospace; font-size: 11px; line-height: 1.6;">
+        <span style="color: #94a3b8;"># 1. Clone your private backup repo:</span><br>
+        $ git clone https://github.com/ArKaRaShi/ai-custom.git ~/Disk/ai-custom<br>
+        <br>
+        <span style="color: #94a3b8;"># 2. Run bootstrap:</span><br>
+        <span style="color: #38bdf8;">$ sync bootstrap --apply</span><br>
+        ai-sync:bootstrap [restoring full AI workspace]<br>
+        &nbsp;&nbsp;✔ Restored 24 authored skills to ~/.agents/skills/<br>
+        &nbsp;&nbsp;✔ Restored 16 coding rules to ~/.omp/agent/rules/<br>
+        &nbsp;&nbsp;✔ Restored 6 subagents to ~/.omp/agent/agents/<br>
+        &nbsp;&nbsp;✔ Restored hooks & MCP configuration<br>
+        &nbsp;&nbsp;✔ Installed 4 external skills via stored installer commands<br>
+        &nbsp;&nbsp;└─ status: 🎉 Machine fully provisioned!
+      </div>
+    </div>
+
+  </div>
+</div>
