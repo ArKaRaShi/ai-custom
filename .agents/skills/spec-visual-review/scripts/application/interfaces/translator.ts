@@ -2,6 +2,6 @@
 export interface Translator {
   /** Identifies the model so cached lines record where they came from. */
   readonly model: string;
-  /** Returns one Thai string per input string, in the same order. */
-  translate(texts: readonly string[]): Promise<string[]>;
+  /** Returns one Thai string per input; optional contexts are reference-only, one per input. */
+  translate(texts: readonly string[], contexts?: readonly string[]): Promise<string[]>;
 }

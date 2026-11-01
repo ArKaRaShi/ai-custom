@@ -1,6 +1,14 @@
 import { UsageError } from "@/scripts/domain/errors";
 
-export const COMMANDS = ["check", "translate", "render", "stages", "setup"] as const;
+export const COMMANDS = [
+  "check",
+  "translate",
+  "check-markdown",
+  "translate-markdown",
+  "render",
+  "stages",
+  "setup",
+] as const;
 export type Command = (typeof COMMANDS)[number];
 
 export interface ParsedArgs {
@@ -21,6 +29,8 @@ export const USAGE = `Usage: bun scripts/cli.ts <command> [spec.md] [options]
 Commands:
   check <spec>       List Thai lines that are missing or flagged for review
   translate <spec>   Fill missing Thai lines with the local model (preview by default)
+  check-markdown <file.md>      List missing or flagged Markdown translations
+  translate-markdown <file.md>  Fill the Markdown cache (preview by default)
   render <spec>      Build the bilingual review page (preview by default)
   stages <stages.json>  Build one read-only page that keeps every stage (preview by default)
   setup              Install the Python environment and model (preview by default)
@@ -33,6 +43,7 @@ Boolean options:
 Value options (accept '--name value' and '--name=value'):
   --format <tree|json>   Output style. Default: tree
   --store <file>         Thai records. Default: <spec folder>/.visual-review/thai.json
+                         Markdown default: <file.md>.thai.json; stages reads this default only
   --extras <dir>         Optional links.json, pre.html, post.html, entities.html.
                          Default: <spec folder>/.visual-review
   --out <file>           Page to write. Default: <spec folder>/.visual-review/review.html

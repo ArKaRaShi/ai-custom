@@ -18,7 +18,9 @@ export interface Fingerprint {
 
 export type Outcome =
   | { command: "check"; result: CheckReviewOutput }
+  | { command: "check-markdown"; result: CheckReviewOutput }
   | { command: "translate"; result: TranslateSpecOutput }
+  | { command: "translate-markdown"; result: TranslateSpecOutput }
   | { command: "render"; result: RenderReviewOutput }
   | { command: "stages"; result: RenderStagesOutput }
   | { command: "setup"; result: SetupRuntimeOutput };
@@ -105,8 +107,10 @@ function setupRows(result: SetupRuntimeOutput): string[] {
 function rowsFor(outcome: Outcome, verbose: boolean): string[] {
   switch (outcome.command) {
     case "check":
+    case "check-markdown":
       return checkRows(outcome.result, verbose);
     case "translate":
+    case "translate-markdown":
       return translateRows(outcome.result, verbose);
     case "render":
       return renderRows(outcome.result, verbose);

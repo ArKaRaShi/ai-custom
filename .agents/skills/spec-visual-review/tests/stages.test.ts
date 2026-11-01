@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { RenderStages } from "@/scripts/application/use-cases/render-stages";
-import { renderDocument } from "@/scripts/domain/blocks";
+import { markdownTranslatables, renderDocument } from "@/scripts/domain/blocks";
 import { ReviewError } from "@/scripts/domain/errors";
 import { sha256, stageStates } from "@/scripts/domain/stages";
 import { LocalStageFormats } from "@/scripts/infrastructure/stage-formats";
@@ -75,6 +75,117 @@ describe("given markdown, when converted to blocks", () => {
 
   it("keeps the source wording of a table cell verbatim", () => {
     expect(renderDocument(doc)).toContain("Keep manifest v2");
+  });
+});
+
+describe("given a Markdown document, when translations are rendered, then source and Thai stay distinct", () => {
+  const doc = markdownToDocument(`# Plan
+
+## Design Decisions
+
+Use \`config.yml\` for FR-01 in src/config.ts.
+
+#### Review details
+
+- Check the result
+
+| ID | Decision |
+| --- | --- |
+| D1 | Keep manifest v2 |
+
+## Approaches
+
+### Safety first
+
+Fix commits.
+
+\`\`\`text
+Never translate this code
+\`\`\`
+`);
+
+  it("extracts complete prose from sections, nested blocks and cards without code-only fields", () => {
+    const texts = markdownTranslatables(doc);
+    expect(texts).toContain("Design Decisions");
+    expect(texts).toContain("Review details");
+    expect(texts).toContain("Check the result");
+    expect(texts).toContain("Decision");
+    expect(texts).toContain("Keep manifest v2");
+    expect(texts).toContain("Safety first");
+    expect(texts).toContain("Fix commits.");
+    expect(texts).toContain("Use `config.yml` for FR-01 in src/config.ts.");
+    expect(texts).not.toContain("D1");
+    expect(texts).not.toContain("Never translate this code");
+  });
+
+  it("renders labeled Thai alongside original text without altering markup or code", () => {
+    const html = renderDocument(
+      doc,
+      new Map([
+        ["Design Decisions", "การตัดสินใจ"],
+        ["Review details", "รายละเอียด"],
+        ["Check the result", "ตรวจผลลัพธ์"],
+        ["Decision", "การตัดสินใจ"],
+        ["Keep manifest v2", "เก็บ manifest v2"],
+        ["Safety first", "ความปลอดภัยก่อน"],
+        ["Fix commits.", "แก้ไขคอมมิต"],
+        [
+          "Use `config.yml` for FR-01 in src/config.ts.",
+          "ใช้ `config.yml` สำหรับ FR-01 ใน src/config.ts",
+        ],
+      ]),
+    );
+    expect(html).toContain('data-title="Design Decisions"');
+    expect(html).toContain('data-th="การตัดสินใจ"');
+    expect(html).toContain('<span class="en">Design Decisions</span>');
+    expect(html).toContain('<span class="th" lang="th">');
+    expect(html).toContain("Thai translation, not source");
+    expect(html).toContain("ตรวจผลลัพธ์");
+    expect(html).toContain("เก็บ manifest v2");
+    expect(html).toContain("ความปลอดภัยก่อน");
+    expect(html).toContain("<code>config.yml</code>");
+    expect(html).toContain("FR-01");
+    expect(html).toContain("src/config.ts");
+    expect(html).toContain("<pre><code>Never translate this code</code></pre>");
+  });
+
+  it("keeps untranslated fields visible when a translation is missing", () => {
+    const html = renderDocument(doc, new Map());
+    expect(html).toContain("<h2");
+    expect(html).toContain("Design Decisions");
+    expect(html).toContain("Check the result");
+    expect(html).not.toContain('class="th"');
+  });
+
+  it("keeps normative wording together for translation checks", () => {
+    const source = markdownToDocument("# Plan\n\n## Rules\n\nThe system MUST NOT delete files.");
+    expect(markdownTranslatables(source)).toContain("The system MUST NOT delete files.");
+  });
+
+  it("does not present an incomplete translation as a Thai line", () => {
+    const source = markdownToDocument("# Plan\n\n## Rules\n\nUse `config.yml` safely.");
+    const html = renderDocument(source, new Map([["Use", "ใช้"]]));
+    expect(html).toContain("<p>Use <code>config.yml</code> safely.</p>");
+    expect(html).not.toContain("Thai translation, not source");
+  });
+
+  it("escapes translated text and retains inline emphasis and links", () => {
+    const source = markdownToDocument(
+      "# Plan\n\n## Rules\n\nRead **carefully** at [guide](https://example.com).",
+    );
+    const html = renderDocument(
+      source,
+      new Map([
+        [
+          "Read **carefully** at [guide](https://example.com).",
+          "อ่าน **ระวัง <script>** ที่ [คู่มือ](https://example.com).",
+        ],
+      ]),
+    );
+    expect(html).toContain("<b>ระวัง &lt;script&gt;</b>");
+    expect(html).toContain("คู่มือ");
+    expect(html).not.toContain("<script>");
+    expect(html).not.toContain("https://example.com");
   });
 });
 

@@ -8,15 +8,14 @@ All progress output goes to stderr so stdout stays machine readable.
 import argparse
 import json
 import sys
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 SYSTEM_PROMPT: str = (
-    "Translate the following text into Thai. "
-    "Keep these English words exactly as written, do not translate them: "
-    "agent, agents, manifest, remote, backup."
+    "Translate the complete text into Thai without adding or omitting information. "
+    "Preserve every numbered placeholder such as ⟦0⟧ exactly once and in its context. "
+    "Keep these English words exactly as written: agent, agents, manifest, remote, backup. "
+    "Return only the translation."
 )
-EXAMPLE_EN: str = "The agents read the manifest and the remote backup, but they do not change them."
-EXAMPLE_TH: str = "agents จะอ่าน manifest และ remote backup แต่จะไม่เปลี่ยนแปลงสิ่งเหล่านั้น"
 MAX_TOKENS: int = 1024
 
 
@@ -35,18 +34,25 @@ def download(model: str, revision: str) -> None:
     print(json.dumps({"downloaded": path}))
 
 
-def translate(model_id: str, revision: str, texts: List[str]) -> List[str]:
+def translate(
+    model_id: str, revision: str, texts: List[str], contexts: Optional[List[str]] = None
+) -> List[str]:
     from mlx_lm import generate, load
     from mlx_lm.sample_utils import make_sampler
 
     model, tokenizer = load(model_id, revision=revision)
     sampler = make_sampler(temp=0.0)
     translations: List[str] = []
-    for text in texts:
+    for index, text in enumerate(texts):
+        system_prompt: str = SYSTEM_PROMPT
+        if contexts is not None:
+            system_prompt += (
+                "\nThe following is background context only; do not translate or repeat it:\n"
+                + contexts[index]
+                + "\nTranslate only the user's text."
+            )
         messages: List[Dict[str, str]] = [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": EXAMPLE_EN},
-            {"role": "assistant", "content": EXAMPLE_TH},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": text},
         ]
         prompt = tokenizer.apply_chat_template(messages, add_generation_prompt=True)
@@ -62,7 +68,7 @@ def main() -> int:
         return 0
     payload: Dict[str, List[str]] = json.load(sys.stdin)
     texts: List[str] = payload["texts"]
-    print(json.dumps({"translations": translate(args.model, args.revision, texts)}, ensure_ascii=False))
+    print(json.dumps({"translations": translate(args.model, args.revision, texts, payload.get("contexts"))}, ensure_ascii=False))
     return 0
 
 

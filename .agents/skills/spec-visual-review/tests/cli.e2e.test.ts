@@ -109,7 +109,6 @@ describe("given a complete Thai cache", () => {
     const html = fs.readFileSync(path.join(reviewDir, "review.html"), "utf8");
     expect(html).toContain("&lt;local&gt; item &amp; more");
     expect(html).toContain(goodThai("Previews MUST NOT mutate local files."));
-    expect(html).toContain('<html lang="en" data-theme="graphite"');
   });
 
   it("accepts value options in both forms and shows a command's help first", async () => {

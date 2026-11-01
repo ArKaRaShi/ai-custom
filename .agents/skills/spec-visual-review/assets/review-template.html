@@ -1,15 +1,19 @@
 <!doctype html>
-<html lang="en" data-theme="graphite" data-lang="both">
+<html lang="en" data-theme="editorial" data-lang="both">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Specification review</title>
   <style>
-    :root { color-scheme: dark; --ink:#e9e9e9; --muted:#b8b8bb; --paper:#18191b; --panel:#242527; --line:#44464b; --accent:#c4d7ee; --inner:#1d1e20; --thai-font:"Sukhumvit Set","Thonburi","Noto Sans Thai","Sarabun","Tahoma",system-ui,sans-serif; }
-    :root[data-theme="midnight"] { --ink:#e5eaf1; --muted:#adbaca; --paper:#121b27; --panel:#202e3e; --line:#405064; --accent:#a6d5ff; --inner:#182738; }
-    :root[data-theme="teal"] { --ink:#e2efec; --muted:#a8c2bd; --paper:#14211f; --panel:#203431; --line:#42615b; --accent:#91d6c6; --inner:#192b28; }
+    :root { color-scheme:dark; --ink:#edf0f2; --muted:#b1bac4; --paper:#191b1f; --panel:#25282d; --line:#454b54; --accent:#a5cae8; --inner:#20262c; --thai-font:"Sukhumvit Set","Thonburi","Noto Sans Thai","Sarabun","Tahoma",system-ui,sans-serif; }
+    :root[data-theme="blueprint"] { --ink:#e9f1f7; --muted:#b0c4d3; --paper:#151e29; --panel:#1b2a39; --line:#405d73; --accent:#9bd4f4; --inner:#182d40; }
+    :root[data-theme="warm"] { --ink:#f1ebe5; --muted:#c5b7aa; --paper:#211f1e; --panel:#302b28; --line:#605147; --accent:#f0c38d; --inner:#282320; }
     * { box-sizing:border-box; }
     body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.55 ui-rounded,"Avenir Next",Avenir,var(--thai-font); }
+    :root[data-theme="blueprint"] body { background-image:linear-gradient(#ffffff08 1px,transparent 1px),linear-gradient(90deg,#ffffff08 1px,transparent 1px); background-size:22px 22px; }
+    :root[data-theme="blueprint"] h1, :root[data-theme="blueprint"] h2 { font-family:ui-monospace,var(--thai-font); letter-spacing:-.02em; }
+    :root[data-theme="warm"] h1, :root[data-theme="warm"] h2 { font-family:Georgia,var(--thai-font); font-weight:500; }
+    :root[data-theme="blueprint"] .step, :root[data-theme="warm"] .step { border-left:3px solid var(--accent); }
     .review-shell { max-width:1320px; margin:auto; padding:32px 28px 80px; }
     header { border-left:4px solid var(--accent); padding-left:20px; margin-bottom:24px; }
     h1 { font-size:clamp(28px,4vw,40px); line-height:1.15; margin:0 0 10px; }
@@ -107,7 +111,7 @@
       const railButtons = [...shell.querySelectorAll('.stage-rail .stage')];
       const controls = document.createElement('div');
       controls.className = 'review-controls';
-      controls.innerHTML = '<label>Language / ภาษา<select name="lang"><option value="both">English + ไทย</option><option value="en">English</option><option value="th">ไทย</option></select></label><label>Theme<select name="theme"><option value="graphite">Graphite</option><option value="midnight">Midnight blue</option><option value="teal">Slate and teal</option></select></label>';
+      controls.innerHTML = '<label>Language / ภาษา<select name="lang"><option value="both">English + ไทย</option><option value="en">English</option><option value="th">ไทย</option></select></label><label>Theme<select name="theme"><option value="editorial">Editorial graphite</option><option value="blueprint">Technical blueprint</option><option value="warm">Warm graphite</option></select></label>';
       shell.querySelector('header').after(controls);
       const layout = document.createElement('div'); layout.className = 'stage-layout';
       const views = document.createElement('div'); views.className = 'stage-views';

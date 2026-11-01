@@ -1,6 +1,11 @@
 import * as path from "node:path";
 import type { ReviewFiles } from "@/scripts/application/interfaces/review-files";
 import type { StageFormats } from "@/scripts/application/interfaces/stage-formats";
+import type { ThaiStore } from "@/scripts/application/interfaces/thai-store";
+import {
+  markdownStorePath,
+  resolveMarkdown,
+} from "@/scripts/application/services/markdown-translation";
 import { renderDocument } from "@/scripts/domain/blocks";
 import { applyStages, type StagePanel } from "@/scripts/domain/stage-page";
 import { type StageEntry, type StageState, sha256, stageStates } from "@/scripts/domain/stages";
@@ -30,16 +35,28 @@ const MISSING_HTML =
 /** Builds one read-only page that keeps every stage. Previews by default and writes only with `apply`. */
 export class RenderStages {
   constructor(
-    private readonly deps: { files: ReviewFiles; formats: StageFormats; specBody: SpecBody },
+    private readonly deps: {
+      files: ReviewFiles;
+      formats: StageFormats;
+      specBody: SpecBody;
+      markdownStore?: (path: string) => ThaiStore;
+    },
   ) {}
 
   private async body(entry: StageEntry, sourcePath: string, text: string): Promise<string> {
     if (entry.kind === "spec") return (await this.deps.specBody(sourcePath)).html;
     const override = await this.deps.files.readOptionalText(`${sourcePath}.blocks.json`);
     const { formats } = this.deps;
-    return renderDocument(
-      override === null ? formats.markdownToDocument(text) : formats.parseDocument(override),
-    );
+    const doc =
+      override === null ? formats.markdownToDocument(text) : formats.parseDocument(override);
+    const store = this.deps.markdownStore?.(markdownStorePath(sourcePath));
+    if (!store) return renderDocument(doc);
+    const resolution = await resolveMarkdown(doc, store);
+    const notice =
+      resolution.missing.length || resolution.findings.length
+        ? `<div class="notice">Thai translation review: ${resolution.missing.length} missing, ${resolution.findings.length} flagged. English is authoritative.</div>`
+        : "";
+    return notice + renderDocument(doc, resolution.translations);
   }
 
   async execute(input: RenderStagesInput): Promise<RenderStagesOutput> {

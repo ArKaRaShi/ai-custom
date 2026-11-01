@@ -1,5 +1,9 @@
 #!/usr/bin/env bun
 import * as path from "node:path";
+import {
+  MarkdownTranslation,
+  markdownStorePath,
+} from "@/scripts/application/services/markdown-translation";
 import { ReviewState } from "@/scripts/application/services/review-state";
 import { SpecBody } from "@/scripts/application/services/spec-body";
 import { CheckReview } from "@/scripts/application/use-cases/check-review";
@@ -57,6 +61,7 @@ async function run(args: ParsedArgs): Promise<{ outcome: Outcome; fingerprint: F
     const result = await new RenderStages({
       files,
       formats: new LocalStageFormats(),
+      markdownStore: (storePath) => new JsonThaiStore(files, storePath),
       specBody,
     }).execute({
       manifestPath,
@@ -70,6 +75,35 @@ async function run(args: ParsedArgs): Promise<{ outcome: Outcome; fingerprint: F
     return {
       outcome: { command: "stages", result },
       fingerprint: { command: "stages", spec: manifestPath, store: null, mode },
+    };
+  }
+  if (args.command === "check-markdown" || args.command === "translate-markdown") {
+    const sourcePath = path.resolve(args.spec ?? "");
+    const storePath = path.resolve(args.store ?? markdownStorePath(sourcePath));
+    const service = new MarkdownTranslation({
+      files,
+      formats: new LocalStageFormats(),
+      store: new JsonThaiStore(files, storePath),
+      translator: new PythonTranslator(paths),
+    });
+    const fingerprint: Fingerprint = {
+      command: args.command,
+      spec: sourcePath,
+      store: storePath,
+      mode: args.command === "check-markdown" ? "read-only" : args.apply ? "apply" : "preview",
+    };
+    if (args.command === "check-markdown") {
+      return {
+        outcome: { command: args.command, result: await service.check(sourcePath) },
+        fingerprint,
+      };
+    }
+    return {
+      outcome: {
+        command: args.command,
+        result: await service.execute({ sourcePath, apply: args.apply }),
+      },
+      fingerprint,
     };
   }
   const spec = path.resolve(args.spec ?? "");
@@ -122,7 +156,10 @@ async function main(argv: readonly string[]): Promise<number> {
     console.log(
       json ? renderJson(outcome, fingerprint) : renderTree(outcome, fingerprint, args.verbose),
     );
-    return outcome.command === "check" && outcome.result.status === "incomplete" ? 1 : 0;
+    return (outcome.command === "check" || outcome.command === "check-markdown") &&
+      outcome.result.status === "incomplete"
+      ? 1
+      : 0;
   } catch (error) {
     const known =
       error instanceof ReviewError ||

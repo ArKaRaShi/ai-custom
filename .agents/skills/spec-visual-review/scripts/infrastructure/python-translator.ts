@@ -8,7 +8,7 @@ export class PythonTranslator implements Translator {
 
   constructor(private readonly paths: RuntimePaths) {}
 
-  async translate(texts: readonly string[]): Promise<string[]> {
+  async translate(texts: readonly string[], contexts?: readonly string[]): Promise<string[]> {
     const child = Bun.spawn(
       [
         "uv",
@@ -28,7 +28,7 @@ export class PythonTranslator implements Translator {
         REVISION,
       ],
       {
-        stdin: new Blob([JSON.stringify({ texts })]),
+        stdin: new Blob([JSON.stringify({ texts, contexts })]),
         stdout: "pipe",
         stderr: "pipe",
         env: {
