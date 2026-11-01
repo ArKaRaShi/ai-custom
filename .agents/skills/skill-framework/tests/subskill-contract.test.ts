@@ -21,8 +21,8 @@ describe("given skills referencing external capabilities, when inspected, then t
     expect(content).toContain("without stalling");
   });
 
-  it("consuming skills (git-pr and git-commit) adhere to REQUIRE SUBSKILL with fallback", () => {
-    const gitPrPath = path.resolve(import.meta.dir, "../../git-pr/SKILL.md");
+  it("consuming skills (git-pr-mr and git-commit) adhere to REQUIRE SUBSKILL with fallback", () => {
+    const gitPrPath = path.resolve(import.meta.dir, "../../git-pr-mr/SKILL.md");
     const gitCommitPath = path.resolve(import.meta.dir, "../../git-commit/SKILL.md");
 
     const gitPrContent = readFileSync(gitPrPath, "utf-8");

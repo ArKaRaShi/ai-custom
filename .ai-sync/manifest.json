@@ -53,16 +53,6 @@
     {
       "kind": "skill",
       "root": "agents",
-      "path": "git-pr",
-      "sync": true,
-      "skill": {
-        "origin": "authored",
-        "description": "PR drafting and review conventional tool"
-      }
-    },
-    {
-      "kind": "skill",
-      "root": "agents",
       "path": "grill-me",
       "sync": false,
       "skill": {
@@ -333,6 +323,15 @@
       "kind": "skill",
       "root": "agents",
       "path": "writing-markdown",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "git-pr-mr",
       "sync": true,
       "skill": {
         "origin": "authored"
