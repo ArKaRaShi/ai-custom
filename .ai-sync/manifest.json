@@ -328,6 +328,15 @@
       "skill": {
         "origin": "authored"
       }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "writing-markdown",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
     }
   ]
 }
