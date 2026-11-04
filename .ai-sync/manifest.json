@@ -356,6 +356,93 @@
       "root": "omp",
       "path": "rules",
       "sync": true
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "create-verification-skill",
+      "sync": true,
+      "skill": {
+        "origin": "external",
+        "source": "backnotprop/pstack",
+        "sourceType": "github",
+        "install": "npx -y skills add https://github.com/backnotprop/pstack --skill create-verification-skill --global --agent codex --yes"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "maintain-verification-skill",
+      "sync": true,
+      "skill": {
+        "origin": "external",
+        "source": "backnotprop/pstack",
+        "sourceType": "github",
+        "install": "npx -y skills add https://github.com/backnotprop/pstack --skill maintain-verification-skill --global --agent codex --yes"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "engineering-principles",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "principle-responsibility-boundaries",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "principle-model-the-domain",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "principle-boundary-discipline",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "principle-minimize-reader-load",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "principle-subtract-before-you-add",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "principle-prove-it-works",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
     }
   ]
 }

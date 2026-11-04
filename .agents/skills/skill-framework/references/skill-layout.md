@@ -129,7 +129,7 @@ upstream layout untouched because reinstalling upstream packages would revert an
 4. **REQUIRE SUBSKILL:** `markdown-quality` (run a read-only review in AI mode on authored Markdown):
    `bun ~/.agents/skills/markdown-quality/scripts/review.ts <skills-root>/<kebab-name>/ --mode=ai`
    If `markdown-quality` is unavailable, review formatting and local links manually against Quality Standards and report the automated-check limit. Automatic fixes require a separate explicit action.
-5. Declare and exercise the skill's verification path under the [verification contract](primitives/verification.md), including applicable code checks and an isolated changed-behavior check.
+5. If the skill has executable content, declare and exercise its verification path under the [verification contract](primitives/verification.md), including applicable code checks and an isolated changed-behavior check. A documentation-only skill doesn't need a verification section.
 6. Register as authored and back up to the sync repo within `skill-framework`
    (see `.ai-sync/manifest.json` workflow. Do not hand-edit the manifest).
 
@@ -143,13 +143,13 @@ Auditing or cloning an existing skill:
 4. heavy docs in `references/`, code in `scripts/`, tests in `tests/`
 5. no tracked dependency artifacts (`node_modules`, `.venv`, `__pycache__`); any manifest must include install instructions fulfilling `references/primitives/dependencies.md` in `references/dependencies.md` or `SKILL.md`
 6. passes markdown quality review in AI mode (`bun ~/.agents/skills/markdown-quality/scripts/review.ts <path> --mode=ai`)
-7. declares a reproducible verification path and reports exercised results and limits; executable content includes applicable static checks and an isolated behavior check
+7. if executable content exists, declares a reproducible verification path and reports exercised results and limits, including applicable static checks and an isolated behavior check
 
 ## Framework integration rules
 
 - Apply this layout guidance to all authored skills, whether they contain
   executable tools.
-- Authored skills must declare a verification path under `primitives/verification.md` when created or modified. External skills keep their upstream files.
+- Authored skills with executable content must declare a verification path under `primitives/verification.md` when created or modified. Documentation-only skills don't need one. External skills keep their upstream files.
 - Consuming skills bundle copied primitives and do not import code from
   `skill-framework` at runtime.
 - Authors may reference relevant external skills when needed, such as `writing-skills`, `markdown-quality`, or `brainstorming`. These names are examples, not an allowlist.

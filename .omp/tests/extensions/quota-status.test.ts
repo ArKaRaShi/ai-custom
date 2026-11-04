@@ -7,6 +7,7 @@ import {
   getProviderPrefix,
   buildProviderSparklineString,
   getLatestModelFromSession,
+  getActiveIdentityFromSession,
   setQuotaStatus,
   setQuotaWidget,
   normalizeModelSelector,
@@ -147,7 +148,7 @@ describe("given quota-status extension, when rendering usage sparklines and form
     expect(output).toContain("40%");
     expect(output).toContain("󰥔 3h0m @15:00");
     // Pool capacity pill
-    expect(output).toContain("[pool: 2 accts · 0 exhausted · 2 available · 1.60× left]");
+    expect(output).toContain("[pool: 1.60× 5h · 2/2 usable · 0 limited]");
   });
 
   it("shows exhausted and available account counts instead of an exhausted account quota", () => {
@@ -169,25 +170,82 @@ describe("given quota-status extension, when rendering usage sparklines and form
     const output = buildProviderSparklineString("google-antigravity", mockUsage);
 
     // then the summary shows account availability without exposing 100% as provider-wide usage
-    expect(output).toContain("[pool: 2 accts · 1 exhausted · 1 available]");
+    expect(output).toContain("[pool: 1/2 usable · 1 limited]");
     expect(output).not.toContain("100%");
   });
 
-  it("applies account summary to non-Antigravity providers", () => {
-    // given one exhausted and one available OpenAI account
+  it("renders one row per account and marks the active one", () => {
+    // given one exhausted and one available OpenAI account with emails
     const mockUsage: UsagePayload = {
       reports: [
-        { provider: "openai-codex", limits: [{ id: "5h", amount: { usedFraction: 1 } }] },
-        { provider: "openai-codex", limits: [{ id: "5h", amount: { usedFraction: 0.2 } }] },
+        { provider: "openai-codex", metadata: { provider: "openai-codex", email: "dead@mail.com" }, limits: [{ id: "5h", amount: { usedFraction: 1 } }] },
+        { provider: "openai-codex", metadata: { provider: "openai-codex", email: "live@mail.com" }, limits: [{ id: "5h", amount: { usedFraction: 0.2 } }] },
       ],
     };
 
     // when the provider status is rendered
-    const output = buildProviderSparklineString("openai-codex", mockUsage);
+    const lines = buildProviderSparklineString("openai-codex", mockUsage).split("\n");
 
-    // then the same dynamic account summary is used
-    expect(output).toContain("[pool: 2 accts · 1 exhausted · 1 available]");
-    expect(output).not.toContain("100%");
+    // then the header keeps the pool tag and each account gets a row; the live one is active
+    expect(lines[0]).toContain("[pool: 1/2 usable · 1 limited]");
+    expect(lines).toHaveLength(3);
+    expect(lines[1]).toContain("dead");
+    expect(lines[1]).toContain("5h 100%");
+    expect(lines[1].startsWith("▶")).toBe(false);
+    expect(lines[2].startsWith("▶")).toBe(true);
+    expect(lines[2]).toContain("live");
+  });
+
+  it("counts an account with an exhausted weekly window as exhausted and never picks it as active", () => {
+    // given account A near-empty 5h but weekly at 100%, account B busier 5h but healthy
+    const mockUsage: UsagePayload = {
+      reports: [
+        { provider: "anthropic", metadata: { provider: "anthropic", email: "weeklydead@mail.com" }, limits: [{ id: "5h", amount: { usedFraction: 0.15 } }, { id: "7d", amount: { usedFraction: 1 } }] },
+        { provider: "anthropic", metadata: { provider: "anthropic", email: "healthy@mail.com" }, limits: [{ id: "5h", amount: { usedFraction: 0.12 } }, { id: "7d", amount: { usedFraction: 0.02 } }] },
+      ],
+      capacity: {
+        anthropic: [{ window: "5h", accounts: 2, usedAccounts: 0.1, remainingAccounts: 1.9 }],
+      },
+    };
+
+    // when the provider status is rendered
+    const lines = buildProviderSparklineString("anthropic", mockUsage).split("\n");
+
+    // then the 5h aggregate includes both accounts, while weekly exhaustion marks one unusable
+    expect(lines[0]).toContain("[pool: 1.90× 5h · 1/2 usable · 1 limited]");
+    expect(lines[1].startsWith("▶")).toBe(false);
+    expect(lines[2].startsWith("▶")).toBe(true);
+  });
+
+  it("keeps monthly exhaustion generic in the pool summary", () => {
+    const mockUsage: UsagePayload = {
+      reports: [
+        { provider: "anthropic", metadata: { provider: "anthropic", email: "monthlydead@mail.com" }, limits: [{ id: "5h", amount: { usedFraction: 0.15 } }, { id: "30d", amount: { usedFraction: 1 } }] },
+        { provider: "anthropic", metadata: { provider: "anthropic", email: "healthy@mail.com" }, limits: [{ id: "5h", amount: { usedFraction: 0.12 } }, { id: "30d", amount: { usedFraction: 0.02 } }] },
+      ],
+      capacity: {
+        anthropic: [{ window: "5h", accounts: 2, usedAccounts: 0.1, remainingAccounts: 1.9 }],
+      },
+    };
+
+    const output = buildProviderSparklineString("anthropic", mockUsage);
+    expect(output).toContain("[pool: 1.90× 5h · 1/2 usable · 1 limited]");
+  });
+
+  it("omits the multiplier when the provider has no 5h capacity entry", () => {
+    const mockUsage: UsagePayload = {
+      reports: [
+        { provider: "anthropic", limits: [{ id: "5h", amount: { usedFraction: 0.15 } }] },
+        { provider: "anthropic", limits: [{ id: "5h", amount: { usedFraction: 0.12 } }] },
+      ],
+      capacity: {
+        anthropic: [{ window: "30d", accounts: 2, usedAccounts: 0.1, remainingAccounts: 1.9 }],
+      },
+    };
+
+    const output = buildProviderSparklineString("anthropic", mockUsage);
+    expect(output).toContain("[pool: 2/2 usable · 0 limited]");
+    expect(output).not.toContain("1.90×");
   });
 
   it("buildProviderSparklineString renders multi-window for Claude", () => {
@@ -576,5 +634,79 @@ describe("given quota-status extension, when rendering usage sparklines and form
     currentModelName = "google-antigravity/claude-3-7-sonnet";
     const switchedCheck = checkModelChange(ctx);
     expect(switchedCheck).toBe(true);
+  });
+});
+
+describe("given multiple accounts, when the real active credential is known", () => {
+  const usage: UsagePayload = {
+    reports: [
+      { provider: "anthropic", metadata: { provider: "anthropic", email: "busy@mail.com", orgId: "o1" }, limits: [{ id: "5h", amount: { usedFraction: 0.5 } }] },
+      { provider: "anthropic", metadata: { provider: "anthropic", email: "idle@mail.com", orgId: "o2" }, limits: [{ id: "5h", amount: { usedFraction: 0.1 } }] },
+    ],
+  };
+
+  it("marks the account matching the identity, overriding the heuristic", () => {
+    // heuristic alone would pick the busier account
+    const heuristic = buildProviderSparklineString("anthropic", usage).split("\n");
+    expect(heuristic[1].startsWith("▶")).toBe(true);
+
+    const real = buildProviderSparklineString("anthropic", usage, Date.now(), undefined, undefined, "", "email:idle@mail.com|org:o2").split("\n");
+    expect(real[1].startsWith("▶")).toBe(false);
+    expect(real[2].startsWith("▶")).toBe(true);
+  });
+
+  it("does not match an identity whose org differs even if the email is the same", () => {
+    const output = buildProviderSparklineString("anthropic", usage, Date.now(), undefined, undefined, "", "email:idle@mail.com|org:other").split("\n");
+    // falls back to heuristic (busy account)
+    expect(output[1].startsWith("▶")).toBe(true);
+  });
+
+  it("heuristic skips accounts inside the 10% reserve on any window", () => {
+    const reserve: UsagePayload = {
+      reports: [
+        { provider: "anthropic", metadata: { provider: "anthropic", email: "weekly99@mail.com" }, limits: [{ id: "5h", amount: { usedFraction: 0.3 } }, { id: "7d", amount: { usedFraction: 0.99 } }] },
+        { provider: "anthropic", metadata: { provider: "anthropic", email: "healthy@mail.com" }, limits: [{ id: "5h", amount: { usedFraction: 0.1 } }, { id: "7d", amount: { usedFraction: 0.02 } }] },
+      ],
+    };
+    const lines = buildProviderSparklineString("anthropic", reserve).split("\n");
+    expect(lines[1].startsWith("▶")).toBe(false);
+    expect(lines[2].startsWith("▶")).toBe(true);
+  });
+
+  it("getActiveIdentityFromSession resolves the newest assistant credentialId via agent.db", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "quota-id-"));
+    try {
+      const dbPath = path.join(dir, "agent.db");
+      const { Database } = require("bun:sqlite");
+      const db = new Database(dbPath);
+      db.run("CREATE TABLE auth_credentials (id INTEGER PRIMARY KEY, provider TEXT, identity_key TEXT)");
+      db.run("INSERT INTO auth_credentials VALUES (1,'anthropic','email:a@x|org:1'),(2,'anthropic','email:b@x|org:2')");
+      db.close();
+      const sessionFile = path.join(dir, "s.jsonl");
+      const rec = (cid: number, provider: string) => JSON.stringify({ type: "message", message: { role: "assistant", provider, credentialId: cid } });
+      fs.writeFileSync(sessionFile, [rec(1, "anthropic"), rec(2, "anthropic"), rec(1, "openai")].join("\n"));
+
+      expect(getActiveIdentityFromSession(sessionFile, "anthropic", dbPath)).toBe("email:b@x|org:2");
+      expect(getActiveIdentityFromSession(sessionFile, "kimi", dbPath)).toBeUndefined();
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("antigravity: exhausted depends on the active model family, not the worst limit", () => {
+    const lim = (id: string, u: number) => ({ id: `google-antigravity:${id}`, amount: { usedFraction: u } });
+    const ag: UsagePayload = {
+      reports: [
+        { provider: "google-antigravity", metadata: { provider: "google-antigravity", email: "alldead@mail.com" }, limits: [lim("google:default:gemini-weekly", 1), lim("anthropic:default:3p-weekly", 1)] },
+        { provider: "google-antigravity", metadata: { provider: "google-antigravity", email: "geminiok@mail.com" }, limits: [lim("anthropic:default:3p-5h", 1), lim("google:default:gemini-5h", 0.17)] },
+      ],
+    };
+
+    const gemini = buildProviderSparklineString("google-antigravity", ag, Date.now(), undefined, undefined, "google-antigravity/gemini-3.8-flash").split("\n");
+    expect(gemini[0]).toContain("1/2 usable · 1 limited");
+    expect(gemini[2].startsWith("▶")).toBe(true);
+
+    const claude = buildProviderSparklineString("google-antigravity", ag, Date.now(), undefined, undefined, "google-antigravity/claude-sonnet").split("\n");
+    expect(claude[0]).toContain("0/2 usable · 2 limited");
   });
 });

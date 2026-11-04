@@ -82,7 +82,9 @@ sync prune "$REPO" --apply --target omp:old/skill.md  # remove exact backup copi
 
 ## Backup Repository Access
 
-Use the bundled `sync.ts` entrypoint for every operation on the backup repository. Edit files in configured local roots, not in the backup repository. Never edit, copy, or redirect files into the backup repository, and never run Git commands against it directly (`git pull`, `git add`, `git commit`, `git push`). Do not bypass the script when a direct operation seems faster or the user approves a Git command.
+Use the bundled `sync.ts` entrypoint for every operation that changes the backup repository. Edit files in configured local roots, not in the backup repository. Never edit, copy, or redirect files into the backup repository, and never run a Git command that writes to it (`git pull`, `git add`, `git commit`, `git push`, `git checkout`, `git reset`, `git stash`). Do not bypass the script when a direct write seems faster or the user approves a Git write.
+
+Read-only Git commands are allowed for diagnosis, such as when a preview reports `GIT_DIRTY_UNRELATED` or `GIT_CONFLICT`: `git status`, `git diff`, `git log`, `git show`, `git branch`, `git remote -v`, `git ls-files`. A command qualifies when it leaves refs, index, working tree, and config unchanged. Report what a read-only command finds, then let the user decide how to resolve it.
 
 ## Git remote workflow
 

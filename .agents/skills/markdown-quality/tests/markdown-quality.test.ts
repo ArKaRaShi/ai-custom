@@ -445,19 +445,23 @@ Body text.
     expect(eqForm.exitCode).toBe(0);
   });
 
-  it("--text saves inline content and prints reuse and cleanup instructions", () => {
+  it("--text reviews inline content without creating temporary artifacts", () => {
     const reviewScript = resolve(import.meta.dir, "../scripts/review.ts");
+    const isolatedCwd = resolve(tmpdir(), `test-text-no-artifact-${Date.now()}`);
+    mkdirSync(isolatedCwd, { recursive: true });
     const text = "# Reusable input\n\nContent.\n";
-    const result = Bun.spawnSync(["bun", reviewScript, `--text=${text}`, "--no-links", "--no-security", "--no-density", "--no-structure"]);
-    const output = result.stdout.toString() + result.stderr.toString();
-    const artifact = output.match(/Saved text artifact: (.+)/)?.[1]?.trim();
-    expect(result.exitCode).toBe(0);
-    expect(artifact).toBeDefined();
-    expect(existsSync(artifact!)).toBe(true);
-    expect(readFileSync(artifact!, "utf8")).toBe(text);
-    expect(output).toContain(`bun "${resolve(import.meta.dir, "../scripts/cleanup.ts")}" "${artifact}"`);
-    expect(output).toContain("Delete it with --apply when ready.");
-    rmSync(artifact!);
+    try {
+      const result = Bun.spawnSync(
+        ["bun", reviewScript, `--text=${text}`, "--no-links", "--no-security", "--no-density", "--no-structure"],
+        { cwd: isolatedCwd },
+      );
+      const output = result.stdout.toString() + result.stderr.toString();
+      expect(result.exitCode).toBe(0);
+      expect(output).not.toContain("Saved text artifact");
+      expect(existsSync(resolve(isolatedCwd, ".tmp-markdown-quality"))).toBe(false);
+    } finally {
+      rmSync(isolatedCwd, { recursive: true, force: true });
+    }
   });
 
   it("rejects --text-file in favor of normal file targets", () => {
@@ -465,22 +469,6 @@ Body text.
     const result = Bun.spawnSync(["bun", reviewScript, "--text-file=./draft.md"]);
     expect(result.exitCode).not.toBe(0);
     expect(result.stderr.toString()).toContain("Unknown flag: --text-file=./draft.md");
-  });
-
-  it("cleanup defaults to dry-run and deletes only with --apply", () => {
-    const cleanupScript = resolve(import.meta.dir, "../scripts/cleanup.ts");
-    const artifactDir = resolve(import.meta.dir, "../.tmp-markdown-quality");
-    mkdirSync(artifactDir, { recursive: true });
-    const artifact = resolve(artifactDir, `markdown-artifact-${Date.now()}.md`);
-    writeFileSync(artifact, "# Keep until apply\n");
-    const dryRun = Bun.spawnSync(["bun", cleanupScript, artifact]);
-    expect(dryRun.exitCode).toBe(0);
-    expect(existsSync(artifact)).toBe(true);
-    expect(dryRun.stdout.toString()).toContain("Dry run");
-
-    const applied = Bun.spawnSync(["bun", cleanupScript, artifact, "--apply"]);
-    expect(applied.exitCode).toBe(0);
-    expect(existsSync(artifact)).toBe(false);
   });
 
   it("resolves directory targets recursively and ignores non-markdown files", async () => {

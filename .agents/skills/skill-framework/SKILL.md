@@ -11,7 +11,7 @@ Use this framework for every authored skill, including reference, technique, and
 
 If `skill://writing-skills` is unavailable or unreadable, follow [the bundled fallback](references/writing-skills-fallback.md) without stalling. Do not substitute another skill.
 
-Every authored skill must declare and run a reproducible verification path. Check metadata, layout, Markdown, and local links. Executable content also needs applicable syntax, type, and correctness checks and an isolated check of changed behavior. Follow the [verification contract](references/primitives/verification.md) and report observed results and limits.
+Before delivery, check metadata, layout, Markdown, and local links. A skill with executable content (a `scripts/` directory, code tests, or executable examples) must also declare and run a reproducible verification path: applicable syntax, type, and correctness checks and an isolated check of changed behavior. Follow the [verification contract](references/primitives/verification.md) and report observed results and limits. A documentation-only skill doesn't need a `Verification` section.
 
 ## References
 

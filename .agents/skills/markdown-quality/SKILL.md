@@ -38,15 +38,7 @@ bun "$SKILL_DIR/scripts/review.ts" "<file-or-dir>" --mode=human
 # 4. Combined auto-fix + full review with custom config override
 bun "$SKILL_DIR/scripts/review.ts" "<file-or-dir>" --fix --config=./my-rules/
 
-# 5. Review long text by saving it as a Markdown file, then use the normal file target
-# Create .tmp-markdown-quality/draft.md with your file-writing tool
-bun "$SKILL_DIR/scripts/review.ts" .tmp-markdown-quality/draft.md
-
-# 6. Preview cleanup of one saved artifact; --apply performs the deletion
-bun "$SKILL_DIR/scripts/cleanup.ts" .tmp-markdown-quality/draft.md
-bun "$SKILL_DIR/scripts/cleanup.ts" .tmp-markdown-quality/draft.md --apply
-
-# 7. Print every finding (the tree shows 15 per check) or get all of them as JSON
+# 5. Print every finding (the tree shows 15 per check) or get all of them as JSON
 bun "$SKILL_DIR/scripts/review.ts" "<file-or-dir>" --verbose
 bun "$SKILL_DIR/scripts/review.ts" "<file-or-dir>" --format=json
 ```
