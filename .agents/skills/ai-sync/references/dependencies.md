@@ -1,11 +1,11 @@
 # Dependencies and Package Management
 
-The skill directory holds `package.json`, `bun.lock`, `tsconfig.json`, and `biome.json`, so the skill installs and checks its own tools (standalone setup from the skill-framework TypeScript starter).
+The skill directory holds `package.json`, `bun.lock`, `tsconfig.json`, and `biome.json`, so the skill installs and checks its own tools.
 
 ## Runtime Requirements
 
 - **Runtime:** `bun` 1.4 or later.
-- **Core modules:** Node standard libraries (`node:fs`, `node:path`, `node:os`, `node:crypto`, `node:child_process`).
+- **Core modules** use the Node standard libraries (`node:fs`, `node:path`, `node:os`, `node:crypto`, `node:child_process`).
 - **Git:** `git` 2.38 or later on `PATH`. Remote preview uses `git merge-tree --write-tree`.
 
 ## Declared Packages and Justification
@@ -35,7 +35,6 @@ Run `bun install` without `--frozen-lockfile` only to change declared versions, 
 bun test tests/
 bun run check                    # typecheck, lint, format check
 bun run fix                      # explicit safe-fix and format
-bun ~/.agents/skills/skill-framework/scripts/layer-guard.ts scripts
 ```
 
 ## Failure Recovery

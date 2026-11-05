@@ -4,12 +4,13 @@ import { existsSync, statSync } from "fs";
 import { resolve, dirname } from "path";
 import { homedir } from "os";
 import { resolveMarkdownFiles } from "./target-resolver";
+import { MODE_ALIAS_NOTICE, parseMode, type Mode } from "./mode";
 
 export interface FixOptions {
   targets?: string | string[];
   target?: string | string[];
   glob?: string | string[];
-  mode?: "ai" | "human";
+  mode?: Mode;
   format?: "tree" | "json";
   config?: string;
   lintConfig?: string;
@@ -30,7 +31,7 @@ export async function runFix(options: FixOptions = {}): Promise<FixResult> {
   const targetDisplay = Array.isArray(rawTargets) ? rawTargets.join(", ") : rawTargets;
   const matchedFiles = resolveMarkdownFiles(rawTargets, process.cwd());
 
-  const mode: "ai" | "human" = options.mode === "human" ? "human" : "ai";
+  const mode: Mode = options.mode === "human" ? "human" : "agent";
   const scriptDir = dirname(dirname(import.meta.path));
 
   // Determine explicit config overrides
@@ -172,7 +173,7 @@ export async function runFix(options: FixOptions = {}): Promise<FixResult> {
 if (import.meta.main) {
   const args = process.argv.slice(2);
   const targets: string[] = [];
-  let mode: "ai" | "human" = "ai";
+  let mode: Mode = "agent";
   let config: string | undefined;
   let lintConfig: string | undefined;
   let format: "tree" | "json" = "tree";
@@ -191,8 +192,8 @@ Arguments:
   [targets...]             Target files, directories, or glob patterns (default: "**/*.md")
 
 Options:
-  --mode <ai|human>        Fix mode: ai (strict code fences, compact) or human (relaxed)
-  --mode=<ai|human>        Equals-form syntax for --mode (default: ai)
+  --mode <agent|human>     Fix mode: agent (reader is a model) or human (reader is a person)
+  --mode=<agent|human>     Equals-form syntax for --mode (default: agent). "ai" is a deprecated alias of agent
   --config <path>          Smart unified config file or directory
   --config=<path>          Equals-form syntax for --config
   --lint-config <path>     Explicit markdownlint-cli2 configuration override
@@ -212,15 +213,13 @@ Examples:
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    if (arg === "--mode") {
-      const val = args[++i];
+    if (arg === "--mode" || arg.startsWith("--mode=")) {
+      const val = arg === "--mode" ? args[++i] : arg.slice("--mode=".length);
       if (!val || val.startsWith("-")) fail("--mode requires a value");
-      if (val === "ai" || val === "human") mode = val;
-      else fail(`Invalid --mode: ${val}. Must be 'ai' or 'human'.`);
-    } else if (arg.startsWith("--mode=")) {
-      const val = arg.slice("--mode=".length);
-      if (val === "ai" || val === "human") mode = val;
-      else fail(`Invalid --mode: ${val}. Must be 'ai' or 'human'.`);
+      const parsed = parseMode(val);
+      if (!parsed) fail(`Invalid --mode: ${val}. Must be 'agent' or 'human'.`);
+      if (parsed.deprecatedAlias) console.error(MODE_ALIAS_NOTICE);
+      mode = parsed.mode;
     } else if (arg === "--config") {
       const val = args[++i];
       if (!val || val.startsWith("-")) fail("--config requires a value");

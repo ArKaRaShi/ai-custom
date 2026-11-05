@@ -2,14 +2,15 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { PlanStore } from "@/scripts/application/services/plan-store";
-import { TargetMatcher } from "@/scripts/application/services/target-matcher";
-import { SyncError, validatePlan } from "@/scripts/domain/plan";
-import { isUnboundedTarget, matchesTarget, normalizeTarget } from "@/scripts/domain/targets";
-import { BunGlobMatcher } from "@/scripts/infrastructure/bun-glob-matcher";
-import { NodeFileSystem } from "@/scripts/infrastructure/node-file-system";
+import { fileSystem as files } from "@/scripts/io/file-system";
+import { globMatcher } from "@/scripts/io/glob-matcher";
+import { createIo } from "@/scripts/io/io";
+import { SyncError, validatePlan } from "@/scripts/lib/plan";
+import { readPlanFile, savePlan } from "@/scripts/lib/plan-store";
+import { filterItems, pathRuleMatches } from "@/scripts/lib/target-matcher";
+import { isUnboundedTarget, matchesTarget, normalizeTarget } from "@/scripts/lib/targets";
 
-describe("domain targets", () => {
+describe("targets", () => {
   const glob = (pattern: string, value: string): boolean => new Bun.Glob(pattern).match(value);
 
   it("normalizes and classifies targets", () => {
@@ -27,7 +28,7 @@ describe("domain targets", () => {
   });
 });
 
-describe("domain plan validation", () => {
+describe("plan validation", () => {
   it("rejects non-plan data with PLAN_INVALID", () => {
     try {
       validatePlan({ version: 2 });
@@ -53,15 +54,14 @@ describe("domain plan validation", () => {
   });
 });
 
-describe("adapters against real dependencies", () => {
+describe("io against real dependencies", () => {
   let dir: string;
   beforeEach(() => {
     dir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-sync-foundation-"));
   });
   afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
 
-  it("NodeFileSystem lists files, hashes, digests, and writes atomically", () => {
-    const files = new NodeFileSystem();
+  it("fileSystem lists files, hashes, digests, and writes atomically", () => {
     fs.mkdirSync(path.join(dir, "node_modules"));
     fs.mkdirSync(path.join(dir, "sub"));
     fs.writeFileSync(path.join(dir, "node_modules", "x.js"), "x");
@@ -87,8 +87,8 @@ describe("adapters against real dependencies", () => {
     );
   });
 
-  it("PlanStore round-trips a plan and guards output locations", () => {
-    const store = new PlanStore({ fileSystem: new NodeFileSystem() });
+  it("plan store round-trips a plan and guards output locations", () => {
+    const io = createIo();
     const plan = validatePlan({
       version: 1,
       operation: "push",
@@ -100,21 +100,20 @@ describe("adapters against real dependencies", () => {
       git: null,
     });
     const file = path.join(dir, "out", "plan.json");
-    expect(store.savePlan(plan, file, [path.join(dir, "elsewhere")])).toBe(file);
-    expect(store.readPlanFile(file)).toEqual(plan);
-    expect(() => store.savePlan(plan, file, [dir])).toThrow(SyncError);
-    expect(() => store.readPlanFile(path.join(dir, "absent.json"))).toThrow(SyncError);
+    expect(savePlan(io, plan, file, [path.join(dir, "elsewhere")])).toBe(file);
+    expect(readPlanFile(io, file)).toEqual(plan);
+    expect(() => savePlan(io, plan, file, [dir])).toThrow(SyncError);
+    expect(() => readPlanFile(io, path.join(dir, "absent.json"))).toThrow(SyncError);
   });
 
-  it("BunGlobMatcher and TargetMatcher apply globs and gitignore rules", () => {
-    const glob = new BunGlobMatcher();
-    expect(glob.matches("*.md", "a.md")).toBe(true);
-    expect(glob.ruleMatches("build/", "build/x.js")).toBe(true);
-    expect(glob.isValidRule("ok/**")).toBe(true);
-    const matcher = new TargetMatcher(glob);
-    expect(matcher.filterItems(["a/x.md", "b/y.md"], { targets: ["a"] })).toEqual(["a/x.md"]);
+  it("globMatcher and target matching apply globs and gitignore rules", () => {
+    const io = createIo();
+    expect(globMatcher.matches("*.md", "a.md")).toBe(true);
+    expect(globMatcher.ruleMatches("build/", "build/x.js")).toBe(true);
+    expect(globMatcher.isValidRule("ok/**")).toBe(true);
+    expect(filterItems(io, ["a/x.md", "b/y.md"], { targets: ["a"] })).toEqual(["a/x.md"]);
     expect(
-      matcher.pathRuleMatches({ kind: "path", root: "r", path: "*.log", sync: false }, "x.log"),
+      pathRuleMatches(io, { kind: "path", root: "r", path: "*.log", sync: false }, "x.log"),
     ).toBe(true);
   });
 });

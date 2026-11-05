@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { runFix } from "../scripts/fix";
 import { runReview } from "../scripts/review";
 import { checkMarkdownLinks } from "../scripts/link-checker";
+import { resolveMarkdownFiles as resolveTargets } from "../scripts/target-resolver";
 import { analyzeTokenDensity } from "../scripts/token-density";
 import { checkMarkdownSecurity } from "../scripts/security-check";
 import { checkMarkdownStructure } from "../scripts/structure-check";
@@ -206,7 +207,7 @@ Body text.
     expect(["CLEAN", "NEEDS_REVIEW"]).toContain(result.verdict);
   });
 
-  it("runReview supports --mode=ai and --mode=human with explicit config overrides", () => {
+  it("runReview reports the bundled agent and human configs and honors --vale-config", () => {
     const scriptPath = resolve(import.meta.dir, "../scripts/review.ts");
     const isolatedCwd = resolve(tmpdir(), `mq-mode-isolated-${Date.now()}`);
     mkdirSync(isolatedCwd, { recursive: true });
@@ -214,19 +215,16 @@ Body text.
     writeFileSync(sampleFile, "# Sample\n\nPlain content.\n");
 
     try {
-      // Default AI mode uses bundled/ai
-      const aiProc = Bun.spawnSync(["bun", scriptPath, sampleFile]);
-      expect(aiProc.stdout.toString()).toContain("mode: ai");
-      expect(aiProc.stdout.toString()).toContain("lint → bundled/ai");
-      expect(aiProc.stdout.toString()).toContain("vale → bundled/ai");
+      const agentProc = Bun.spawnSync(["bun", scriptPath, sampleFile]);
+      expect(agentProc.stdout.toString()).toContain("mode: agent");
+      expect(agentProc.stdout.toString()).toContain("lint → bundled/agent");
+      expect(agentProc.stdout.toString()).toContain("vale → bundled/agent");
 
-      // Human mode uses bundled/human
       const humanProc = Bun.spawnSync(["bun", scriptPath, sampleFile, "--mode=human"]);
       expect(humanProc.stdout.toString()).toContain("mode: human");
       expect(humanProc.stdout.toString()).toContain("lint → bundled/human");
       expect(humanProc.stdout.toString()).toContain("vale → bundled/human");
 
-      // Custom config override via --config
       const customIni = resolve(isolatedCwd, "custom.ini");
       writeFileSync(customIni, "StylesPath = .vale/styles\n[*.md]\nBasedOnStyles = Vale\n");
       const customProc = Bun.spawnSync(["bun", scriptPath, sampleFile, `--vale-config=${customIni}`]);
@@ -280,7 +278,7 @@ Body text.
         writeFileSync(resolve(dir, ".vale/styles/config/vocabularies/Personal/accept.txt"), "unrelated\n");
         writeFileSync(resolve(dir, ".vale.ini"), "StylesPath = .vale/styles\nVocab = Personal\n");
       }
-      const res = Bun.spawnSync(["bun", scriptPath, "--text=# Title\n\nThe venv appears.\n", "--mode=ai", "--format=json"], {
+      const res = Bun.spawnSync(["bun", scriptPath, "--text=# Title\n\nThe venv appears.\n", "--mode=agent", "--format=json"], {
         env: { ...process.env, HOME: home, XDG_CONFIG_HOME: resolve(home, ".config") },
       });
       const parsed = JSON.parse(res.stdout.toString());
@@ -295,7 +293,7 @@ Body text.
     const scriptPath = resolve(import.meta.dir, "../scripts/review.ts");
     const words = Array.from({ length: 20 }, (_, i) => `zzqa${String.fromCharCode(97 + i)}x`);
     const text = `# Title\n\n${words.join(" ")}\n`;
-    const run = (...flags: string[]) => Bun.spawnSync(["bun", scriptPath, `--text=${text}`, "--mode=ai", ...flags]);
+    const run = (...flags: string[]) => Bun.spawnSync(["bun", scriptPath, `--text=${text}`, "--mode=agent", ...flags]);
 
     it("prints a capped tree by default and points to the full list", () => {
       const out = run().stdout.toString();
@@ -328,7 +326,7 @@ Body text.
   it("names the kind and reason of structure and security findings instead of undefined", () => {
     const scriptPath = resolve(import.meta.dir, "../scripts/review.ts");
     const text = '# Title\n\n##### Level 5 Heading\n\nBody.\n\nexport HOST="1.2.3.4"\n';
-    const res = Bun.spawnSync(["bun", scriptPath, `--text=${text}`, "--mode=ai", "--format=json"]);
+    const res = Bun.spawnSync(["bun", scriptPath, `--text=${text}`, "--mode=agent", "--format=json"]);
     const parsed = JSON.parse(res.stdout.toString());
     expect(parsed.findings.structure.join("\n")).toContain("deep-heading");
     expect(parsed.findings.security.join("\n")).toContain("dummy-ip");
@@ -340,7 +338,7 @@ Body text.
   describe("given a document with only style warnings", () => {
     const scriptPath = resolve(import.meta.dir, "../scripts/review.ts");
     const text = "# Title\n\nA plain sentence has a colon: Use it; the tests pass.\n";
-    const run = (...flags: string[]) => Bun.spawnSync(["bun", scriptPath, `--text=${text}`, "--mode=ai", ...flags]);
+    const run = (...flags: string[]) => Bun.spawnSync(["bun", scriptPath, `--text=${text}`, "--mode=human", ...flags]);
 
     it("passes with exit 0 and lists the warnings in json without counting them as errors", () => {
       const res = run("--format=json");
@@ -364,7 +362,7 @@ Body text.
     });
 
     it("still fails with exit 1 when an error-level finding is present next to warnings", () => {
-      const res = Bun.spawnSync(["bun", scriptPath, `--text=${text}\nThe zzqxword appears.\n`, "--mode=ai", "--format=json"]);
+      const res = Bun.spawnSync(["bun", scriptPath, `--text=${text}\nThe zzqxword appears.\n`, "--mode=human", "--format=json"]);
       const parsed = JSON.parse(res.stdout.toString());
       expect(res.exitCode).toBe(1);
       expect(parsed.summary.valeErrors).toBe(1);
@@ -376,7 +374,7 @@ Body text.
   it("treats ColonUsage as a warning that does not cause exit 1", () => {
     const scriptPath = resolve(import.meta.dir, "../scripts/review.ts");
     const text = "# Title\n\n**Goal:** Rebuild the tool.\n";
-    const res = Bun.spawnSync(["bun", scriptPath, `--text=${text}`, "--mode=ai", "--format=json"]);
+    const res = Bun.spawnSync(["bun", scriptPath, `--text=${text}`, "--mode=human", "--format=json"]);
     expect(res.exitCode).toBe(0);
     const parsed = JSON.parse(res.stdout.toString());
     expect(parsed.status).toBe("clean");
@@ -384,6 +382,125 @@ Body text.
     expect(parsed.summary.valeWarnings).toBeGreaterThanOrEqual(1);
     const colon = (parsed.findings.warnings as string[]).filter((w) => w.includes("ColonUsage"));
     expect(colon.length).toBeGreaterThanOrEqual(1);
+  });
+
+  describe("given the agent and human review modes", () => {
+    const reviewScript = resolve(import.meta.dir, "../scripts/review.ts");
+    const fixture = (name: string) => resolve(import.meta.dir, "fixtures", name);
+    const review = (mode: string, ...args: string[]) => {
+      const res = Bun.spawnSync(["bun", reviewScript, ...args, `--mode=${mode}`, "--format=json"]);
+      return { res, parsed: JSON.parse(res.stdout.toString()) };
+    };
+    const checks = (parsed: { findings: { warnings: string[] } }): string =>
+      parsed.findings.warnings.map((w) => w.split(":")[3]).join("\n");
+
+    it("agent mode flags padding, hedging, filler, and figurative wording", () => {
+      const { res, parsed } = review("agent", fixture("agent-instructions.md"));
+      const found = checks(parsed);
+      expect(res.exitCode).toBe(0);
+      for (const rule of ["EmptyPadding", "HedgingPhrases", "StackedHedges", "FillerPhrases", "SycophancyMarkers", "FigurativeWorth"]) {
+        expect(found).toContain(`ai-tells.${rule}`);
+      }
+    });
+
+    it("agent mode skips punctuation style rules that cost a model no meaning", () => {
+      const { parsed } = review("agent", fixture("readme-punctuation.md"));
+      const found = checks(parsed);
+      for (const rule of ["SemicolonUsage", "ColonUsage", "EmDashUsage", "DoubleHyphen"]) {
+        expect(found).not.toContain(`ai-tells.${rule}`);
+      }
+    });
+
+    it("human mode flags punctuation tells and AI vocabulary", () => {
+      const punctuation = checks(review("human", fixture("readme-punctuation.md")).parsed);
+      for (const rule of ["SemicolonUsage", "ColonUsage", "EmDashUsage", "DoubleHyphen"]) {
+        expect(punctuation).toContain(`ai-tells.${rule}`);
+      }
+      const vocabulary = checks(review("human", fixture("change.pr.md")).parsed);
+      expect(vocabulary).toContain("ai-tells.OverusedVocabulary");
+      expect(vocabulary).toContain("ai-tells.AIAdjectiveNounPairs");
+    });
+
+    it("applies the Bloat paragraph-length limit in agent mode only", () => {
+      expect(checks(review("agent", fixture("long-paragraph.md")).parsed)).toContain("Bloat.ParagraphLength");
+      expect(checks(review("human", fixture("long-paragraph.md")).parsed)).not.toContain("Bloat.ParagraphLength");
+    });
+
+    it("reports no findings for a clean document in either mode", () => {
+      for (const mode of ["agent", "human"]) {
+        const { res, parsed } = review(mode, fixture("clean-doc.md"));
+        expect(res.exitCode).toBe(0);
+        expect(parsed.summary.valeWarnings).toBe(0);
+      }
+    });
+
+    it("human mode flags AI commit tells in PR text, COMMIT_EDITMSG, and --commit text, without blocking", () => {
+      for (const file of ["change.pr.md", "COMMIT_EDITMSG"]) {
+        const { res, parsed } = review("human", fixture(file));
+        expect(checks(parsed)).toContain("ai-tells-commits.CommitSelfReference");
+        expect(res.exitCode).toBe(0);
+        expect(parsed.summary.valeErrors).toBe(0);
+      }
+      const viaText = Bun.spawnSync(["bun", reviewScript, "--mode=human", "--commit", "--format=json", "--text=feat: add filter\n\nThis commit introduces a filter.\n"]);
+      expect(checks(JSON.parse(viaText.stdout.toString()))).toContain("ai-tells-commits.CommitSelfReference");
+    });
+
+    it("does not apply commit rules to ordinary documents, to agent mode, or to --text without --commit", () => {
+      expect(checks(review("human", fixture("agent-instructions.md")).parsed)).not.toContain("ai-tells-commits");
+      expect(checks(review("agent", fixture("change.pr.md")).parsed)).not.toContain("ai-tells-commits");
+      const plain = Bun.spawnSync(["bun", reviewScript, "--mode=human", "--format=json", "--text=# Title\n\nThis commit introduces a filter.\n"]);
+      expect(checks(JSON.parse(plain.stdout.toString()))).not.toContain("ai-tells-commits");
+    });
+
+    it("rejects --commit without --text", () => {
+      const res = Bun.spawnSync(["bun", reviewScript, fixture("change.pr.md"), "--commit"]);
+      expect(res.exitCode).not.toBe(0);
+      expect(res.stderr.toString()).toContain("--commit requires --text");
+    });
+
+    it("accepts --mode=ai as a deprecated alias that reports agent", () => {
+      const { res, parsed } = review("ai", fixture("clean-doc.md"));
+      expect(res.exitCode).toBe(0);
+      expect(parsed.fingerprint.mode).toBe("agent");
+      expect(parsed.fingerprint.configs.vale).toBe("bundled/agent");
+      expect(res.stderr.toString()).toContain("--mode=ai is deprecated");
+      const tree = Bun.spawnSync(["bun", reviewScript, fixture("clean-doc.md"), "--mode=ai"]);
+      expect(tree.stdout.toString()).toContain("mode: agent");
+      expect(tree.stdout.toString()).not.toContain("mode: ai");
+    });
+
+    it("rejects an unknown mode in review.ts and fix.ts", () => {
+      const fixScript = resolve(import.meta.dir, "../scripts/fix.ts");
+      for (const script of [reviewScript, fixScript]) {
+        const res = Bun.spawnSync(["bun", script, fixture("clean-doc.md"), "--mode=robot"]);
+        expect(res.exitCode).not.toBe(0);
+        expect(res.stderr.toString()).toContain("Invalid --mode: robot");
+      }
+    });
+
+    it("agent mode only enables ai-tells rules that exist in the vendored package", () => {
+      const ini = readFileSync(resolve(import.meta.dir, "../assets/modes/agent/.vale.ini"), "utf-8");
+      const enabled = [...ini.matchAll(/^ai-tells\.(\w+) = YES$/gm)].map((m) => m[1]);
+      expect(enabled.length).toBeGreaterThan(0);
+      for (const rule of enabled) {
+        expect(existsSync(resolve(import.meta.dir, "../assets/.vale/styles/ai-tells", `${rule}.yml`))).toBe(true);
+      }
+    });
+
+    it("resolves .txt and COMMIT_EDITMSG only as explicit file targets", () => {
+      const dir = resolve(tmpdir(), `test-commit-targets-${Date.now()}`);
+      mkdirSync(dir, { recursive: true });
+      const txt = resolve(dir, "message.txt");
+      const editmsg = resolve(dir, "COMMIT_EDITMSG");
+      writeFileSync(txt, "feat: add filter\n");
+      writeFileSync(editmsg, "fix: handle null\n");
+      try {
+        expect(resolveTargets([txt, editmsg]).sort()).toEqual([editmsg, txt].sort());
+        expect(resolveTargets(dir)).toEqual([]);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
   });
 
 
@@ -423,7 +540,7 @@ Body text.
     expect(resFix.stderr.toString()).toContain("Unknown flag");
   });
 
-  it("review.ts validates --min-level syntax per skill-framework contract", () => {
+  it("review.ts validates --min-level syntax", () => {
     const reviewScript = resolve(import.meta.dir, "../scripts/review.ts");
 
     // Missing value

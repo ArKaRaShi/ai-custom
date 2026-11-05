@@ -6,14 +6,14 @@ import {
   findPendingInstalls,
   installHash,
   reviewApprovals,
-} from "@/scripts/domain/bootstrap";
+} from "@/scripts/lib/bootstrap";
 import {
   buildMigratedManifest,
   mergeLegacySkills,
   parseLegacyPathRules,
   parseLegacySkillEntries,
-} from "@/scripts/domain/legacy-manifest";
-import type { Locations, ResolvedRoot, UnifiedManifest } from "@/scripts/domain/manifest";
+} from "@/scripts/lib/legacy-manifest";
+import type { Locations, ResolvedRoot, UnifiedManifest } from "@/scripts/lib/manifest";
 
 const manifest: UnifiedManifest = {
   version: 2,

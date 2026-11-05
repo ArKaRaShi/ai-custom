@@ -2,11 +2,19 @@
 
 Detailed lookup for the three review passes.
 
+## Contents
+
+- [1. Standards: `markdownlint-cli2`](#1-standards-markdownlint-cli2)
+- [2. Prose: `Vale`](#2-prose-vale)
+- [3. AI-Tells and Slop](#3-ai-tells-and-slop-vale-with-ai-tells-and-ai-tells-commits)
+- [4. Stop Conditions](#4-stop-conditions)
+- [5. Common False Positives](#5-common-false-positives)
+
 <!-- vale off -->
 
-## 1. Standards: `markdownlint-cli2` v0.22.x
+## 1. Standards: `markdownlint-cli2`
 
-Wrapper around `markdownlint` with config-file lookup, nested overrides, auto-fix, and JSON output.
+Wrapper (v0.22.x) around `markdownlint` with config-file lookup, nested overrides, auto-fix, and JSON output.
 
 ### Key rules to know
 
@@ -56,7 +64,7 @@ npx -y markdownlint-cli2 --config .markdownlint-cli2.jsonc README.md
 
 Drop a `.markdownlint-cli2.jsonc` in any subdir to override rules locally. CLI merges them up the tree.
 
-## 2. Prose: `Vale` v3.14.x
+## 2. Prose: `Vale`
 
 Single Go binary replacing `write-good`, `proselint`, `alex`, and `readability` in one tool.
 
@@ -130,9 +138,18 @@ ignorecase: true
 
 `scope: raw` is needed for structural checks (list depth, empty sections).
 
-## 3. AI-Tells & Slop: `Vale` with `ai-tells` (110+ rules)
+## 3. AI-Tells and Slop: `Vale` with `ai-tells` and `ai-tells-commits`
 
-Official Vale style package (`tbhb/vale-ai-tells`) that detects 110+ AI-generated prose fingerprints and clichés.
+`ai-tells` (`tbhb/vale-ai-tells`, 137 rules) detects fingerprints of AI-written prose. `ai-tells-commits` (15 rules) detects them in commit messages and PR text. Both ship every rule at `error`. The review demotes their alerts to warnings, so they never block.
+
+| Mode | `ai-tells` | `ai-tells-commits` |
+| --- | --- | --- |
+| `agent` | Allowlist in `assets/modes/agent/.vale.ini`: padding, filler, hedging, pleasantries, puffery, AI vocabulary, figurative and anthropomorphic wording | Off |
+| `human` | Every rule | `COMMIT_EDITMSG`, `*.commit.md`, `*.commit.txt`, `*.pr.md`, `*.pr.txt`, and `--text` with `--commit` |
+
+Agent mode lists each enabled rule as `ai-tells.<Rule> = YES` and leaves the package out of `BasedOnStyles`. A package update then adds no rule to agent mode until the list names it. Vale ignores an unknown rule name, so a test checks that every listed rule exists.
+
+`ai-tells-commits` is vendored from the `tbhb/vale-ai-tells` v1.37.0 release asset `ai-tells-commits.zip`. It is not in the Vale package catalog. Extract the zip into `assets/.vale/styles/` to update it.
 
 ### Rule families
 
@@ -140,9 +157,11 @@ Official Vale style package (`tbhb/vale-ai-tells`) that detects 110+ AI-generate
 - `OverusedVocabulary`: "delve", "tapestry", "multifaceted", "plethora", "beacon", "testament"
 - `OverusedVocabularyVerbs`: "leverage", "foster", "streamline", "embark"
 - `SycophancyMarkers`: "Great question!", "Certainly!", "Of course!"
-- `EmptyPadding`: "it is worth noting that", "it is important to remember that"
+- `EmptyPadding`: "various", "certain", "particular" before a noun
+- `HedgingPhrases`: "It is important to note that"
 - `ConclusionMarkers`: "in conclusion", "ultimately", "to summarize"
-- `EmDashUsage`: excessive em-dashes used as dramatic punctuation
+- `EmDashUsage`, `SemicolonUsage`, `ColonUsage`: punctuation tells (human mode only)
+- `CommitSelfReference`: "This commit introduces", "This PR adds" (`ai-tells-commits`, human mode only)
 
 ### Common invocations
 
@@ -159,7 +178,7 @@ vale --minAlertLevel=error "**/*.md"
 The review is complete when:
 
 - `markdownlint-cli2` exits 0
-- `vale` reports 0 errors at configured `MinAlertLevel` (including `ai-tells`)
+- `vale` reports 0 errors at configured `MinAlertLevel`. `ai-tells` and `ai-tells-commits` alerts never count as errors
 - Or the user has explicitly accepted the remaining findings
 
 Do not loop "fixing" things that have been explicitly accepted.

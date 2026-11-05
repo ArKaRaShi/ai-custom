@@ -2,10 +2,9 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { MergeResult } from "@/scripts/application/interfaces/command-runner";
-import { NodeCommandRunner } from "@/scripts/infrastructure/node-command-runner";
+import type { MergeResult } from "@/scripts/io/command-runner";
+import { commandRunner as runner } from "@/scripts/io/command-runner";
 
-const runner = new NodeCommandRunner();
 const plainMergeFiles = (localFile: string, repoFile: string, baseFile?: string): MergeResult =>
   runner.mergeFiles(localFile, repoFile, baseFile);
 

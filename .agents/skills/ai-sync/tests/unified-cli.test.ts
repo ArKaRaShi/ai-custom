@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { InspectItem, Plan, Result } from "@/scripts/domain/plan";
+import type { InspectItem, Plan, Result } from "@/scripts/lib/plan";
 import { at } from "./helpers/at";
 
 const tempDirs: string[] = [];
@@ -2114,5 +2114,545 @@ describe("given a tracked skill with recorded metadata, when it is re-tracked wi
       version: "2.0",
     });
     expect(manifestEntries(repo).filter((entry) => entry.path === "tool")).toHaveLength(1);
+  });
+});
+
+describe("given a skill deleted locally, when it is retired and pruned, then its backup copy and emptied folders go", () => {
+  const manifestOf = (repo: string): { entries: Record<string, unknown>[] } =>
+    JSON.parse(fs.readFileSync(path.join(repo, ".ai-sync", "manifest.json"), "utf8"));
+
+  it("untrack --prune keeps the skill as an exclusion with its recorded origin, so prune can target it", () => {
+    const m = registered();
+    const backupFile = path.join(m.repo, ".agents", "skills", "mine", "SKILL.md");
+    fs.mkdirSync(path.dirname(backupFile), { recursive: true });
+    fs.writeFileSync(backupFile, "mine");
+    const retired = run(m.home, m.repo, "untrack", "skill", "mine", "--root", "agents", "--prune");
+    expect(retired.exitCode).toBe(0);
+    const entry = manifestOf(m.repo).entries.find((e) => e.path === "mine");
+    expect(entry).toMatchObject({ sync: false, skill: { origin: "authored" } });
+    const preview = result(
+      run(m.home, m.repo, "prune", "--target", "agents:mine", "--format=json"),
+    );
+    expect(preview.scope.resolvedPaths).toEqual(["agents:mine/SKILL.md"]);
+  });
+
+  it("re-tracks an existing skill without --origin but still demands one for a new skill", () => {
+    const m = registered();
+    expect(
+      run(m.home, m.repo, "track", "skill", "mine", "--root", "agents", "--no-sync").exitCode,
+    ).toBe(0);
+    expect(manifestOf(m.repo).entries.find((e) => e.path === "mine")).toMatchObject({
+      sync: false,
+      skill: { origin: "authored" },
+    });
+    expect(run(m.home, m.repo, "track", "skill", "fresh", "--root", "agents").exitCode).not.toBe(0);
+  });
+
+  it("applying a prune removes folders it emptied but keeps folders that still hold files and the root folder", () => {
+    const m = prunable();
+    const applied = run(
+      m.home,
+      m.repo,
+      "prune",
+      "--apply",
+      "--target",
+      "omp:extensions/orca-a/index.ts",
+      "--format=json",
+    );
+    expect(applied.exitCode).toBe(0);
+    expect(fs.existsSync(path.join(m.repo, ".omp", "extensions", "orca-a"))).toBe(false);
+    expect(fs.existsSync(path.join(m.repo, ".omp", "extensions", "orca-b", "index.ts"))).toBe(true);
+    expect(fs.existsSync(path.join(m.repo, ".omp", "config.yml"))).toBe(true);
+  });
+});
+
+interface Retirable extends Registered {
+  remote: string;
+}
+
+/** `registered()` with the skill `mine` also in a committed backup that pushes to a bare remote. */
+function retirable(): Retirable {
+  const m = registered();
+  const remote = tempDir();
+  fs.writeFileSync(
+    path.join(m.home, ".gitconfig"),
+    "[user]\n\tname = t\n\temail = t@example.invalid\n",
+  );
+  git(m.home, remote, "init", "-q", "--bare", "-b", "main");
+  const backupFile = path.join(m.repo, ".agents", "skills", "mine", "SKILL.md");
+  fs.mkdirSync(path.dirname(backupFile), { recursive: true });
+  fs.writeFileSync(backupFile, "mine");
+  git(m.home, m.repo, "init", "-q", "-b", "main");
+  git(m.home, m.repo, "add", "-A");
+  git(m.home, m.repo, "commit", "-q", "-m", "base");
+  git(m.home, m.repo, "remote", "add", "origin", remote);
+  git(m.home, m.repo, "push", "-q", "-u", "origin", "main");
+  return { ...m, remote };
+}
+
+describe("given a skill with a committed backup copy, when it is retired", () => {
+  const retire = (m: Retirable, ...extra: string[]): RunOutput =>
+    run(m.home, m.repo, "retire", "mine", "--root", "agents", "--format=json", ...extra);
+  const remoteHas = (m: Retirable): string =>
+    git(m.home, m.remote, "ls-tree", "-r", "--name-only", "main");
+
+  it("previews the removal and the Git export without changing files, policy, or Git", () => {
+    const m = retirable();
+    const before = { files: snapshot(m.repo), head: git(m.home, m.repo, "rev-parse", "HEAD") };
+    const preview = retire(m, "--git-push");
+    expect(preview.exitCode).toBe(0);
+    const value = result(preview);
+    expect(value.outcome).toBe("preview");
+    expect(value.scope.resolvedPaths).toEqual(["agents:mine/SKILL.md"]);
+    expect(value.git?.exportedPaths).toEqual([
+      ".agents/skills/mine/SKILL.md",
+      ".ai-sync/manifest.json",
+    ]);
+    expect(value.git?.unrelatedChanges).toEqual([]);
+    expect({ files: snapshot(m.repo), head: git(m.home, m.repo, "rev-parse", "HEAD") }).toEqual(
+      before,
+    );
+  });
+
+  it("removes the copy and its folder, then commits and pushes exactly those paths", () => {
+    const m = retirable();
+    expect(remoteHas(m)).toContain(".agents/skills/mine/SKILL.md");
+    const applied = retire(m, "--apply", "--git-push");
+    expect(applied.exitCode).toBe(0);
+    expect(result(applied).outcome).toBe("success");
+    expect(fs.existsSync(path.join(m.repo, ".agents", "skills", "mine"))).toBe(false);
+    expect(remoteHas(m)).not.toContain(".agents/skills/mine/SKILL.md");
+    expect(git(m.home, m.repo, "log", "-1", "--format=%s").trim()).toBe("sync: retire mine");
+    expect(git(m.home, m.repo, "status", "--porcelain")).toBe("");
+  });
+
+  it("retires several skills in one commit, so one skill's pending deletion never blocks another's", () => {
+    const m = retirable();
+    const other = path.join(m.repo, ".agents", "skills", "other", "SKILL.md");
+    fs.mkdirSync(path.dirname(other), { recursive: true });
+    fs.writeFileSync(other, "other");
+    run(m.home, m.repo, "track", "skill", "other", "--root", "agents", "--origin", "authored");
+    git(m.home, m.repo, "add", "-A");
+    git(m.home, m.repo, "commit", "-q", "-m", "add other");
+    git(m.home, m.repo, "push", "-q");
+    const applied = run(
+      m.home,
+      m.repo,
+      "retire",
+      "mine",
+      "other",
+      "--root",
+      "agents",
+      "--apply",
+      "--git-push",
+      "--format=json",
+    );
+    expect(applied.exitCode).toBe(0);
+    expect(remoteHas(m)).not.toContain("SKILL.md");
+    expect(git(m.home, m.repo, "log", "-1", "--format=%s").trim()).toBe("sync: retire mine, other");
+  });
+
+  it("blocks the push on an unrelated change and leaves the backup untouched", () => {
+    const m = retirable();
+    fs.writeFileSync(path.join(m.repo, "stray.txt"), "not mine");
+    const before = snapshot(m.repo);
+    const blocked = retire(m, "--apply", "--git-push");
+    expect(blocked.exitCode).not.toBe(0);
+    expect(codes(result(blocked))).toEqual(["GIT_DIRTY_UNRELATED"]);
+    expect(snapshot(m.repo)).toEqual(before);
+    expect(remoteHas(m)).toContain(".agents/skills/mine/SKILL.md");
+  });
+
+  it("retires without Git when --git-push is absent, and a later run pushes the pending deletion", () => {
+    const m = retirable();
+    const applied = retire(m, "--apply");
+    expect(applied.exitCode).toBe(0);
+    expect(fs.existsSync(path.join(m.repo, ".agents", "skills", "mine"))).toBe(false);
+    expect(remoteHas(m)).toContain(".agents/skills/mine/SKILL.md");
+    const again = retire(m, "--apply", "--git-push");
+    expect(again.exitCode).toBe(0);
+    expect(remoteHas(m)).not.toContain(".agents/skills/mine/SKILL.md");
+  });
+
+  it("refuses a glob as the skill name and a skill that is not in the manifest", () => {
+    const m = retirable();
+    const glob = run(m.home, m.repo, "retire", "*", "--root", "agents", "--format=json");
+    expect(codes(result(glob))).toEqual(["BROAD_SCOPE"]);
+    const unknown = run(m.home, m.repo, "retire", "ghost", "--root", "agents", "--format=json");
+    expect(codes(result(unknown))).toEqual(["UNKNOWN_TARGET"]);
+  });
+});
+
+describe("given an excluded backup file in a path root, when it is retired with --target", () => {
+  const remoteFiles = (m: Retirable): string =>
+    git(m.home, m.remote, "ls-tree", "-r", "--name-only", "main");
+
+  /** `retirable()` plus a committed, pushed backup file `.omp/extra/x.md` that the policy now excludes. */
+  function excludedFile(): Retirable {
+    const m = retirable();
+    const file = path.join(m.repo, ".omp", "extra", "x.md");
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, "x");
+    git(m.home, m.repo, "add", "-A");
+    git(m.home, m.repo, "commit", "-q", "-m", "add x");
+    git(m.home, m.repo, "push", "-q");
+    expect(run(m.home, m.repo, "untrack", "path", "extra/x.md", "--root", "omp").exitCode).toBe(0);
+    return m;
+  }
+
+  it("retires the file and a skill in one commit that removes both from the remote", () => {
+    const m = excludedFile();
+    const args = ["retire", "mine", "--root", "agents", "--target", "omp:extra/x.md"];
+    const preview = run(m.home, m.repo, ...args, "--git-push", "--format=json");
+    expect(preview.exitCode).toBe(0);
+    expect(result(preview).scope.resolvedPaths).toEqual(["agents:mine/SKILL.md", "omp:extra/x.md"]);
+    expect(fs.existsSync(path.join(m.repo, ".omp", "extra", "x.md"))).toBe(true);
+
+    const applied = run(m.home, m.repo, ...args, "--apply", "--git-push", "--format=json");
+    expect(applied.exitCode).toBe(0);
+    expect(remoteFiles(m)).not.toContain("x.md");
+    expect(remoteFiles(m)).not.toContain("mine/SKILL.md");
+    expect(git(m.home, m.repo, "log", "-1", "--format=%s").trim()).toBe(
+      "sync: retire mine, omp:extra/x.md",
+    );
+    expect(git(m.home, m.repo, "status", "--porcelain")).toBe("");
+  });
+
+  it("pushes an already pruned file's pending deletion without naming a skill", () => {
+    const m = excludedFile();
+    const pruned = run(m.home, m.repo, "prune", "--apply", "--target", "omp:extra/x.md");
+    expect(pruned.exitCode).toBe(0);
+    const applied = run(
+      m.home,
+      m.repo,
+      "retire",
+      "--target",
+      "omp:extra/x.md",
+      "--apply",
+      "--git-push",
+      "--format=json",
+    );
+    expect(applied.exitCode).toBe(0);
+    expect(remoteFiles(m)).not.toContain("x.md");
+    expect(remoteFiles(m)).toContain("mine/SKILL.md");
+  });
+
+  it("refuses a file the policy still manages, a glob, and a path that leaves the root", () => {
+    const m = excludedFile();
+    fs.mkdirSync(path.join(m.repo, ".omp", "notes"), { recursive: true });
+    fs.writeFileSync(path.join(m.repo, ".omp", "notes", "n.md"), "managed");
+    const retire = (target: string): RunOutput =>
+      run(m.home, m.repo, "retire", "--target", target, "--format=json");
+    expect(codes(result(retire("omp:notes/n.md")))).toEqual(["UNKNOWN_TARGET"]);
+    expect(codes(result(retire("omp:extra/*.md")))).toEqual(["BROAD_SCOPE"]);
+    expect(codes(result(retire("omp:../escape.md")))).toEqual(["BROAD_SCOPE"]);
+  });
+});
+
+/**
+ * `retirable()` after a restructure: the committed, pushed backup still holds the old layout of
+ * `mine` and a deleted note beside what the machine has now. `.omp/private/old.txt` is a backup
+ * copy the policy excludes, so it is never stale.
+ */
+function restructured(): Retirable {
+  const m = retirable();
+  fs.mkdirSync(path.join(m.skills, "mine", "new"), { recursive: true });
+  fs.writeFileSync(path.join(m.skills, "mine", "new", "guide.md"), "guide");
+  const backup: [string, string][] = [
+    [".agents/skills/mine/old/deep/legacy.md", "legacy"],
+    [".agents/skills/mine/old/legacy2.md", "legacy2"],
+    [".omp/notes/gone.md", "gone"],
+    [".omp/private/old.txt", "excluded copy"],
+  ];
+  for (const [relative, text] of backup) {
+    const file = path.join(m.repo, relative);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, text);
+  }
+  git(m.home, m.repo, "add", "-A");
+  git(m.home, m.repo, "commit", "-q", "-m", "old layout");
+  git(m.home, m.repo, "push", "-q");
+  return m;
+}
+
+describe("given a backup that holds the old layout, when pushing with --remove-stale", () => {
+  const OLD_SKILL_FILES = [
+    ".agents/skills/mine/old/deep/legacy.md",
+    ".agents/skills/mine/old/legacy2.md",
+  ];
+  const push = (m: Retirable, ...extra: string[]): RunOutput =>
+    run(m.home, m.repo, "push", "--target", "agents", "--remove-stale", "--format=json", ...extra);
+  const remoteFiles = (m: Retirable): string[] => {
+    const listing = git(m.home, m.remote, "ls-tree", "-r", "--name-only", "main");
+    return listing.split("\n").filter(Boolean);
+  };
+  const commitCount = (m: Retirable): number => {
+    const count = git(m.home, m.repo, "rev-list", "--count", "HEAD");
+    return Number(count.trim());
+  };
+
+  it("lists each stale removal beside the copies in the preview and changes nothing", () => {
+    const m = restructured();
+    const before = snapshot(m.repo);
+    const head = git(m.home, m.repo, "rev-parse", "HEAD");
+    const preview = push(m, "--git-push");
+    expect(preview.exitCode).toBe(0);
+    const value = result(preview);
+    expect(value.outcome).toBe("preview");
+    expect([...value.scope.resolvedPaths].sort()).toEqual([
+      "agents:mine/new/guide.md",
+      "agents:mine/old/deep/legacy.md",
+      "agents:mine/old/legacy2.md",
+    ]);
+    const typed = value.scope.resolvedPaths.map((id, index) => [id, value.actions[index]?.type]);
+    expect(typed.filter(([, type]) => type === "delete").map(([id]) => id)).toEqual(
+      expect.arrayContaining(["agents:mine/old/deep/legacy.md", "agents:mine/old/legacy2.md"]),
+    );
+    expect(typed.filter(([, type]) => type === "delete")).toHaveLength(2);
+    expect(value.git?.exportedPaths).toEqual(
+      [...OLD_SKILL_FILES, ".agents/skills/mine/new/guide.md"].sort(),
+    );
+    expect(value.git?.unrelatedChanges).toEqual([]);
+    expect(snapshot(m.repo)).toEqual(before);
+    expect(git(m.home, m.repo, "rev-parse", "HEAD")).toBe(head);
+
+    const tree = run(m.home, m.repo, "push", "--target", "agents", "--remove-stale");
+    expect(tree.exitCode).toBe(0);
+    expect(tree.stdout).toContain("to_remove  2 stale backup file(s)");
+    expect(tree.stdout).toContain("agents:mine/old/legacy2.md (remove:");
+  });
+
+  it("removes stale files with the copies in one commit and the remote loses them", () => {
+    const m = restructured();
+    const commitsBefore = commitCount(m);
+    const applied = push(m, "--apply", "--git-push");
+    expect(applied.exitCode).toBe(0);
+    const value = result(applied);
+    expect(value.outcome).toBe("success");
+    expect(value.actions.filter((action) => action.type === "delete")).toHaveLength(2);
+    expect(commitCount(m)).toBe(commitsBefore + 1);
+    const changes = git(m.home, m.repo, "show", "--name-status", "--format=", "HEAD");
+    expect(changes).toContain("A\t.agents/skills/mine/new/guide.md");
+    for (const removed of OLD_SKILL_FILES) expect(changes).toContain(`D\t${removed}`);
+    const remote = remoteFiles(m);
+    expect(remote).toContain(".agents/skills/mine/new/guide.md");
+    expect(remote).toContain(".agents/skills/mine/SKILL.md");
+    for (const removed of OLD_SKILL_FILES) expect(remote).not.toContain(removed);
+    expect(git(m.home, m.repo, "status", "--porcelain")).toBe("");
+  });
+
+  it("removes only inside the selected --target scope", () => {
+    const m = restructured();
+    const applied = push(m, "--apply", "--git-push");
+    expect(applied.exitCode).toBe(0);
+    expect(fs.existsSync(path.join(m.repo, ".omp", "notes", "gone.md"))).toBe(true);
+    expect(remoteFiles(m)).toContain(".omp/notes/gone.md");
+    const narrow = run(
+      m.home,
+      m.repo,
+      "push",
+      "--target",
+      "omp:notes/gone.md",
+      "--remove-stale",
+      "--format=json",
+    );
+    expect(result(narrow).scope.resolvedPaths).toEqual(["omp:notes/gone.md"]);
+  });
+
+  it("leaves stale files in place without the flag", () => {
+    const m = restructured();
+    const applied = run(
+      m.home,
+      m.repo,
+      "push",
+      "--target",
+      "agents",
+      "--apply",
+      "--git-push",
+      "--format=json",
+    );
+    expect(applied.exitCode).toBe(0);
+    expect(result(applied).scope.resolvedPaths).toEqual(["agents:mine/new/guide.md"]);
+    for (const kept of OLD_SKILL_FILES) {
+      expect(fs.existsSync(path.join(m.repo, kept))).toBe(true);
+      expect(remoteFiles(m)).toContain(kept);
+    }
+  });
+
+  it("never treats a policy-excluded backup copy as stale", () => {
+    const m = restructured();
+    const preview = run(
+      m.home,
+      m.repo,
+      "push",
+      "--target",
+      "omp",
+      "--remove-stale",
+      "--format=json",
+    );
+    expect(preview.exitCode).toBe(0);
+    const paths = result(preview).scope.resolvedPaths;
+    expect(paths).toContain("omp:notes/gone.md");
+    expect(paths.filter((id) => id.startsWith("omp:private/"))).toEqual([]);
+    const applied = run(
+      m.home,
+      m.repo,
+      "push",
+      "--target",
+      "omp",
+      "--remove-stale",
+      "--apply",
+      "--format=json",
+    );
+    expect(applied.exitCode).toBe(0);
+    expect(fs.existsSync(path.join(m.repo, ".omp", "private", "old.txt"))).toBe(true);
+    expect(fs.existsSync(path.join(m.repo, ".omp", "notes", "gone.md"))).toBe(false);
+  });
+
+  it("blocks on an unrelated Git change and leaves the backup untouched", () => {
+    const m = restructured();
+    fs.writeFileSync(path.join(m.repo, "stray.txt"), "not mine");
+    const before = snapshot(m.repo);
+    const blocked = push(m, "--apply", "--git-push");
+    expect(blocked.exitCode).not.toBe(0);
+    expect(codes(result(blocked))).toEqual(["GIT_DIRTY_UNRELATED"]);
+    expect(snapshot(m.repo)).toEqual(before);
+    for (const kept of OLD_SKILL_FILES) expect(remoteFiles(m)).toContain(kept);
+  });
+
+  it("removes folders the removals empty but keeps folders that still hold files", () => {
+    const m = restructured();
+    expect(push(m, "--apply").exitCode).toBe(0);
+    expect(fs.existsSync(path.join(m.repo, ".agents", "skills", "mine", "old"))).toBe(false);
+    expect(fs.existsSync(path.join(m.repo, ".agents", "skills", "mine", "SKILL.md"))).toBe(true);
+  });
+
+  it("keeps the root's own backup folder when every file in it is stale", () => {
+    const f = fixture();
+    for (const name of ["a.txt", "b.txt"]) fs.rmSync(path.join(f.local, name));
+    fs.rmSync(path.join(f.local, "sub"), { recursive: true });
+    fs.mkdirSync(path.join(f.repo, ".omp", "x", "y"), { recursive: true });
+    fs.writeFileSync(path.join(f.repo, ".omp", "x", "y", "only.txt"), "only");
+    const applied = run(
+      f.home,
+      f.repo,
+      "push",
+      "--target",
+      "omp",
+      "--remove-stale",
+      "--apply",
+      "--format=json",
+    );
+    expect(applied.exitCode).toBe(0);
+    expect(fs.existsSync(path.join(f.repo, ".omp", "x"))).toBe(false);
+    expect(fs.existsSync(path.join(f.repo, ".omp"))).toBe(true);
+  });
+
+  it("refuses --remove-stale on a pull", () => {
+    const m = restructured();
+    const refused = run(m.home, m.repo, "pull", "--remove-stale", "--format=json");
+    expect(refused.exitCode).not.toBe(0);
+    expect(codes(result(refused))).toEqual(["PLAN_INVALID"]);
+  });
+
+  describe("with a saved plan", () => {
+    const save = (m: Retirable): string => {
+      const file = path.join(tempDir(), "stale.plan.json");
+      const saved = run(
+        m.home,
+        m.repo,
+        "push",
+        "--target",
+        "agents",
+        "--remove-stale",
+        "--plan-out",
+        file,
+      );
+      expect(saved.exitCode).toBe(0);
+      return file;
+    };
+    const applyPlan = (m: Retirable, file: string): RunOutput =>
+      run(m.home, m.repo, "apply", file, "--apply", "--format=json");
+
+    it("records the removals and applies them while nothing changed", () => {
+      const m = restructured();
+      const file = save(m);
+      const recorded = JSON.parse(fs.readFileSync(file, "utf8")) as Plan;
+      expect(recorded.scope.removeStale).toBe(true);
+      const deletes = recorded.actions.filter((action) => action.type === "delete");
+      expect(deletes).toHaveLength(2);
+      for (const action of deletes) expect(action.source.digest).toEqual({ kind: "absent" });
+      const applied = applyPlan(m, file);
+      expect(applied.exitCode).toBe(0);
+      for (const removed of OLD_SKILL_FILES) {
+        expect(fs.existsSync(path.join(m.repo, removed))).toBe(false);
+      }
+      expect(fs.existsSync(path.join(m.repo, ".agents", "skills", "mine", "new", "guide.md"))).toBe(
+        true,
+      );
+    });
+
+    it("rejects the plan with PLAN_STALE_SOURCE when a local file reappears", () => {
+      const m = restructured();
+      const file = save(m);
+      fs.mkdirSync(path.join(m.skills, "mine", "old"), { recursive: true });
+      fs.writeFileSync(path.join(m.skills, "mine", "old", "legacy2.md"), "back again");
+      const before = snapshot(m.repo);
+      const rejected = applyPlan(m, file);
+      expect(rejected.exitCode).not.toBe(0);
+      expect(codes(result(rejected))).toEqual(["PLAN_STALE_SOURCE"]);
+      expect(snapshot(m.repo)).toEqual(before);
+    });
+
+    it("rejects the plan with PLAN_STALE_TARGET when a backup file changed", () => {
+      const m = restructured();
+      const file = save(m);
+      fs.writeFileSync(path.join(m.repo, OLD_SKILL_FILES[1] as string), "edited after preview");
+      const before = snapshot(m.repo);
+      const rejected = applyPlan(m, file);
+      expect(rejected.exitCode).not.toBe(0);
+      expect(codes(result(rejected))).toEqual(["PLAN_STALE_TARGET"]);
+      expect(snapshot(m.repo)).toEqual(before);
+    });
+
+    it("rejects the plan with PLAN_STALE_SCOPE when another stale file appears", () => {
+      const m = restructured();
+      const file = save(m);
+      fs.writeFileSync(path.join(m.repo, ".agents", "skills", "mine", "old", "extra.md"), "extra");
+      const before = snapshot(m.repo);
+      const rejected = applyPlan(m, file);
+      expect(rejected.exitCode).not.toBe(0);
+      expect(codes(result(rejected))).toEqual(["PLAN_STALE_SCOPE"]);
+      expect(snapshot(m.repo)).toEqual(before);
+    });
+  });
+
+  it("gives a second machine that pulls exactly the new layout", () => {
+    const m = restructured();
+    expect(push(m, "--apply", "--git-push").exitCode).toBe(0);
+    const home2 = tempDir();
+    const parent = tempDir();
+    const skills2 = path.join(home2, "skills");
+    fs.mkdirSync(skills2, { recursive: true });
+    git(home2, parent, "clone", "-q", m.remote, "clone");
+    const repo2 = path.join(parent, "clone");
+    const bindAgents = run(home2, repo2, "root", "bind", "agents", "--local-root", skills2);
+    const bindOmp = run(
+      home2,
+      repo2,
+      "root",
+      "bind",
+      "omp",
+      "--local-root",
+      path.join(home2, "omp"),
+    );
+    expect(bindAgents.exitCode).toBe(0);
+    expect(bindOmp.exitCode).toBe(0);
+    const pulled = run(home2, repo2, "pull", "--target", "agents", "--apply", "--format=json");
+    expect(pulled.exitCode).toBe(0);
+    expect(snapshot(skills2)).toEqual({
+      [path.join("mine", "SKILL.md")]: "mine",
+      [path.join("mine", "new", "guide.md")]: "guide",
+    });
   });
 });

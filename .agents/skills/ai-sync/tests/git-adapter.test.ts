@@ -3,9 +3,9 @@ import { execSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { RemoteIntegrationPreview } from "@/scripts/domain/git";
-import type { GitPlan } from "@/scripts/domain/plan";
-import { NodeGitGateway } from "@/scripts/infrastructure/git/node-git-gateway";
+import { git as gateway } from "@/scripts/io/git/git";
+import type { RemoteIntegrationPreview } from "@/scripts/lib/git";
+import type { GitPlan } from "@/scripts/lib/plan";
 import {
   commitFile,
   git,
@@ -18,8 +18,6 @@ import {
   tempDir,
   useIsolatedGitEnv,
 } from "./helpers/git-fixtures";
-
-const gateway = new NodeGitGateway();
 
 function savedGitFrom(
   local: string,

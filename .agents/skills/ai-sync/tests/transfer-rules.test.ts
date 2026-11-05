@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import * as path from "node:path";
-import type { RemoteIntegrationPreview } from "@/scripts/domain/git";
-import type { ResolvedRoot } from "@/scripts/domain/manifest";
-import { type Plan, type PlanAction, SyncError } from "@/scripts/domain/plan";
+import type { RemoteIntegrationPreview } from "@/scripts/lib/git";
+import type { ResolvedRoot } from "@/scripts/lib/manifest";
+import { type Plan, type PlanAction, SyncError } from "@/scripts/lib/plan";
 import {
   assemblePlan,
   assertReviewedScope,
@@ -18,13 +18,13 @@ import {
   locationsFor,
   PRUNE_CAVEAT,
   previewResult,
-  pruneActionType,
   pullGitPlan,
   pullGitReport,
+  removalActionType,
   staleItem,
   toActionError,
   transferActionType,
-} from "@/scripts/domain/plan-rules";
+} from "@/scripts/lib/plan-rules";
 
 const absent = { kind: "absent" } as const;
 const file = { kind: "file", sha256: "a".repeat(64), mode: 0o644 } as const;
@@ -81,10 +81,10 @@ describe("given digests, when action types are chosen, then symlinks skip and pr
     expect(transferActionType(file, link)).toBe("skip");
   });
 
-  it("prunes only regular files", () => {
-    expect(pruneActionType(file)).toBe("delete");
-    expect(pruneActionType(link)).toBe("skip");
-    expect(pruneActionType(absent)).toBe("skip");
+  it("removes only regular backup files", () => {
+    expect(removalActionType(file)).toBe("delete");
+    expect(removalActionType(link)).toBe("skip");
+    expect(removalActionType(absent)).toBe("skip");
   });
 });
 

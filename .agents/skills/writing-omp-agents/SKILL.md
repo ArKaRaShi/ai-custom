@@ -66,6 +66,6 @@ If it finds a new escape hatch, add the smallest structural rule that closes it,
 
 ### Quality Verification
 
-**REQUIRE SUBSKILL:** `markdown-quality` (`bun ~/.agents/skills/markdown-quality/scripts/review.ts <agent-file> --mode=ai`).
+**REQUIRE SUBSKILL:** `markdown-quality` (`bun ~/.agents/skills/markdown-quality/scripts/review.ts <agent-file> --mode=agent`).
 
-Verify authored or modified agent definitions in AI mode to ensure clean structure and zero conversational filler. If `markdown-quality` is unavailable, review the agent markdown manually without stalling.
+Verify authored or modified agent definitions in agent mode to ensure clean structure and zero conversational filler. If `markdown-quality` is unavailable, review the agent markdown manually without stalling.

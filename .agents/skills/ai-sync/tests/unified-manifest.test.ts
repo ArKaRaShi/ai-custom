@@ -2,14 +2,17 @@ import { afterEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { Environment } from "@/scripts/application/interfaces/environment";
-import { ManifestRepository } from "@/scripts/application/services/manifest-repository";
-import type { Locations, ResolvedRoot, UnifiedManifest } from "@/scripts/domain/manifest";
-import { BunGlobMatcher } from "@/scripts/infrastructure/bun-glob-matcher";
-import { NodeFileSystem } from "@/scripts/infrastructure/node-file-system";
+import type { Environment } from "@/scripts/io/environment";
+import { createIo, type Io } from "@/scripts/io/io";
+import type { Locations, ResolvedRoot, UnifiedManifest } from "@/scripts/lib/manifest";
+import {
+  loadLocations as loadLocationsIn,
+  resolveRoots,
+  validateManifest,
+} from "@/scripts/lib/manifest-repository";
 import { at } from "./helpers/at";
 
-function repositoryFor(home: string): ManifestRepository {
+function ioFor(home: string): Io {
   const environment: Environment = {
     home,
     defaultRepo: path.join(home, "Disk", "ai-custom"),
@@ -18,23 +21,18 @@ function repositoryFor(home: string): ManifestRepository {
     cwd: home,
     isInteractive: false,
   };
-  return new ManifestRepository({
-    fileSystem: new NodeFileSystem(),
-    environment,
-    globMatcher: new BunGlobMatcher(),
-  });
+  return { ...createIo(), environment };
 }
 
 const unusedHome = path.join(os.tmpdir(), "ai-sync-v2-unused-home");
 const validateUnifiedManifest = (value: unknown, repoBase: string): UnifiedManifest =>
-  repositoryFor(unusedHome).validateManifest(value, repoBase);
-const loadLocations = (file: string, home: string): Locations =>
-  repositoryFor(home).loadLocations(file);
+  validateManifest(ioFor(unusedHome), value, repoBase);
+const loadLocations = (file: string, home: string): Locations => loadLocationsIn(ioFor(home), file);
 const resolveRootPaths = (
   value: UnifiedManifest,
   locations: Locations,
   repoBase: string,
-): ResolvedRoot[] => repositoryFor(unusedHome).resolveRoots(value, locations, repoBase);
+): ResolvedRoot[] => resolveRoots(ioFor(unusedHome), value, locations, repoBase);
 
 const tempDirs: string[] = [];
 

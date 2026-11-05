@@ -52,10 +52,10 @@ Apply these five invariants across every Markdown file:
 
 ## Verification
 
-After authoring or editing Markdown files, audit the files with `markdown-quality` in `ai` mode:
+After authoring or editing Markdown files, audit the files with `markdown-quality` in `agent` mode:
 
 ```bash
-bun ~/.agents/skills/markdown-quality/scripts/review.ts <file-or-dir> --mode=ai
+bun ~/.agents/skills/markdown-quality/scripts/review.ts <file-or-dir> --mode=agent
 ```
 
 The review must return clean with no errors or broken links.

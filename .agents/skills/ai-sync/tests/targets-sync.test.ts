@@ -3,11 +3,10 @@ import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { MergeResult } from "@/scripts/application/interfaces/command-runner";
-import type { ExecuteHooks } from "@/scripts/application/services/plan-executor";
-import { createApp } from "@/scripts/container";
-import { inspectItems as inspectItemsIn } from "@/scripts/domain/inspect";
-import { type Locations, syncPolicyOf, type UnifiedManifest } from "@/scripts/domain/manifest";
+import type { MergeResult } from "@/scripts/io/command-runner";
+import { createIo } from "@/scripts/io/io";
+import { inspectItems as inspectItemsIn } from "@/scripts/lib/inspect";
+import { type Locations, syncPolicyOf, type UnifiedManifest } from "@/scripts/lib/manifest";
 import {
   type Digest,
   hashCanonical,
@@ -17,23 +16,27 @@ import {
   type Result,
   SyncError,
   validatePlan,
-} from "@/scripts/domain/plan";
+} from "@/scripts/lib/plan";
+import { pathEscapesRoot as pathEscapesRootIn } from "@/scripts/lib/plan-builder";
+import { type ExecuteHooks, executePlan as executePlanIn } from "@/scripts/lib/plan-executor";
+import {
+  filterItems as filterItemsIn,
+  matchesTarget as matchesTargetIn,
+} from "@/scripts/lib/target-matcher";
 import {
   isUnboundedTarget,
+  matchesPattern,
   type SyncOptions,
   type TargetCandidate,
-} from "@/scripts/domain/targets";
+} from "@/scripts/lib/targets";
 import { at } from "./helpers/at";
 
-const app = createApp();
-const { fileSystem, services } = app;
-const { targetMatcher, planExecutor, planBuilder } = services;
+const io = createIo();
+const { fileSystem } = io;
 const matchesTarget = (target: string, candidate: TargetCandidate): boolean =>
-  targetMatcher.matchesTarget(target, candidate);
-const matchesPattern = (relPath: string, patterns: string[]): boolean =>
-  targetMatcher.matchesPattern(relPath, patterns);
+  matchesTargetIn(io, target, candidate);
 const filterItems = (paths: string[], opts: SyncOptions): string[] =>
-  targetMatcher.filterItems(paths, opts);
+  filterItemsIn(io, paths, opts);
 const inspectItems = (
   manifest: UnifiedManifest,
   locations: Locations,
@@ -44,11 +47,11 @@ const digestOf = (location: string): Digest => fileSystem.digest(location);
 const copyFileSafe = (src: string, dest: string): void => fileSystem.copyFile(src, dest);
 const getAllFiles = (dir: string): string[] => fileSystem.getAllFiles(dir);
 const plainMergeFiles = (local: string, repo: string, base?: string): MergeResult =>
-  app.commandRunner.mergeFiles(local, repo, base);
+  io.commandRunner.mergeFiles(local, repo, base);
 const executePlan = (plan: Plan, hooks: ExecuteHooks = {}): Result =>
-  planExecutor.executePlan(plan, hooks);
+  executePlanIn(io, plan, hooks);
 const pathEscapesRoot = (base: string, relPath: string): boolean =>
-  planBuilder.pathEscapesRoot(base, relPath);
+  pathEscapesRootIn(io, base, relPath);
 
 describe("path filters", () => {
   it("matches and excludes paths consistently", () => {
@@ -760,6 +763,18 @@ describe("given a prune plan, when it is validated and executed, then only exact
 
     const wrongOperation = { ...JSON.parse(JSON.stringify(plan)), operation: "push" };
     expect(codeOf(() => validatePlan(wrongOperation))).toBe("PLAN_INVALID");
+
+    const stalePush = {
+      ...JSON.parse(JSON.stringify(plan)),
+      operation: "push",
+      scope: { ...plan.scope, removeStale: true },
+    };
+    expect(validatePlan(stalePush).operation).toBe("push");
+    const localReappeared = JSON.parse(JSON.stringify(stalePush)) as Plan;
+    at(localReappeared.actions, 0).source.digest = { kind: "dir" };
+    expect(codeOf(() => validatePlan(localReappeared))).toBe("PLAN_INVALID");
+    const staleOnPull = { ...stalePush, operation: "pull" };
+    expect(codeOf(() => validatePlan(staleOnPull))).toBe("PLAN_INVALID");
 
     const copyInPrune = JSON.parse(JSON.stringify(plan)) as Plan;
     at(copyInPrune.actions, 0).type = "copy";

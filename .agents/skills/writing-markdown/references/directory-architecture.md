@@ -76,7 +76,7 @@ Every relative link MUST resolve to an existing file on disk:
 
 ```bash
 # Run link check from workspace root
-bun ~/.agents/skills/markdown-quality/scripts/review.ts docs/ --mode=ai
+bun ~/.agents/skills/markdown-quality/scripts/review.ts docs/ --mode=agent
 ```
 
 Never author dead links or link to external web pages when the primary source is stored in the local repository.

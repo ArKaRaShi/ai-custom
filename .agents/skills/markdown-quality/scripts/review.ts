@@ -8,13 +8,16 @@ import { checkMarkdownLinks, type BrokenLink } from "./link-checker";
 import { analyzeTokenDensity, type TokenDensityReport } from "./token-density";
 import { checkMarkdownSecurity, type SecurityFinding } from "./security-check";
 import { checkMarkdownStructure, type StructureFinding } from "./structure-check";
+import { MODE_ALIAS_NOTICE, parseMode, type Mode } from "./mode";
 
 export interface ReviewOptions {
   text?: string;
   targets?: string | string[];
   target?: string | string[];
   glob?: string | string[];
-  mode?: "ai" | "human";
+  mode?: Mode;
+  /** Treat `text` as commit or PR text, so Vale applies the commit rules (human mode). */
+  commit?: boolean;
   fix?: boolean;
   minLevel?: "error" | "warning" | "suggestion";
   checkLinks?: boolean;
@@ -66,7 +69,8 @@ function isValeAlert(item: unknown): item is ValeAlert {
   );
 }
 
-// Vale reports one Severity per alert; only `error` blocks the review, warnings and suggestions inform.
+// Vale reports one Severity per alert. Only `error` blocks the review, warnings and suggestions inform.
+// The ai-tells and ai-tells-commits packages ship every rule at `error`, so their alerts are demoted: they are style advice.
 function parseValeAlerts(json: string): Array<{ line: string; blocking: boolean }> {
   if (json.trim() === "") return [];
   let raw: unknown;
@@ -82,7 +86,7 @@ function parseValeAlerts(json: string): Array<{ line: string; blocking: boolean 
     if (!Array.isArray(alerts)) return [];
     return alerts.filter(isValeAlert).map((a) => ({
       line: `${file}:${a.Line}:${a.Span[0]}:${a.Check}:${a.Message}`,
-      blocking: a.Severity === "error",
+      blocking: a.Severity === "error" && !/^ai-tells(-commits)?\./.test(a.Check),
     }));
   });
 }
@@ -122,7 +126,7 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
   const rawTargets = isTextInput ? ["<string>"] : (options.targets ?? options.target ?? options.glob ?? "**/*.md");
   const targetDisplay = isTextInput ? (options.text!.length > 50 ? options.text!.slice(0, 47) + "..." : options.text!) : (Array.isArray(rawTargets) ? rawTargets.join(", ") : rawTargets);
   const matchedFiles = isTextInput ? ["<string>"] : resolveMarkdownFiles(rawTargets, process.cwd());
-  const mode: "ai" | "human" = options.mode === "human" ? "human" : "ai";
+  const mode: Mode = options.mode === "human" ? "human" : "agent";
   const fix = options.fix ?? false;
   const minLevel = options.minLevel || "warning";
   const checkLinks = options.checkLinks ?? true;
@@ -267,7 +271,7 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
     let valeOut = "";
     if (isTextInput) {
       const valeProc = Bun.spawnSync(
-        ["vale", "--no-global", "--ext=.md", ...valeConfigArg, `--minAlertLevel=${minLevel}`, "--output=JSON"],
+        ["vale", "--no-global", `--ext=${options.commit ? ".commit.md" : ".md"}`, ...valeConfigArg, `--minAlertLevel=${minLevel}`, "--output=JSON"],
         { stdin: Buffer.from(options.text!), stdout: "pipe", stderr: "pipe" },
       );
       valeOut = valeProc.stdout.toString();
@@ -588,7 +592,8 @@ export async function runReview(options: ReviewOptions = {}): Promise<ReviewResu
 if (import.meta.main) {
   const args = process.argv.slice(2);
   const targets: string[] = [];
-  let mode: "ai" | "human" = "ai";
+  let mode: Mode = "agent";
+  let commit = false;
   let fix = false;
   let minLevel: "error" | "warning" | "suggestion" = "warning";
   let checkLinks = true;
@@ -615,8 +620,8 @@ Arguments:
   [targets...]             Target files, directories, or glob patterns (default: "**/*.md")
 
 Options:
-  --mode <ai|human>        Review mode: ai (token-dense, strict AI-tells) or human (readability, relaxed)
-  --mode=<ai|human>        Equals-form syntax for --mode (default: ai)
+  --mode <agent|human>     Review mode: agent (reader is a model: fewest tokens, one literal meaning) or human (reader is a person: reads like a person wrote it)
+  --mode=<agent|human>     Equals-form syntax for --mode (default: agent). "ai" is a deprecated alias of agent
   --config <path>          Smart unified config file or directory
   --config=<path>          Equals-form syntax for --config
   --lint-config <path>     Explicit markdownlint-cli2 configuration override
@@ -636,6 +641,8 @@ Options:
   -h, --help               Show this help message and exit
   --text <content>         Review Markdown content directly without saving it
   --text=<content>         Equals-form syntax for --text
+  --commit                 With --text: review the content as commit or PR text (human mode adds the ai-tells-commits rules).
+                           Files get those rules by name: COMMIT_EDITMSG, *.commit.md|txt, *.pr.md|txt
 Examples:
   bun review.ts
   bun review.ts README.md --mode=human
@@ -659,15 +666,15 @@ Examples:
       checkSecurity = false;
     } else if (arg === "--no-structure") {
       checkStructure = false;
-    } else if (arg === "--mode") {
-      const val = args[++i];
+    } else if (arg === "--mode" || arg.startsWith("--mode=")) {
+      const val = arg === "--mode" ? args[++i] : arg.slice("--mode=".length);
       if (!val || val.startsWith("-")) fail("--mode requires a value");
-      if (val === "ai" || val === "human") mode = val;
-      else fail(`Invalid --mode: ${val}. Must be 'ai' or 'human'.`);
-    } else if (arg.startsWith("--mode=")) {
-      const val = arg.slice("--mode=".length);
-      if (val === "ai" || val === "human") mode = val;
-      else fail(`Invalid --mode: ${val}. Must be 'ai' or 'human'.`);
+      const parsed = parseMode(val);
+      if (!parsed) fail(`Invalid --mode: ${val}. Must be 'agent' or 'human'.`);
+      if (parsed.deprecatedAlias) console.error(MODE_ALIAS_NOTICE);
+      mode = parsed.mode;
+    } else if (arg === "--commit") {
+      commit = true;
     } else if (arg === "--config") {
       const val = args[++i];
       if (!val || val.startsWith("-")) fail("--config requires a value");
@@ -727,9 +734,12 @@ Examples:
     }
   }
 
+  if (commit && text === undefined) fail("--commit requires --text. Files get commit rules by name (COMMIT_EDITMSG, *.commit.md|txt, *.pr.md|txt).");
+
   const result = await runReview({
     targets: targets.length > 0 ? targets : ["**/*.md"],
     mode,
+    commit,
     format,
     config,
     text,

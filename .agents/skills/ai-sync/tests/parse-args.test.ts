@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { canonicalOperation } from "@/scripts/presentation/exit-policy";
-import { fallbackUsage, usageText } from "@/scripts/presentation/help";
-import { parseArgs } from "@/scripts/presentation/parse-args";
+import { canonicalOperation } from "@/scripts/render/exit-policy";
+import { fallbackUsage, usageText } from "@/scripts/render/help";
+import { parseArgs } from "@/scripts/render/parse-args";
 
 const REPO = "/default/repo";
 const ctx = { home: "/home/u", pathExists: (p: string): boolean => p === "existing" };

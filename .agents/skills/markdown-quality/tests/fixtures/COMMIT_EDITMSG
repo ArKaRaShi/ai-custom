@@ -1,0 +1,5 @@
+feat: leverage a robust filter pipeline
+
+This commit introduces comprehensive filtering. I added tests, and updated the handler to seamlessly streamline queries.
+
+Co-Authored-By: Claude <noreply@anthropic.com>

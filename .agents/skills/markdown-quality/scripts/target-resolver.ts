@@ -2,6 +2,8 @@ import { existsSync, statSync } from "fs";
 import { resolve } from "path";
 
 const MD_REGEX = /\.(md|markdown|mdx)$/i;
+// Commit and PR text files. Accepted only when named as a file target, never found by directory scan.
+const COMMIT_TEXT_REGEX = /(\.txt|(^|\/)COMMIT_EDITMSG)$/;
 const IGNORED_DIRS: Record<string, true> = {
   ".git": true,
   node_modules: true,
@@ -14,7 +16,8 @@ const IGNORED_DIRS: Record<string, true> = {
 /**
  * Resolves one or more targets (file paths, directory paths, or glob patterns)
  * into a deduplicated, sorted list of existing Markdown files.
- * Ignores non-markdown files and excluded directory trees.
+ * A file target may also be a `.txt` file or a `COMMIT_EDITMSG` file (commit and PR text).
+ * Ignores other non-markdown files and excluded directory trees.
  */
 export function resolveMarkdownFiles(
   targets: string | string[],
@@ -30,7 +33,7 @@ export function resolveMarkdownFiles(
     if (existsSync(targetPath)) {
       const stat = statSync(targetPath);
       if (stat.isFile()) {
-        if (MD_REGEX.test(targetPath)) {
+        if (MD_REGEX.test(targetPath) || COMMIT_TEXT_REGEX.test(targetPath)) {
           matched.add(targetPath);
         }
       } else if (stat.isDirectory()) {

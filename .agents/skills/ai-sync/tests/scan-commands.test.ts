@@ -5,12 +5,12 @@ import {
   divergentFiles,
   statusResultOf,
   targetForPath,
-} from "@/scripts/domain/diff";
-import { inspectItem, inspectItems, inspectResultOf } from "@/scripts/domain/inspect";
-import type { Locations, SyncEntry, UnifiedManifest } from "@/scripts/domain/manifest";
-import { SyncError } from "@/scripts/domain/plan";
-import type { ResolvedSyncTarget, ScanEntry, ScanResult } from "@/scripts/domain/scan";
-import { matchesTarget } from "@/scripts/domain/targets";
+} from "@/scripts/lib/diff";
+import { inspectItem, inspectItems, inspectResultOf } from "@/scripts/lib/inspect";
+import type { Locations, SyncEntry, UnifiedManifest } from "@/scripts/lib/manifest";
+import { SyncError } from "@/scripts/lib/plan";
+import type { ResolvedSyncTarget, ScanEntry, ScanResult } from "@/scripts/lib/scan";
+import { matchesTarget } from "@/scripts/lib/targets";
 
 const glob = (pattern: string, value: string): boolean => new Bun.Glob(pattern).match(value);
 const test = (raw: string, candidate: Parameters<typeof matchesTarget>[1]): boolean =>
