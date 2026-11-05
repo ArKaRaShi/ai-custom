@@ -2,9 +2,9 @@
 import { appendFile, chmod, lstat, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
-import { escapeHtml } from "./render";
+import { composePage, escapeHtml, renderScreen } from "./render";
 import { cookieName, createKey } from "./auth";
-import type { Mode } from "./domain";
+import { detectMode, type Mode } from "./domain";
 import {
   clearRunInfo,
   isAlive,
@@ -21,12 +21,14 @@ import { resolveRunDir, SessionStore } from "./store";
 const CLI = import.meta.filename;
 const USAGE = `visual-companion — show mockups and choices in a local browser tab
 
-  start   [--project-dir <dir>] [--port <n>] [--host <host>] [--open]
+  start   [--port <n>] [--host <host>] [--open]
           [--idle-minutes <n>]                 start (or reuse) the companion
   status                                    report running / stale / stopped
   stop                                      stop it
   push <file> [--title <text>] [--plain|--bundle] [--isolate]
                                             publish a screen and reload the tab
+  page <name> <file> [<name> <file> ...] [--title <text>]
+                                            stack fragments into one long page with a section index
   compare <name> <file> <name> <file> [...] publish static isolated previews side-by-side
   states <name> <file> [<name> <file> ...]  publish full-page isolated states with an edge rail
   stage <file> <relative-path>              copy one dependency to session/files
@@ -35,7 +37,8 @@ const USAGE = `visual-companion — show mockups and choices in a local browser 
 
   Staging does not rewrite CSS URLs: stage dependencies and use paths resolving under /files/.
 
-  flags: --json (structured output) --run-dir <dir> (override session dir)
+  session: every command above except components takes --project-dir <dir> or --run-dir <dir>
+  flags: --json (structured output)
   exit: 0 ok, 1 failure, 2 usage`;
 
 const VALUE_FLAGS = new Set([
@@ -311,22 +314,15 @@ async function compare(args: Args): Promise<void> {
   if (args.flags.has("isolate") || args.flags.has("plain") || args.flags.has("bundle")) {
     throw new UsageError("compare does not accept --isolate, --plain or --bundle");
   }
-  const previews: { name: string; html: string }[] = [];
-  for (let i = 0; i < args.positional.length; i += 2) {
-    const name = args.positional[i]!;
-    const file = args.positional[i + 1]!;
-    if (!name.trim()) throw new UsageError("preview name must not be empty");
-    const html = await readFile(file, "utf8").catch(() => { throw new Error(`cannot read ${file}`); });
-    if (!html.trim()) throw new Error(`${file} is empty`);
-    previews.push({ name, html });
-  }
+  const previews = await readPairs(args.positional, "preview");
   const { store } = runContext(args.flags);
   await store.init();
   if (!(await lstat(store.filesDir)).isDirectory()) throw new Error("session files must be a directory, not a symlink");
   const directory = `compare-${randomUUID()}`;
   await mkdir(join(store.filesDir, directory));
   for (let i = 0; i < previews.length; i++) {
-    await writeFile(join(store.filesDir, directory, `${i}.html`), previews[i]!.html, { flag: "wx" });
+    const preview = await isolatedPreview(previews[i]!);
+    await writeFile(join(store.filesDir, directory, `${i}.html`), preview, { flag: "wx" });
   }
   const cards = previews.map((preview, i) => `<section><h2>${escapeHtml(preview.name)}</h2><iframe title="${escapeHtml(preview.name)}" sandbox="allow-same-origin" src="/files/${directory}/${i}.html"></iframe></section>`).join("\n");
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Comparison</title><style>body{margin:0;padding:1rem;font:16px system-ui;background:#f1f2f4}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,32rem),1fr));gap:1rem}section{min-width:0}h2{font-size:1rem}iframe{display:block;width:100%;height:75vh;min-height:24rem;border:1px solid #ccc;background:white;box-sizing:border-box}</style></head><body><main>${cards}</main></body></html>`;
@@ -340,28 +336,59 @@ async function states(args: Args): Promise<void> {
   if (["isolate", "plain", "bundle"].some((flag) => args.flags.has(flag))) {
     throw new UsageError("states does not accept --isolate, --plain or --bundle");
   }
-  const previews: { name: string; html: string }[] = [];
-  for (let i = 0; i < args.positional.length; i += 2) {
-    const name = args.positional[i]!;
-    const file = args.positional[i + 1]!;
-    if (!name.trim()) throw new UsageError("state name must not be empty");
-    const html = await readFile(file, "utf8").catch(() => { throw new Error(`cannot read ${file}`); });
-    if (!html.trim()) throw new Error(`${file} is empty`);
-    previews.push({ name, html });
-  }
+  const previews = await readPairs(args.positional, "state");
   const { store } = runContext(args.flags);
   await store.init();
   if (!(await lstat(store.filesDir)).isDirectory()) throw new Error("session files must be a directory, not a symlink");
   const directory = `states-${randomUUID()}`;
   await mkdir(join(store.filesDir, directory));
   for (let i = 0; i < previews.length; i++) {
-    await writeFile(join(store.filesDir, directory, `${i}.html`), previews[i]!.html, { flag: "wx" });
+    const preview = await isolatedPreview(previews[i]!);
+    await writeFile(join(store.filesDir, directory, `${i}.html`), preview, { flag: "wx" });
   }
   const buttons = previews.map((p, i) => `<button type="button" data-state-index="${i}" aria-pressed="${i === 0}">${escapeHtml(p.name)}</button>`).join("");
   const options = previews.map((p, i) => `<option value="${i}">${escapeHtml(p.name)}</option>`).join("");
   const frames = previews.map((p, i) => `<iframe title="${escapeHtml(p.name)}" sandbox="allow-same-origin" src="/files/${directory}/${i}.html"${i ? " hidden" : ""}></iframe>`).join("");
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>States</title><link rel="stylesheet" href="/assets/state-rail.css"><script src="/assets/state-rail.js" defer></script></head><body><main>${frames}</main><nav aria-label="Preview states"><div class="vc-rail">${buttons}</div><label class="vc-mobile">State <select aria-label="Preview state">${options}</select></label></nav></body></html>`;
   await publish(args, html);
+}
+
+/** A fragment gets the vc-* stylesheet inside its sandbox; a whole document is kept as written. */
+async function isolatedPreview(preview: { name: string; html: string }): Promise<string> {
+  const mode = detectMode(preview.html);
+  return renderScreen({ mode, title: preview.name, content: preview.html, isolated: true });
+}
+
+async function page(args: Args): Promise<void> {
+  if (args.positional.length < 2 || args.positional.length % 2 !== 0) {
+    throw new UsageError("page needs one or more name and file pairs");
+  }
+  if (["isolate", "plain", "bundle"].some((flag) => args.flags.has(flag))) {
+    throw new UsageError("page does not accept --isolate, --plain or --bundle");
+  }
+  const parts = await readPairs(args.positional, "section");
+  const whole = parts.find((part) => detectMode(part.html) === "plain");
+  if (whole) throw new UsageError(`page sections must be fragments; "${whole.name}" is a whole document`);
+  const html = composePage(parts);
+  await publish(args, html);
+}
+
+async function readPairs(positional: string[], label: string): Promise<{ name: string; html: string }[]> {
+  const pairs: { name: string; html: string }[] = [];
+  for (let i = 0; i < positional.length; i += 2) {
+    const name = positional[i]!;
+    const file = positional[i + 1]!;
+    if (!name.trim()) throw new UsageError(`${label} name must not be empty`);
+    let html: string;
+    try {
+      html = await readFile(file, "utf8");
+    } catch {
+      throw new Error(`cannot read ${file}`);
+    }
+    if (!html.trim()) throw new Error(`${file} is empty`);
+    pairs.push({ name, html });
+  }
+  return pairs;
 }
 
 async function stage(args: Args): Promise<void> {
@@ -473,6 +500,8 @@ async function main(): Promise<void> {
       return stage(args);
     case "compare":
       return compare(args);
+    case "page":
+      return page(args);
     case "states":
       return states(args);
     case "events":

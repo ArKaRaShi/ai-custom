@@ -58,6 +58,13 @@ export async function renderScreen(options: {
   return frame(options.title, options.content);
 }
 
+/** One long bundle page: every part stacked as a section, with a thin section rail that only scrolls. */
+export function composePage(parts: { name: string; html: string }[]): string {
+  const links = parts.map((part, i) => `<li><a href="#vc-part-${i + 1}" aria-label="${i + 1}. ${escapeHtml(part.name)}"><span class="vc-toc-num">${i + 1}</span><span class="vc-toc-name">${escapeHtml(part.name)}</span></a></li>`).join("");
+  const sections = parts.map((part, i) => `<section class="vc-part" id="vc-part-${i + 1}" aria-labelledby="vc-part-${i + 1}-title"><h2 class="vc-part-title" id="vc-part-${i + 1}-title"><span class="vc-toc-num">${i + 1}</span>${escapeHtml(part.name)}</h2>${part.html}</section>`).join("");
+  return `<div class="vc-page"><nav class="vc-toc" aria-label="Sections"><ol>${links}</ol></nav><div class="vc-page-body">${sections}</div></div>`;
+}
+
 export async function emptyState(): Promise<string> {
   return frame(
     "Visual companion",

@@ -1,5 +1,7 @@
 # State preview rail
 
+Use the state rail for product page states, such as Default, Empty, and Error, that each need the full viewport and their own CSS. For explanations, use `page` instead, which stacks every part on one scrolling page. See [CLI](cli.md#page).
+
 Publish separate complete HTML files as a state set:
 
 ```bash
@@ -12,8 +14,4 @@ Previews are static: scripts, forms, external resources, and choice reporting ar
 
 ## Verification
 
-```bash
-bun test
-```
-
-Check selection, keyboard navigation, and the mobile selector in a browser.
+After publishing, check selection, keyboard navigation, and the mobile selector in a browser. Skill maintainers run `bun test` in the skill directory after changing the rail.

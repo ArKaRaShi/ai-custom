@@ -115,7 +115,7 @@ describe("cli end to end", () => {
     const a = join(project, "a.html");
     const b = join(project, "b.html");
     await writeFile(a, '<style>body{color:red}</style>first');
-    await writeFile(b, '<style>body{color:blue}</style>second');
+    await writeFile(b, '<!doctype html><html><head><style>body{color:blue}</style></head><body>second</body></html>');
     expect((await run(["states", "First", a, "Second", b, "--project-dir", project])).code).toBe(0);
     const page = await (await fetch(info.url)).text();
     expect(page).toContain('/assets/state-rail.js');
@@ -125,10 +125,36 @@ describe("cli end to end", () => {
     for (const [i, url] of urls.entries()) {
       const response = await fetch(new URL(`${url}?key=${new URL(info.url).searchParams.get("key")}`, info.url));
       expect(response.headers.get("content-security-policy")).toContain("sandbox allow-same-origin; default-src 'none'");
-      expect(await response.text()).toContain(i ? 'color:blue' : 'color:red');
+      const body = await response.text();
+      expect(body).toContain(i ? 'color:blue' : 'color:red');
+      // A fragment is wrapped with the vc-* stylesheet; a whole document stays as written.
+      if (i) expect(body).not.toContain("/assets/components.css");
+      else expect(body).toContain('<link rel="stylesheet" href="/assets/components.css"></head><body class="vc-body"><main class="vc-main">');
     }
     expect((await run(["states", "Missing", join(project, "missing"), "--project-dir", project])).code).toBe(1);
     expect(await (await fetch(info.url)).text()).toBe(page);
+  }, 30_000);
+
+  test("page stacks fragments into one framed page and rejects whole documents", async () => {
+    const info = await startCompanion();
+    const a = join(project, "a.html");
+    const b = join(project, "b.html");
+    const whole = join(project, "whole.html");
+    await writeFile(a, '<p id="first">first</p>');
+    await writeFile(b, '<p id="second">second</p>');
+    await writeFile(whole, "<!doctype html><html><body>doc</body></html>");
+    expect((await run(["page", "Answer", a, "Why <it>", b, "--project-dir", project])).code).toBe(0);
+    const response = await fetch(info.url);
+    const html = await response.text();
+    expect(html).toContain('class="vc-bar"');
+    expect(html).toContain('href="#vc-part-2"');
+    expect(html).toContain("Why &lt;it&gt;");
+    expect(html.indexOf('id="first"')).toBeLessThan(html.indexOf('id="second"'));
+    expect(html).not.toContain("<iframe");
+    const rejected = await run(["page", "Answer", a, "Doc", whole, "--project-dir", project]);
+    expect(rejected.code).toBe(2);
+    const after = await fetch(info.url);
+    expect(await after.text()).toBe(html);
   }, 30_000);
 
   test("stale startup, relative paths and private state", async () => {

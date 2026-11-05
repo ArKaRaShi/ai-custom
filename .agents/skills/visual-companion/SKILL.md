@@ -18,12 +18,13 @@ Show what matters in context. Default to visual mockups without complete applica
 3. **Show.** Start the companion after consent and publish the preview. Keep and share the full keyed URL. Read [CLI](references/cli.md) for commands and session details.
 4. **Review.** Inspect the rendered result and state switching in a browser when available; disclose if unverified. Gather user feedback and revise. Republish state sets with `states`, not a single-screen `push`.
 5. **Distill.** After explicit approval of a project-specific design, save confirmed reusable visual CSS for that area. Read [style profiles](references/style-profiles.md).
-6. **Continue.** Implement app changes only when the user has authorized them. Stop the companion when the visual session ends.
+6. **Continue.** Implement app changes only when the user has authorized them. Stop the companion when the visual session ends. The keyed URL stops working after `stop`, so hand over the source file paths and screenshot paths with your answer.
 
 ## Choose a presentation
 
 - Show one design as a complete preview.
 - Compare alternatives at a readable size.
 - Use the [state rail](references/state-rail.md) for complete page states without losing surrounding context. The rail is outside each isolated static preview.
+- Use the [explain-visually playbook](references/explain-visually.md) when the reader says they don't understand something, or asks you to explain, illustrate, walk through, or trace it. It picks a recipe and sets the order: answer first, then steps and an example.
 
 For neutral chat visuals, use the companion theme tokens and explicit text/surface pairs rather than hardcoded colors. Preserve project-specific styles in product previews. For markup and companion components, read [authoring screens](references/authoring-screens.md) and [components](references/components.md). For project styles, asset staging, isolation, and interaction limits, read the relevant linked reference.

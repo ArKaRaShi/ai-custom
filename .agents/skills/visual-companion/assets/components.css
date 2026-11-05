@@ -158,7 +158,7 @@
 }
 
 .vc-label {
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--vc-muted);
@@ -221,7 +221,7 @@
   padding: 2px 8px;
   border-radius: 999px;
   border: 1px solid var(--vc-border);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--vc-muted);
 }
 
@@ -358,7 +358,7 @@
 }
 
 .vc-table th {
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--vc-muted);
@@ -369,7 +369,8 @@
   border-bottom: 0;
 }
 
-.vc-table td[data-numeric] {
+.vc-table td[data-numeric],
+.vc-table th[data-numeric] {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
@@ -386,7 +387,7 @@
 
 .vc-mockup-head {
   padding: 6px 12px;
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--vc-muted);
@@ -441,6 +442,337 @@
 
 .vc-proscons .vc-cons h4 {
   color: var(--vc-warn);
+}
+
+/* ---------- explanations ---------- */
+
+.vc-answer {
+  color: var(--vc-fg);
+  background: var(--vc-surface);
+  border: 1px solid var(--vc-border);
+  border-left: 4px solid var(--vc-accent);
+  border-radius: var(--vc-radius);
+  padding: 16px 18px;
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+.vc-answer > :first-child {
+  margin-top: 0;
+}
+
+.vc-answer > :last-child {
+  margin-bottom: 0;
+}
+
+.vc-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  counter-reset: vc-step;
+}
+
+.vc-step {
+  counter-increment: vc-step;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 4px 12px;
+  color: var(--vc-fg);
+  background: var(--vc-surface);
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius);
+  padding: 12px 14px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.vc-step > * {
+  grid-column: 2;
+}
+
+.vc-step::before {
+  content: counter(vc-step);
+  grid-column: 1;
+  grid-row: 1;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--vc-fg);
+  border: 1px solid var(--vc-border);
+}
+
+/* data-diff marks a step's change. The border style differs per kind so the mark
+   survives without color; the markup still carries a text badge naming the change. */
+.vc-step[data-diff="add"] {
+  border: 2px solid var(--vc-ok);
+}
+
+.vc-step[data-diff="chg"] {
+  border: 2px solid var(--vc-warn);
+}
+
+.vc-step[data-diff="del"] {
+  border: 2px dashed var(--vc-danger);
+}
+
+.vc-step-note {
+  margin: 0;
+  color: var(--vc-muted);
+  font-size: 14px;
+}
+
+.vc-delta {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.vc-delta del {
+  color: var(--vc-muted);
+}
+
+.vc-delta ins {
+  text-decoration: none;
+  font-weight: 650;
+}
+
+.vc-delta del + ins::before {
+  content: " → ";
+  font-weight: 400;
+  color: var(--vc-muted);
+}
+
+.vc-collapsed {
+  color: var(--vc-muted);
+  border: 1px dashed var(--vc-border);
+  border-radius: var(--vc-radius);
+  padding: 10px 14px;
+  font-size: 14px;
+}
+
+.vc-collapsed > summary {
+  cursor: pointer;
+}
+
+.vc-collapsed[open] > summary {
+  margin-bottom: 8px;
+}
+
+/* ---------- long page: stacked sections + thin section rail ---------- */
+
+.vc-page-body {
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+  min-width: 0;
+}
+
+.vc-part {
+  scroll-margin-top: 56px;
+}
+
+.vc-part + .vc-part {
+  border-top: 1px solid var(--vc-border);
+  padding-top: 32px;
+}
+
+.vc-part-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--vc-muted);
+}
+
+.vc-toc-num {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--vc-border);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0;
+  color: var(--vc-fg);
+}
+
+/* Rail: fixed to the left edge, vertically centred. One tick per section; the name shows on hover or focus. */
+.vc-toc {
+  position: fixed;
+  z-index: 10;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.vc-toc ol {
+  list-style: none;
+  margin: 0;
+  padding: 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--vc-border);
+  border-left: 0;
+  border-radius: 0 8px 8px 0;
+  background: var(--vc-surface);
+  box-shadow: 0 2px 12px #0003;
+}
+
+.vc-toc li {
+  position: relative;
+}
+
+.vc-toc a {
+  display: flex;
+  align-items: center;
+  width: 36px;
+  height: 24px;
+  padding: 0 6px;
+  text-decoration: none;
+}
+
+.vc-toc a::before {
+  content: "";
+  width: 6px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--vc-muted);
+  transition: width 160ms ease-out, background 160ms ease-out;
+}
+
+.vc-toc a[data-distance="0"]::before { width: 20px; }
+.vc-toc a[data-distance="1"]::before { width: 15px; }
+.vc-toc a[data-distance="2"]::before { width: 10px; }
+
+/* Section in view: a longer tick in the accent color, so length marks it as well as color. */
+.vc-toc a[aria-current="true"]::before {
+  width: 20px;
+  background: var(--vc-accent);
+}
+
+.vc-toc a:focus-visible {
+  outline: 2px solid var(--vc-accent);
+  outline-offset: -2px;
+}
+
+.vc-toc .vc-toc-num {
+  display: none;
+}
+
+.vc-toc-name {
+  position: absolute;
+  left: 44px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 6px 10px;
+  border: 1px solid var(--vc-border);
+  border-radius: 6px;
+  background: var(--vc-surface);
+  color: var(--vc-fg);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px #0004;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.vc-toc a:hover .vc-toc-name,
+.vc-toc a:focus-visible .vc-toc-name {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vc-toc a::before {
+    transition: none;
+  }
+}
+
+/* Narrow screens: the rail becomes a sticky strip of numbered names under the status bar. */
+@media (max-width: 760px) {
+  .vc-toc {
+    position: sticky;
+    top: 41px;
+    transform: none;
+    z-index: 5;
+    margin: 0 -16px 16px;
+    padding: 6px 16px;
+    background: var(--vc-bg);
+    border-bottom: 1px solid var(--vc-border);
+    overflow-x: auto;
+  }
+
+  .vc-toc ol {
+    flex-direction: row;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .vc-toc a {
+    width: auto;
+    height: auto;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    color: var(--vc-muted);
+    white-space: nowrap;
+  }
+
+  .vc-toc a::before {
+    display: none;
+  }
+
+  .vc-toc .vc-toc-num {
+    display: inline-grid;
+  }
+
+  .vc-toc-name {
+    position: static;
+    transform: none;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+    color: inherit;
+    font-weight: inherit;
+    opacity: 1;
+  }
+
+  .vc-toc a[aria-current="true"] {
+    color: var(--vc-fg);
+    font-weight: 650;
+    background: var(--vc-surface);
+  }
+
+  .vc-toc a[aria-current="true"] .vc-toc-num {
+    background: var(--vc-accent);
+    border-color: var(--vc-accent);
+    color: var(--vc-accent-fg);
+  }
+
+  .vc-part {
+    scroll-margin-top: 100px;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html:has(.vc-page) {
+    scroll-behavior: smooth;
+  }
 }
 
 /* ---------- code ---------- */
@@ -507,15 +839,52 @@ vc-tabs vc-tab[data-active] {
 
 /* ---------- chart ---------- */
 
-vc-chart svg {
-  width: 100%;
-  height: auto;
-  overflow: visible;
+vc-chart {
+  display: block;
 }
 
-vc-chart .vc-tick {
-  fill: var(--vc-muted);
-  font-size: 10px;
+vc-chart .vc-chart-plot,
+vc-chart .vc-chart-labels {
+  display: grid;
+  grid-template-columns: repeat(var(--vc-chart-cols, 1), minmax(0, 1fr));
+  gap: 12px;
+  padding: 0 4px;
+}
+
+vc-chart .vc-chart-plot {
+  align-items: end;
+  border-bottom: 1px solid var(--vc-border);
+}
+
+vc-chart .vc-chart-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+}
+
+vc-chart .vc-chart-bar {
+  width: 100%;
+  max-width: 72px;
+  background: var(--vc-accent);
+  opacity: 0.85;
+  border-radius: 4px 4px 0 0;
+}
+
+vc-chart .vc-chart-value {
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--vc-muted);
+}
+
+vc-chart .vc-chart-label {
+  padding-top: 6px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--vc-muted);
+  overflow-wrap: anywhere;
 }
 
 /* ---------- forms ---------- */
