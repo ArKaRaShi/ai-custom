@@ -1,8 +1,10 @@
 import * as path from "node:path";
 import { untrackEntry } from "@/scripts/commands/untrack-entry";
 import type { Io } from "@/scripts/io/io";
+import type { SyncEntry, UnifiedManifest } from "@/scripts/lib/manifest";
+import { manifestDiffOf } from "@/scripts/lib/manifest-diff";
 import { loadUnifiedManifest } from "@/scripts/lib/manifest-repository";
-import { type Result, type ResultError, syncError } from "@/scripts/lib/plan";
+import { type GitReport, type Result, type ResultError, syncError } from "@/scripts/lib/plan";
 import { buildPrunePlan } from "@/scripts/lib/plan-builder";
 import { executePlan } from "@/scripts/lib/plan-executor";
 import { isExcludedByPolicy } from "@/scripts/lib/target-matcher";
@@ -156,6 +158,20 @@ export function retireSkill(io: Io, input: RetireSkillInput): RetireSkillOutput 
       message: `Unrelated changes in the backup repository block --git-push: ${scope.unrelatedChanges.join(", ")}`,
     };
   }
+  let gitReport: GitReport | undefined = scope ?? undefined;
+  if (scope && wantsGit) {
+    // The retire edits the manifest only on apply, so a preview diffs the manifest as the apply will leave it.
+    const retired: UnifiedManifest = {
+      ...manifest,
+      entries: manifest.entries.map(
+        (entry): SyncEntry =>
+          entry.kind === "skill" && entry.root === rootId && names.includes(entry.path)
+            ? { ...entry, sync: false }
+            : entry,
+      ),
+    };
+    gitReport = { ...scope, manifestDiff: manifestDiffOf(io, repoBase, retired) };
+  }
 
   const resolvedPaths = entries.map((item) => item.label);
   const roots = [
@@ -173,7 +189,7 @@ export function retireSkill(io: Io, input: RetireSkillInput): RetireSkillOutput 
     outcome,
     errors,
     recovery,
-    ...(scope ? { git: scope } : {}),
+    ...(gitReport ? { git: gitReport } : {}),
   });
 
   const apply = opts.apply === true;
@@ -200,7 +216,7 @@ export function retireSkill(io: Io, input: RetireSkillInput): RetireSkillOutput 
     result = {
       ...executePlan(io, plan),
       operation: "retire",
-      ...(scope ? { git: scope } : {}),
+      ...(gitReport ? { git: gitReport } : {}),
     };
   }
   const extraLines: string[] = [];

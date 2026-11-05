@@ -1,6 +1,10 @@
 import type { Io } from "@/scripts/io/io";
 import type { PathEntry, UnifiedManifest } from "@/scripts/lib/manifest";
-import { isExcludedByPolicy as isExcludedByPolicyWith } from "@/scripts/lib/scan";
+import type { PolicyRule } from "@/scripts/lib/plan";
+import {
+  isExcludedByPolicy as isExcludedByPolicyWith,
+  policyRuleOf as policyRuleOfWith,
+} from "@/scripts/lib/scan";
 import {
   filterItems as filterItemsWith,
   matchesTarget as matchesTargetWith,
@@ -33,6 +37,18 @@ export function isExcludedByPolicy(
   relPath: string,
 ): boolean {
   return isExcludedByPolicyWith(manifest, rootId, relPath, (entry, rel) =>
+    pathRuleMatches(io, entry, rel),
+  );
+}
+
+/** The manifest rule that decides this file's policy, or undefined when no rule names it. */
+export function policyRuleOf(
+  io: Io,
+  manifest: UnifiedManifest,
+  rootId: string,
+  relPath: string,
+): PolicyRule | undefined {
+  return policyRuleOfWith(manifest, rootId, relPath, (entry, rel) =>
     pathRuleMatches(io, entry, rel),
   );
 }

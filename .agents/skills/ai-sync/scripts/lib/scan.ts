@@ -5,7 +5,7 @@ import {
   syncPolicyOf,
   type UnifiedManifest,
 } from "@/scripts/lib/manifest";
-import { hashCanonical, resolvedPathId, SyncError } from "@/scripts/lib/plan";
+import { hashCanonical, type PolicyRule, resolvedPathId, SyncError } from "@/scripts/lib/plan";
 import { normalizeTarget, type TargetTest } from "@/scripts/lib/targets";
 
 export interface ResolvedSyncTarget {
@@ -132,31 +132,42 @@ export function selectCopies(
 }
 
 /**
- * True when the policy names this file's item and says it does not sync. Path rules follow the
- * transfer scan: the last matching rule decides, and a file no rule mentions is not excluded.
- * A skill file is excluded only when every skill entry covering it is sync-off.
+ * The manifest rule that decides a file's policy, or undefined when none names it. Path rules follow
+ * the transfer scan: the last matching rule decides. A skill file is covered by the skill entries
+ * whose name is the file's first segment; a sync-on entry decides over a sync-off one.
  */
+export function policyRuleOf(
+  manifest: UnifiedManifest,
+  rootId: string,
+  relPath: string,
+  ruleMatches: PathRuleTest,
+): PolicyRule | undefined {
+  const root = manifest.roots[rootId];
+  if (!root) return undefined;
+  const entries = manifest.entries.filter((entry) => entry.root === rootId);
+  if (root.kind === "path") {
+    let decided: PathEntry | undefined;
+    for (const entry of entries) {
+      if (entry.kind === "path" && ruleMatches(entry, relPath)) decided = entry;
+    }
+    return decided && { kind: "path", root: rootId, pattern: decided.path, sync: decided.sync };
+  }
+  const covering = entries.filter(
+    (entry) =>
+      entry.kind === "skill" && (relPath === entry.path || relPath.startsWith(`${entry.path}/`)),
+  );
+  const decided = covering.find((entry) => entry.sync) ?? covering[0];
+  return decided && { kind: "skill", root: rootId, pattern: decided.path, sync: decided.sync };
+}
+
+/** True when the policy names this file's item and says it does not sync; a file no rule mentions is not excluded. */
 export function isExcludedByPolicy(
   manifest: UnifiedManifest,
   rootId: string,
   relPath: string,
   ruleMatches: PathRuleTest,
 ): boolean {
-  const root = manifest.roots[rootId];
-  if (!root) return false;
-  const entries = manifest.entries.filter((entry) => entry.root === rootId);
-  if (root.kind === "path") {
-    let verdict: boolean | undefined;
-    for (const entry of entries) {
-      if (entry.kind === "path" && ruleMatches(entry, relPath)) verdict = entry.sync;
-    }
-    return verdict === false;
-  }
-  const covering = entries.filter(
-    (entry) =>
-      entry.kind === "skill" && (relPath === entry.path || relPath.startsWith(`${entry.path}/`)),
-  );
-  return covering.length > 0 && covering.every((entry) => !entry.sync);
+  return policyRuleOf(manifest, rootId, relPath, ruleMatches)?.sync === false;
 }
 
 export function bindingsHashOf(roots: ResolvedRoot[]): string {

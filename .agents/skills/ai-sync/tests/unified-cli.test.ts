@@ -254,7 +254,7 @@ describe("given explicit targets, when previewing and applying, then results use
     const status = run(f.home, f.repo, "status", "--format=json");
     expect(status.exitCode).toBe(0);
     const value = result(status);
-    expect(value).toEqual({
+    expect(value).toMatchObject({
       operation: "status",
       scope: { roots: ["omp"], resolvedPaths: ["omp:a.txt", "omp:b.txt", "omp:sub/c.txt"] },
       actions: [],
@@ -1524,7 +1524,7 @@ describe("given backup copies of items the policy now excludes, when previewing 
     expect(value.operation).toBe("prune");
     expect(value.outcome).toBe("preview");
     expect(value.scope).toEqual({ roots: ["agents", "omp"], resolvedPaths: EXCLUDED_COPIES });
-    expect(value.actions).toEqual(
+    expect(value.actions.map(({ id, state }) => ({ id, state }))).toEqual(
       EXCLUDED_COPIES.map((_, index) => ({ id: `a${index + 1}`, state: "proposed" })),
     );
     expect(value.errors).toEqual([]);
@@ -1627,7 +1627,7 @@ describe("given an approved prune, when it is applied directly, then only the bo
     const value = result(applied);
     expect(value.operation).toBe("prune");
     expect(value.outcome).toBe("success");
-    expect(value.actions).toEqual([{ id: "a1", state: "completed" }]);
+    expect(value.actions).toMatchObject([{ id: "a1", state: "completed" }]);
     expect(value.recovery).toContain("Git history");
 
     expect(fs.existsSync(path.join(m.repo, ".omp", "extensions", "orca-a", "index.ts"))).toBe(
@@ -2654,5 +2654,323 @@ describe("given a backup that holds the old layout, when pushing with --remove-s
       [path.join("mine", "SKILL.md")]: "mine",
       [path.join("mine", "new", "guide.md")]: "guide",
     });
+  });
+});
+
+type Drifting = Result & {
+  drift: {
+    id: string;
+    cause: { code: string; message: string };
+    policy: Record<string, unknown>;
+  }[];
+};
+
+const causesOf = (value: Drifting): Record<string, string> =>
+  Object.fromEntries(value.drift.map((file) => [file.id, file.cause.code]));
+
+describe("given a restructured backup, when drift is reported, then each file carries its cause (stories 11, 12)", () => {
+  /** `restructured()` with one shared file edited locally, so every cause occurs. */
+  function drifted(): Retirable {
+    const m = restructured();
+    fs.writeFileSync(path.join(m.skills, "mine", "SKILL.md"), "edited locally");
+    return m;
+  }
+
+  const EXPECTED_CAUSES = {
+    "agents:mine/SKILL.md": "differs",
+    "agents:mine/new/guide.md": "only_local",
+    "agents:mine/old/deep/legacy.md": "only_backup",
+    "agents:mine/old/legacy2.md": "only_backup",
+    "omp:config.yml": "only_local",
+    "omp:notes/gone.md": "only_backup",
+    "omp:notes/n.md": "only_local",
+    "omp:private/old.txt": "excluded_backup_copy",
+  };
+
+  it("status JSON names a cause per file and separates repo-only files from excluded backup copies", () => {
+    const m = drifted();
+    const before = { files: snapshot(m.repo), head: git(m.home, m.repo, "rev-parse", "HEAD") };
+    const output = run(m.home, m.repo, "status", "--format=json");
+    expect(output.exitCode).toBe(0);
+    const value = JSON.parse(output.stdout) as Drifting;
+    expect(causesOf(value)).toEqual(EXPECTED_CAUSES);
+    expect(value.scope.resolvedPaths).not.toContain("omp:private/old.txt");
+    expect(value.drift.every((file) => file.cause.message.length > 0)).toBe(true);
+    const restore = value.drift.find((file) => file.id === "omp:notes/gone.md");
+    expect(restore?.cause.message).toContain("pull restores it");
+    expect(restore?.cause.message).toContain("--remove-stale");
+    const excluded = value.drift.find((file) => file.id === "omp:private/old.txt");
+    expect(excluded?.cause.message).toContain("prune");
+    expect({ files: snapshot(m.repo), head: git(m.home, m.repo, "rev-parse", "HEAD") }).toEqual(
+      before,
+    );
+  });
+
+  it("status tree prints each cause code and the excluded copy count", () => {
+    const m = drifted();
+    const output = run(m.home, m.repo, "status");
+    expect(output.exitCode).toBe(0);
+    expect(output.stdout).toContain("omp:notes/gone.md  only_backup");
+    expect(output.stdout).toContain("omp:private/old.txt  excluded_backup_copy");
+    expect(output.stdout).toContain("agents:mine/SKILL.md  differs");
+    expect(output.stdout).toContain("excluded     1 backup copies");
+  });
+
+  it("status narrows causes by --target and still rejects an unknown target", () => {
+    const m = drifted();
+    const scoped = JSON.parse(
+      run(m.home, m.repo, "status", "--target", "omp:notes", "--format=json").stdout,
+    ) as Drifting;
+    expect(causesOf(scoped)).toEqual({
+      "omp:notes/gone.md": "only_backup",
+      "omp:notes/n.md": "only_local",
+    });
+    const unknown = run(m.home, m.repo, "status", "--target", "nothing-like-this", "--format=json");
+    expect(unknown.exitCode).not.toBe(0);
+    expect(codes(result(unknown))).toEqual(["UNKNOWN_TARGET"]);
+  });
+
+  it("inspect JSON gives the cause and the policy rule behind a repo-only file and an excluded copy", () => {
+    const m = drifted();
+    const output = run(m.home, m.repo, "inspect", "--format=json");
+    expect(output.exitCode).toBe(0);
+    const value = JSON.parse(output.stdout) as Drifting;
+    expect(causesOf(value)).toEqual(EXPECTED_CAUSES);
+    const gone = value.drift.find((file) => file.id === "omp:notes/gone.md");
+    expect(gone?.policy).toEqual({
+      verdict: "managed",
+      rule: { kind: "path", root: "omp", pattern: "notes/**", sync: true },
+    });
+    const old = value.drift.find((file) => file.id === "omp:private/old.txt");
+    expect(old?.policy).toEqual({
+      verdict: "excluded",
+      rule: { kind: "path", root: "omp", pattern: "private/**", sync: false },
+    });
+    const skill = value.drift.find((file) => file.id === "agents:mine/old/legacy2.md");
+    expect(skill?.policy).toEqual({
+      verdict: "managed",
+      rule: { kind: "skill", root: "agents", pattern: "mine", sync: true },
+    });
+  });
+
+  it("inspect narrowed to one excluded file prints its cause and the rule in the tree", () => {
+    const m = drifted();
+    const output = run(m.home, m.repo, "inspect", "--target", "omp:private/old.txt");
+    expect(output.exitCode).toBe(0);
+    expect(output.stdout).toContain("omp:private/old.txt  excluded_backup_copy");
+    expect(output.stdout).toContain("policy: excluded by path rule 'private/**' (sync: false)");
+    expect(output.stdout).not.toContain("omp:notes/gone.md");
+  });
+});
+
+describe("given a shared config file the policy now excludes, when previewing prune, then the entry names its rule (story 13)", () => {
+  /** `prunable()` after `untrack path config.yml`: the backup copy of config.yml is excluded. */
+  function configExcluded(): Prunable {
+    const m = prunable();
+    expect(run(m.home, m.repo, "untrack", "path", "config.yml", "--root", "omp").exitCode).toBe(0);
+    return m;
+  }
+
+  it("states the path rule with sync: false in JSON, beside rules for trees and skills", () => {
+    const m = configExcluded();
+    const before = worldState(m);
+    const preview = run(m.home, m.repo, "prune", "--format=json");
+    expect(preview.exitCode).toBe(0);
+    const value = result(preview);
+    const byPath = new Map(
+      value.scope.resolvedPaths.map((id, index) => [id, value.actions[index]?.excludedBy]),
+    );
+    expect(byPath.get("omp:config.yml")).toEqual({
+      kind: "path",
+      root: "omp",
+      pattern: "config.yml",
+      sync: false,
+    });
+    expect(byPath.get("omp:private/token.txt")).toEqual({
+      kind: "path",
+      root: "omp",
+      pattern: "private/**",
+      sync: false,
+    });
+    expect(byPath.get("agents:vendor/SKILL.md")).toEqual({
+      kind: "skill",
+      root: "agents",
+      pattern: "vendor",
+      sync: false,
+    });
+    expect(value.actions.every((action) => action.excludedBy !== undefined)).toBe(true);
+    expect(worldState(m)).toEqual(before);
+  });
+
+  it("explains the entry in the tree, and status reports the same file as an excluded backup copy", () => {
+    const m = configExcluded();
+    const tree = run(m.home, m.repo, "prune");
+    expect(tree.stdout).toContain(
+      "omp:config.yml (excluded by path rule 'config.yml' (sync: false))",
+    );
+    expect(tree.stdout).toContain("excluded by skill entry 'vendor' (sync: false)");
+    const status = JSON.parse(run(m.home, m.repo, "status", "--format=json").stdout) as Drifting;
+    const config = status.drift.find((file) => file.id === "omp:config.yml");
+    expect(config?.cause.code).toBe("excluded_backup_copy");
+    expect(config?.cause.message).toContain("path rule 'config.yml' (sync: false)");
+  });
+
+  it("keeps the rule on the apply result", () => {
+    const m = configExcluded();
+    const applied = run(
+      m.home,
+      m.repo,
+      "prune",
+      "--apply",
+      "--target",
+      "omp:config.yml",
+      "--format=json",
+    );
+    expect(applied.exitCode).toBe(0);
+    const value = result(applied);
+    expect(value.actions).toMatchObject([
+      { state: "completed", excludedBy: { pattern: "config.yml", sync: false } },
+    ]);
+    expect(fs.existsSync(path.join(m.repo, ".omp", "config.yml"))).toBe(false);
+  });
+});
+
+type ManifestChangeJson = { kind: string; root: string; path: string; changes?: string[] };
+type WithManifestDiff = Result & {
+  git?: {
+    manifestDiff?: {
+      base: string;
+      added: ManifestChangeJson[];
+      removed: ManifestChangeJson[];
+      changed: ManifestChangeJson[];
+      lines: { added: number; removed: number };
+    };
+  };
+};
+
+describe("given pending manifest edits, when a Git export is previewed or blocked, then the manifest diff is shown and nothing changes (stories 14, 15)", () => {
+  const worldOf = (m: Retirable): { files: Record<string, string>; head: string } => ({
+    files: snapshot(m.repo),
+    head: git(m.home, m.repo, "rev-parse", "HEAD"),
+  });
+  const retirePreview = (m: Retirable, ...extra: string[]): RunOutput =>
+    run(m.home, m.repo, "retire", "mine", "--root", "agents", "--git-push", ...extra);
+
+  /** `retirable()` with a pending manifest that adds a path rule and drops the `vendor` skill. */
+  function editedManifest(): Retirable {
+    const m = retirable();
+    expect(run(m.home, m.repo, "track", "path", "extra/**", "--root", "omp").exitCode).toBe(0);
+    expect(run(m.home, m.repo, "untrack", "skill", "vendor", "--root", "agents").exitCode).toBe(0);
+    return m;
+  }
+
+  it("retire preview lists added, removed, and changed entries with line counts", () => {
+    const m = editedManifest();
+    const before = worldOf(m);
+    const preview = retirePreview(m, "--format=json");
+    expect(preview.exitCode).toBe(0);
+    const value = JSON.parse(preview.stdout) as WithManifestDiff;
+    expect(value.outcome).toBe("preview");
+    const diff = value.git?.manifestDiff;
+    expect(diff?.base).toBe("head");
+    expect(diff?.added).toEqual([{ kind: "path", root: "omp", path: "extra/**" }]);
+    expect(diff?.removed).toEqual([{ kind: "skill", root: "agents", path: "vendor" }]);
+    expect(diff?.changed).toEqual([
+      { kind: "skill", root: "agents", path: "mine", changes: ["sync: true → false"] },
+    ]);
+    expect(diff?.lines.added).toBeGreaterThan(0);
+    expect(diff?.lines.removed).toBeGreaterThan(0);
+    expect(worldOf(m)).toEqual(before);
+  });
+
+  it("retire preview prints the diff in the tree and still changes nothing", () => {
+    const m = editedManifest();
+    const before = worldOf(m);
+    const preview = retirePreview(m);
+    expect(preview.exitCode).toBe(0);
+    expect(preview.stdout).toContain("manifest diff: 1 added, 1 removed, 1 changed");
+    expect(preview.stdout).toContain("manifest + path omp:extra/**");
+    expect(preview.stdout).toContain("manifest - skill agents:vendor");
+    expect(preview.stdout).toContain("manifest ~ skill agents:mine  sync: true → false");
+    expect(worldOf(m)).toEqual(before);
+  });
+
+  it("shows an empty diff when the manifest the retire exports already matches HEAD", () => {
+    const m = retirable();
+    const excluded = run(m.home, m.repo, "untrack", "skill", "mine", "--root", "agents", "--prune");
+    expect(excluded.exitCode).toBe(0);
+    git(m.home, m.repo, "add", "-A");
+    git(m.home, m.repo, "commit", "-q", "-m", "exclude mine");
+    const preview = retirePreview(m, "--format=json");
+    expect(preview.exitCode).toBe(0);
+    const diff = (JSON.parse(preview.stdout) as WithManifestDiff).git?.manifestDiff;
+    expect(diff).toEqual({
+      base: "head",
+      added: [],
+      removed: [],
+      changed: [],
+      lines: { added: 0, removed: 0 },
+    });
+    expect(retirePreview(m).stdout).toContain("manifest diff: no entry changes (+0 -0 lines)");
+  });
+
+  it("blocks a plain push on a pending manifest edit, names the manifest, shows the diff, and changes nothing", () => {
+    const m = editedManifest();
+    const before = worldOf(m);
+    for (const extra of [[], ["--apply"]]) {
+      const blocked = run(
+        m.home,
+        m.repo,
+        "push",
+        "--target",
+        "omp",
+        "--git-push",
+        "--format=json",
+        ...extra,
+      );
+      expect(blocked.exitCode).not.toBe(0);
+      const value = JSON.parse(blocked.stdout) as WithManifestDiff;
+      expect(codes(value)).toEqual(["GIT_DIRTY_UNRELATED"]);
+      expect(value.errors[0]?.message).toContain(".ai-sync/manifest.json");
+      expect(value.errors[0]?.message).toContain("does not export");
+      expect(value.recovery).toContain("sync retire");
+      expect(value.recovery).toContain("committed");
+      expect(value.git?.manifestDiff?.added).toEqual([
+        { kind: "path", root: "omp", path: "extra/**" },
+      ]);
+      expect(value.git?.manifestDiff?.removed).toEqual([
+        { kind: "skill", root: "agents", path: "vendor" },
+      ]);
+      expect(value.actions.every((action) => action.state === "not_attempted")).toBe(true);
+      expect(worldOf(m)).toEqual(before);
+    }
+  });
+
+  it("omits the manifest diff from a plain push preview when the manifest is clean", () => {
+    const m = retirable();
+    const preview = run(m.home, m.repo, "push", "--target", "omp", "--git-push", "--format=json");
+    expect(preview.exitCode).toBe(0);
+    const value = JSON.parse(preview.stdout) as WithManifestDiff;
+    expect(value.outcome).toBe("preview");
+    expect(value.git?.exportedPaths).not.toContain(".ai-sync/manifest.json");
+    expect(value.git?.manifestDiff).toBeUndefined();
+  });
+
+  it("never exports the manifest in an applied plain push whose manifest is clean", () => {
+    const m = retirable();
+    const applied = run(
+      m.home,
+      m.repo,
+      "push",
+      "--target",
+      "omp",
+      "--apply",
+      "--git-push",
+      "--format=json",
+    );
+    expect(applied.exitCode).toBe(0);
+    const files = git(m.home, m.repo, "show", "--name-only", "--format=", "HEAD");
+    expect(files).toContain(".omp/config.yml");
+    expect(files).not.toContain(".ai-sync/manifest.json");
   });
 });

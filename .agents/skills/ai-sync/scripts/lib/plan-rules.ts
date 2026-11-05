@@ -1,6 +1,7 @@
 import * as path from "node:path";
 import type { RemoteIntegrationPreview } from "@/scripts/lib/git";
 import { isWithin, type ResolvedRoot } from "@/scripts/lib/manifest";
+import { manifestDiffNotes } from "@/scripts/lib/manifest-diff";
 import {
   type Digest,
   describeDigest,
@@ -270,6 +271,7 @@ export function gitNotes(git: GitReport | undefined): string[] {
     notes.push(`git unrelated changes: ${git.unrelatedChanges.join(", ")}`);
   }
   if (git.limitation) notes.push(`git limitation: ${git.limitation}`);
+  notes.push(...manifestDiffNotes(git.manifestDiff));
   return notes;
 }
 

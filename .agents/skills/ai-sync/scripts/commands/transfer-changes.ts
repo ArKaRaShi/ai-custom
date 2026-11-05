@@ -1,5 +1,6 @@
 import * as path from "node:path";
 import type { Io } from "@/scripts/io/io";
+import { pushManifestOf } from "@/scripts/lib/manifest-diff";
 import {
   type GitPlan,
   type GitReport,
@@ -24,6 +25,9 @@ import {
 } from "@/scripts/lib/plan-rules";
 import { loadRoots } from "@/scripts/lib/root-scanner";
 import type { SyncOptions } from "@/scripts/lib/targets";
+
+const MANIFEST_BLOCK_RECOVERY =
+  "A push never exports .ai-sync/manifest.json. `sync retire ... --git-push` exports it with the retirements it makes; any other manifest change must be committed by the user before the push.";
 
 export interface TransferChangesInput {
   operation: "push" | "pull";
@@ -148,19 +152,27 @@ export function transferChanges(io: Io, input: TransferChangesInput): TransferCh
           .map((action) => action.target.location),
       )
     : null;
-  let gitReport: GitReport | undefined = pullGit?.git ?? pushScope ?? undefined;
+  const pushManifest = pushScope ? pushManifestOf(io, repoBase, pushScope) : undefined;
+  let gitReport: GitReport | undefined = pullGit?.git;
+  if (!gitReport && pushScope) {
+    gitReport = pushManifest ? { ...pushScope, manifestDiff: pushManifest.diff } : pushScope;
+  }
   let blocked: ResultError | null = pullGit?.blocked ?? null;
   if (operation === "push" && opts.gitPush === true) {
     if (!pushScope) {
       blocked = { code: "GIT_FAILED", item: null, message: `Not a git repository: ${repoBase}` };
     } else if (pushScope.unrelatedChanges.length > 0) {
+      const manifestCause = pushManifest?.blocking
+        ? `. The manifest ${pushManifest.gitPath} has pending changes that a push does not export`
+        : "";
       blocked = {
         code: "GIT_DIRTY_UNRELATED",
         item: null,
-        message: `Unrelated changes in the backup repository block --git-push: ${pushScope.unrelatedChanges.join(", ")}`,
+        message: `Unrelated changes in the backup repository block --git-push: ${pushScope.unrelatedChanges.join(", ")}${manifestCause}`,
       };
     }
   }
+  const manifestRecovery = pushManifest?.blocking ? ` ${MANIFEST_BLOCK_RECOVERY}` : "";
   if (blocked) gitReport = gitReport ?? {};
 
   if (!apply) {
@@ -168,7 +180,7 @@ export function transferChanges(io: Io, input: TransferChangesInput): TransferCh
       const stopped = gitStoppedResult(
         plan,
         [blocked],
-        "Resolve the Git state, then preview again. Nothing was changed.",
+        `Resolve the Git state, then preview again. Nothing was changed.${manifestRecovery}`,
         gitReport,
       );
       return { kind: "git-stopped", phase: "preview", result: stopped, plan };
@@ -187,7 +199,7 @@ export function transferChanges(io: Io, input: TransferChangesInput): TransferCh
     const stopped = gitStoppedResult(
       plan,
       [blocked],
-      "Resolve the Git state, then run the push again. Nothing was exported.",
+      `Resolve the Git state, then run the push again. Nothing was exported.${manifestRecovery}`,
       gitReport,
     );
     return { kind: "git-stopped", phase: "apply", result: stopped, plan };

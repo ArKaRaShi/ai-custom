@@ -1,4 +1,5 @@
 import type { PruneBackupOutput } from "@/scripts/commands/prune-backup";
+import { describeRule } from "@/scripts/lib/drift";
 import type { SyncOptions } from "@/scripts/lib/targets";
 import { printJson } from "./common";
 import { printApplyTree, printPreviewTree } from "./transfer";
@@ -10,8 +11,11 @@ export function renderPrune(output: PruneBackupOutput, format: SyncOptions["form
     printJson(result);
     return;
   }
+  const reasons = result.actions.map((action) =>
+    action.excludedBy ? `excluded by ${describeRule(action.excludedBy)}` : undefined,
+  );
   if (output.kind === "applied") {
-    printApplyTree(plan, result, []);
+    printApplyTree(plan, result, [], reasons);
     return;
   }
   if (plan.actions.length === 0) {
@@ -19,5 +23,5 @@ export function renderPrune(output: PruneBackupOutput, format: SyncOptions["form
     console.log(`  ├─ repo_root  ${plan.repository.path}`);
     console.log("  ├─ to_remove  0 file(s)");
     console.log("  └─ status     ✔ nothing to remove (no excluded backup copies)");
-  } else printPreviewTree(plan, output.planFile, []);
+  } else printPreviewTree(plan, output.planFile, [], reasons);
 }

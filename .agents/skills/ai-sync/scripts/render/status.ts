@@ -7,7 +7,7 @@ export function renderStatus(output: ReportStatusOutput, format: SyncOptions["fo
     printJson(output.result);
     return;
   }
-  const { counts } = output;
+  const { counts, drift } = output;
   console.log(`ai-sync:status [${counts.in_sync} files in sync]`);
   console.log(`  ├─ machine_home ${output.home}`);
   console.log(`  ├─ repo_root    ${output.repoBase}`);
@@ -19,6 +19,13 @@ export function renderStatus(output: ReportStatusOutput, format: SyncOptions["fo
   console.log(`  ├─ new_local    ${counts.new_local} files`);
   console.log(`  ├─ new_repo     ${counts.new_repo} files`);
   console.log(`  ├─ modified     ${counts.modified} files`);
+  console.log(`  ├─ excluded     ${output.excludedCopies} backup copies (prune removes them)`);
+  if (drift.length > 0) {
+    console.log(`  ├─ causes       ${drift.length} file(s)`);
+    for (const file of drift) {
+      console.log(`  │  ├─ ${file.id}  ${file.cause.code}: ${file.cause.message}`);
+    }
+  }
   console.log(
     output.drifting
       ? `  └─ status       ⚠ drift detected (run push or pull)`

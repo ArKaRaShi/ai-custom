@@ -7,6 +7,8 @@ Every `sync` command, grouped by what it changes.
 - Setup
 - Track and untrack
 - Retire a skill
+- Mirror a restructure with push
+- Why a file differs
 - Command effects
 - Targets and saved plans
 
@@ -50,7 +52,7 @@ sync retire --target omp:rules/old.md --apply --git-push  # an excluded backup f
 
 `--target <root>:<path>` is repeatable and names one exact file, with no globs. The policy must already exclude the file (`sync untrack path <path> --root <id>`), or its removal must already be pending in Git. A file the policy still manages is refused. Without skill names, `--root` is not needed.
 
-`retire` names exact skills that are already in the manifest. List every skill retired in one batch, because each skill's pending deletion counts as unrelated for a single-skill push. It excludes each skill from the policy, prunes its backup copy and the folders that leaves empty, and with `--git-push` commits and pushes only those paths plus `.ai-sync/manifest.json`. Any other pending change blocks the push with `GIT_DIRTY_UNRELATED` before anything changes. Without `--git-push`, it stops after the local prune. A later `retire --apply --git-push` pushes the pending deletions.
+`retire` names exact skills that are already in the manifest. List every skill retired in one batch, because each skill's pending deletion counts as unrelated for a single-skill push. It excludes each skill from the policy, prunes its backup copy and the folders that leaves empty, and with `--git-push` commits and pushes only those paths plus `.ai-sync/manifest.json`. The preview shows the manifest diff: entries added, removed, and changed (by kind, root, path) and line counts, from Git HEAD against the manifest the retire will leave; JSON has it as `git.manifestDiff`. Any other pending change blocks the push with `GIT_DIRTY_UNRELATED` before anything changes. Without `--git-push`, it stops after the local prune. A later `retire --apply --git-push` pushes the pending deletions.
 
 The manual path is `sync untrack skill mentor --root agents --prune`, then `sync prune "$REPO" --apply --target agents:mentor`. Plain `untrack` drops the entry, so `prune` and `retire` can no longer see its backup copy.
 
@@ -63,13 +65,26 @@ sync push "$REPO" --target agents --remove-stale                       # preview
 sync push "$REPO" --target agents --remove-stale --apply --git-push    # one commit holds the copies and the removals
 ```
 
-A backup file is stale when it is inside `--target`, has no local file, and the policy does not exclude it. Excluded copies stay with `prune`. The preview lists each removal beside the copies, and the JSON result marks it `"type": "delete"`. Apply also removes folders the removals leave empty, except the root's own backup folder. Unrelated Git changes still block `--git-push`. A saved plan (`--plan-out`) records the removals, and `apply` rejects it with `PLAN_STALE_SOURCE` when a local file reappears or `PLAN_STALE_TARGET` when the backup file changed. Pull and prune are unchanged, and `pull --remove-stale` is refused.
+A backup file is stale when it is inside `--target`, has no local file, and the policy does not exclude it. Excluded copies stay with `prune`. The preview lists each removal beside the copies, and the JSON result marks it `"type": "delete"`. Apply also removes folders the removals leave empty, except the root's own backup folder. Unrelated Git changes still block `--git-push`. A push never exports `.ai-sync/manifest.json`, so a pending manifest edit blocks it as unrelated: the error names the manifest, the preview shows its diff (`git.manifestDiff`), and the recovery is `sync retire ... --git-push` or committing the manifest yourself. A saved plan (`--plan-out`) records the removals, and `apply` rejects it with `PLAN_STALE_SOURCE` when a local file reappears or `PLAN_STALE_TARGET` when the backup file changed. Pull and prune are unchanged, and `pull --remove-stale` is refused.
+
+## Why a file differs
+
+`status` and `inspect` give each drifting file a `cause` (JSON `drift[]` with `id`, `cause.code`, `cause.message`, `policy`), from facts the tool holds: local presence, backup presence, content, and policy. They never say who changed a file or when.
+
+| Cause | Meaning | Next step |
+| --- | --- | --- |
+| `only_local` | new locally | `push` copies it |
+| `differs` | both sides hold different content | `push` overwrites the backup, `pull` the local file |
+| `only_backup` | in the backup, absent locally, policy does not exclude it | `pull` restores it; `push --remove-stale` removes it |
+| `excluded_backup_copy` | the policy excludes it | `prune` removes the backup copy |
+
+`inspect` adds `policy`: `managed` or `excluded`, and the deciding rule (`kind`, `root`, `pattern`, `sync`). `prune` names the same rule per entry, in the tree and as `excludedBy` on each JSON action, for example `path rule 'config.yml' (sync: false)`.
 
 ## Command effects
 
 | Command | Effect |
 | --- | --- |
-| `status`, `diff`, `inspect` | read only |
+| `status`, `diff`, `inspect` | read only; `status` and `inspect` explain each drifting file |
 | `push`, `pull` | preview; `--apply` needs a bounded `--target`; `push --remove-stale` also removes stale backup files |
 | `prune` | preview excluded backup copies; `--apply --target` removes only those |
 | `apply plan.json` | recheck the saved plan; `--apply` executes it |
@@ -81,7 +96,7 @@ A backup file is stale when it is inside `--target`, has no local file, and the 
 sync push "$REPO" --target omp --plan-out plan.json   # keep the file outside the backup and managed roots
 sync apply plan.json                                  # recheck only
 sync apply plan.json --apply                          # stale plans are rejected; nothing changes
-sync inspect "$REPO" [--target <scope>]               # kind, root, path, shared|local-only, version or null, local path
+sync inspect "$REPO" [--target <scope>]               # items: kind, root, path, shared|local-only, version or null, local path; plus drift causes
 sync prune "$REPO"                                    # list; local files and unselected backup content stay untouched
 sync prune "$REPO" --apply --target omp:old/skill.md  # remove exact backup copies only
 ```

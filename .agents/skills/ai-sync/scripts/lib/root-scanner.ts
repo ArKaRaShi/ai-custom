@@ -24,13 +24,28 @@ const toPosix = (value: string): string => value.split(path.sep).join("/");
 
 // Reads the manifest and both sides of every sync root to report drift. Read-only.
 
-/** The manifest in `repoBase` with each root resolved through this machine's bindings. */
-export function loadRoots(io: Io, repoBase: string): LoadedRoots {
-  const manifest = loadUnifiedManifest(io, repoBase);
-  return {
-    manifest,
-    roots: resolveRoots(io, manifest, loadLocations(io), repoBase),
-  };
+/**
+ * The manifest in `repoBase` with each root resolved through this machine's bindings. A root with no
+ * binding aborts the load, unless `boundOnly` drops it (and its entries) so a read-only report can cover the rest.
+ */
+export function loadRoots(
+  io: Io,
+  repoBase: string,
+  { boundOnly = false }: { boundOnly?: boolean } = {},
+): LoadedRoots {
+  const loaded = loadUnifiedManifest(io, repoBase);
+  const locations = loadLocations(io);
+  let manifest = loaded;
+  if (boundOnly) {
+    const boundRoots = Object.entries(loaded.roots).filter(([id]) => locations.roots[id]);
+    manifest = {
+      ...loaded,
+      roots: Object.fromEntries(boundRoots),
+      entries: loaded.entries.filter((entry) => locations.roots[entry.root]),
+    };
+  }
+  const roots = resolveRoots(io, manifest, locations, repoBase);
+  return { manifest, roots };
 }
 
 /** Path roots as one target each; skill roots as one target per synced skill. */
@@ -64,9 +79,13 @@ export function getSyncTargets(
 }
 
 /** Every policy-allowed file in every sync root, with its drift state. Read-only. */
-export function scanTargets(io: Io, repoBase: string, opts: SyncOptions = {}): ScanResult {
+export function scanTargets(
+  io: Io,
+  repoBase: string,
+  opts: SyncOptions = {},
+  loaded: LoadedRoots = loadRoots(io, repoBase),
+): ScanResult {
   const { fileSystem, git } = io;
-  const loaded = loadRoots(io, repoBase);
   const syncTargets = getSyncTargets(io, repoBase, loaded);
   const entries: ScanEntry[] = [];
 
@@ -171,9 +190,13 @@ export function scanTargets(io: Io, repoBase: string, opts: SyncOptions = {}): S
 }
 
 /** Every backup file whose item the policy excludes, committed or not. Read-only. */
-export function scanExcludedCopies(io: Io, repoBase: string, opts: SyncOptions = {}): PruneScan {
+export function scanExcludedCopies(
+  io: Io,
+  repoBase: string,
+  opts: SyncOptions = {},
+  loaded: LoadedRoots = loadRoots(io, repoBase),
+): PruneScan {
   const { fileSystem } = io;
-  const loaded = loadRoots(io, repoBase);
   const found = new Map<string, ExcludedCopy>();
 
   for (const root of loaded.roots) {

@@ -4,8 +4,13 @@ import { gitNotes, isStaleRemoval, PRUNE_CAVEAT, TRANSFER_WORDS } from "@/script
 import type { SyncOptions } from "@/scripts/lib/targets";
 import { printErrors, printJson } from "./common";
 
-/** The preview tree for a plan with actions; `notes` appear above the file list. */
-export function printPreviewTree(plan: Plan, planFile: string | undefined, notes: string[]): void {
+/** The preview tree for a plan with actions; `notes` appear above the file list and `reasons[i]` explains action `i`. */
+export function printPreviewTree(
+  plan: Plan,
+  planFile: string | undefined,
+  notes: string[],
+  reasons: readonly (string | undefined)[] = [],
+): void {
   const operation = plan.operation;
   const words = TRANSFER_WORDS[operation];
   console.log(`ai-sync:${operation} [preview]`);
@@ -18,28 +23,34 @@ export function printPreviewTree(plan: Plan, planFile: string | undefined, notes
   const removals = plan.actions.filter((action) => isStaleRemoval(plan, action)).length;
   console.log(`  ├─ to_${words.noun}  ${plan.actions.length - removals} file(s)`);
   if (removals > 0) console.log(`  ├─ to_remove  ${removals} stale backup file(s)`);
-  for (const action of plan.actions) {
-    const suffix =
-      action.type === "skip"
-        ? " (skipped: symlink is never followed)"
-        : isStaleRemoval(plan, action)
-          ? " (remove: backup file has no local counterpart)"
-          : "";
+  plan.actions.forEach((action, index) => {
+    const parts: string[] = [];
+    if (action.type === "skip") parts.push("skipped: symlink is never followed");
+    else if (isStaleRemoval(plan, action))
+      parts.push("remove: backup file has no local counterpart");
+    const reason = reasons[index];
+    if (reason) parts.push(reason);
+    const suffix = parts.length > 0 ? ` (${parts.join("; ")})` : "";
     console.log(`  │  ├─ ${action.root}:${action.path}${suffix}`);
-  }
+  });
   if (planFile) console.log(`  ├─ plan_out   ${planFile}`);
   console.log(`  └─ action     none (preview only; run with --apply to ${words.noun})`);
 }
 
-/** The apply tree: one line per action, then `extraLines`, then the status line and any errors. */
-export function printApplyTree(plan: Plan, result: Result, extraLines: string[]): void {
+/** The apply tree: one line per action, then `extraLines`, then the status line and any errors. `reasons[i]` explains action `i`. */
+export function printApplyTree(
+  plan: Plan,
+  result: Result,
+  extraLines: string[],
+  reasons: readonly (string | undefined)[] = [],
+): void {
   const operation = plan.operation;
   const words = TRANSFER_WORDS[operation];
   console.log(`ai-sync:${operation} [apply]`);
   console.log(`  ├─ repo_root  ${plan.repository.path}`);
   plan.actions.forEach((action, index) => {
     const state = result.actions[index];
-    const label = `${action.root}:${action.path}`;
+    const label = `${action.root}:${action.path}${reasons[index] ? ` (${reasons[index]})` : ""}`;
     if (state?.state === "completed")
       console.log(`  │  ✔ ${isStaleRemoval(plan, action) ? "removed" : words.done}: ${label}`);
     else if (state?.state === "failed")

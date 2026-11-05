@@ -1,8 +1,10 @@
 import type { Io } from "@/scripts/io/io";
+import { loadUnifiedManifest } from "@/scripts/lib/manifest-repository";
 import { type Plan, type Result, syncError } from "@/scripts/lib/plan";
 import { buildPrunePlan, saveGuardedPlan } from "@/scripts/lib/plan-builder";
 import { executePlan } from "@/scripts/lib/plan-executor";
 import { assertReviewedScope, previewResult } from "@/scripts/lib/plan-rules";
+import { policyRuleOf } from "@/scripts/lib/target-matcher";
 import type { SyncOptions } from "@/scripts/lib/targets";
 
 export interface PruneBackupInput {
@@ -54,6 +56,23 @@ export function pruneBackup(io: Io, input: PruneBackupInput): PruneBackupOutput 
   }
   const planFile = opts.planOut ? saveGuardedPlan(io, plan, opts.planOut) : undefined;
 
-  if (!apply) return { kind: "preview", result: previewResult(plan), plan, planFile };
-  return { kind: "applied", result: executePlan(io, plan), plan };
+  if (!apply) {
+    const proposed = previewResult(plan);
+    const preview = withExclusionRules(io, repoBase, plan, proposed);
+    return { kind: "preview", result: preview, plan, planFile };
+  }
+  const executed = executePlan(io, plan);
+  const applied = withExclusionRules(io, repoBase, plan, executed);
+  return { kind: "applied", result: applied, plan };
+}
+
+/** Adds the policy rule that excludes each action's backup copy; actions align with `plan.actions` by index. */
+function withExclusionRules(io: Io, repoBase: string, plan: Plan, result: Result): Result {
+  const manifest = loadUnifiedManifest(io, repoBase);
+  const actions = result.actions.map((action, index) => {
+    const planned = plan.actions[index];
+    const rule = planned && policyRuleOf(io, manifest, planned.root, planned.path);
+    return rule ? { ...action, excludedBy: rule } : action;
+  });
+  return { ...result, actions };
 }

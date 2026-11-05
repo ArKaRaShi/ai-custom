@@ -208,7 +208,7 @@ describe("given a backup with unrelated pending files, when pushing with --git-p
     const value = resultOf(dirty);
     expect(value.outcome).toBe("failed");
     expect(codesOf(value)).toEqual(["GIT_DIRTY_UNRELATED"]);
-    expect(value.git).toEqual({
+    expect(value.git).toMatchObject({
       exportedPaths: [".omp/test.txt"],
       unrelatedChanges: [".ai-sync/manifest.json", "notes.md"],
     });

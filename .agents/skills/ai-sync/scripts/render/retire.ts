@@ -1,4 +1,5 @@
 import type { RetireSkillOutput } from "@/scripts/commands/retire-skill";
+import { manifestDiffNotes } from "@/scripts/lib/manifest-diff";
 import type { SyncOptions } from "@/scripts/lib/targets";
 import { printErrors, printJson } from "./common";
 
@@ -21,6 +22,7 @@ export function renderRetire(output: RetireSkillOutput, format: SyncOptions["for
       `  ├─ git_export ${result.git.exportedPaths?.length ?? 0} path(s) plus the manifest`,
     );
     for (const file of result.git.unrelatedChanges ?? []) console.log(`  │  ✖ unrelated: ${file}`);
+    for (const note of manifestDiffNotes(result.git.manifestDiff)) console.log(`  │  ${note}`);
   }
   for (const line of extraLines) console.log(`  ├─ ${line}`);
   if (result.outcome === "preview") {

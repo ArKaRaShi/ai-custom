@@ -102,6 +102,56 @@ export interface InspectItem {
   installHash?: string;
 }
 
+/**
+ * The manifest rule that decides a file's policy: `pattern` is a path entry's gitignore-style rule,
+ * or a skill entry's name. `sync: false` means the policy excludes what it covers.
+ */
+export interface PolicyRule {
+  kind: "path" | "skill";
+  root: string;
+  pattern: string;
+  sync: boolean;
+}
+
+/**
+ * Why a file differs between this machine and the backup, from facts the tool holds: local
+ * presence, backup presence, content, and policy. It never says who changed the file or when.
+ * - `only_local`: new locally; a push copies it.
+ * - `differs`: both sides hold it with different content; a push overwrites the backup, a pull the local file.
+ * - `only_backup`: in the backup, absent locally, not excluded; a pull restores it, `push --remove-stale` removes it.
+ * - `excluded_backup_copy`: the policy excludes it; `prune` removes the backup copy.
+ */
+export type DriftCauseCode = "only_local" | "differs" | "only_backup" | "excluded_backup_copy";
+
+/** One file that is not in sync (or is an excluded backup copy), with its cause and the policy that applies to it. */
+export interface DriftFile {
+  /** `<root>:<path>`, with `path` root-relative and `/`-separated. */
+  id: string;
+  cause: { code: DriftCauseCode; message: string };
+  policy: { verdict: "managed" | "excluded"; rule: PolicyRule };
+}
+
+/** One manifest entry (or root) named in a manifest diff. A root's `path` is its backup `repoRoot`. */
+export interface ManifestChange {
+  kind: "path" | "skill" | "root";
+  root: string;
+  path: string;
+  /** Changed entries only: `field: before → after` per differing field. */
+  changes?: string[];
+}
+
+/**
+ * What a Git step would export of `.ai-sync/manifest.json`: Git HEAD against the manifest as the
+ * operation leaves it. `base: "none"` means HEAD holds no ai-sync v2 manifest, so every entry counts as added.
+ */
+export interface ManifestDiff {
+  base: "head" | "none";
+  added: ManifestChange[];
+  removed: ManifestChange[];
+  changed: ManifestChange[];
+  lines: { added: number; removed: number };
+}
+
 /** Git facts a push or pull Result reports. Never holds a remote URL. */
 export interface GitReport {
   /** Push: paths relative to the Git working-tree root that the push stages and commits. */
@@ -115,13 +165,21 @@ export interface GitReport {
   conflicts?: string[];
   /** Pull: why dependent restore actions cannot be determined exactly before the pull. */
   limitation?: string;
+  /** Present when the manifest is exported, or has pending changes that block a push. */
+  manifestDiff?: ManifestDiff;
 }
 
 export interface Result {
   operation: string;
   scope: { roots: string[]; resolvedPaths: string[] };
-  /** `type` is present only for a removal (`delete`) on a push; every other action is a copy or overwrite. */
-  actions: { id: string; state: ActionState; error?: string; type?: "delete" }[];
+  /** `type` is present only for a removal (`delete`) on a push; every other action is a copy or overwrite. `excludedBy` is present on prune actions: the rule that excludes the backup copy. */
+  actions: {
+    id: string;
+    state: ActionState;
+    error?: string;
+    type?: "delete";
+    excludedBy?: PolicyRule;
+  }[];
   outcome: Outcome;
   errors: ResultError[];
   recovery: string | null;
@@ -129,6 +187,8 @@ export interface Result {
   git?: GitReport;
   /** Present for inspection-style operations (`inspect`, `bootstrap`); aligned with `scope.resolvedPaths`. */
   items?: InspectItem[];
+  /** Present for `status` and `inspect`: each drifting file with its cause. */
+  drift?: DriftFile[];
 }
 
 /** A failure carrying the stable error codes that belong in a Result envelope. */

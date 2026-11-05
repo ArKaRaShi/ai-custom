@@ -71,6 +71,12 @@ export const git = {
     return prefix.status === 0 ? prefix.stdout.trim() : null;
   },
 
+  /** Contents of `relPath` (relative to `repo`) at HEAD, or null when HEAD has no such file. Read-only. */
+  readHeadFile(repo: string, relPath: string): string | null {
+    const shown = runGit(repo, ["show", `HEAD:./${relPath}`]);
+    return shown.status === 0 ? shown.stdout : null;
+  },
+
   /** Read-only simulation of integrating the remote; never writes to `repo`. */
   previewRemoteIntegration(repo: string, options?: PreviewOptions): RemoteIntegrationPreview {
     return previewRemoteIntegration(repo, options);
