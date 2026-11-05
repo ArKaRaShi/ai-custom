@@ -293,15 +293,6 @@
     {
       "kind": "skill",
       "root": "agents",
-      "path": "e2e-smoke-qa",
-      "sync": true,
-      "skill": {
-        "origin": "authored"
-      }
-    },
-    {
-      "kind": "skill",
-      "root": "agents",
       "path": "writing-markdown",
       "sync": true,
       "skill": {
