@@ -1,0 +1,23 @@
+html, body, main { margin: 0; width: 100%; height: 100%; }
+main > iframe { display: block; width: 100%; height: 100%; border: 0; background: white; }
+main > iframe[hidden] { display: none; }
+.vc-rail { position: fixed; z-index: 10; right: 0; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: flex-end; gap: 2px; padding: 8px 0; border-radius: 8px 0 0 8px; background: #20232c; box-shadow: 0 2px 12px #0005; }
+.vc-rail button { display: flex; align-items: center; justify-content: flex-end; width: 36px; height: 24px; padding: 0 6px; border: 0; background: transparent; color: transparent; font-size: 0; cursor: pointer; }
+.vc-rail button::after { content: ''; width: 6px; height: 8px; border-radius: 2px; background: #8a93a3; transition: width 160ms ease-out, background 160ms ease-out; }
+.vc-rail button[aria-pressed="true"]::after { width: 9px; background: #fff; }
+.vc-rail button[data-distance="0"]::after { width: 20px; background: #8eb0ff; }
+.vc-rail button[data-distance="1"]::after { width: 15px; }
+.vc-rail button[data-distance="2"]::after { width: 10px; }
+.vc-rail button:focus-visible, .vc-mobile select:focus-visible { outline: 3px solid #6da9ff; outline-offset: -3px; }
+.vc-preview { position: absolute; right: 44px; transform: translateY(-50%); width: 192px; padding: 10px; border-radius: 10px; background: #20232c; color: #fff; box-shadow: 0 8px 24px #0005; pointer-events: none; }
+.vc-preview[hidden] { display: none; }
+.vc-preview-title { margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 12px/1.4 system-ui, sans-serif; }
+.vc-preview-viewport { width: 192px; height: 120px; overflow: hidden; border-radius: 5px; background: white; }
+.vc-preview iframe { display: block; width: 960px; height: 600px; border: 0; transform: scale(.2); transform-origin: top left; pointer-events: none; }
+.vc-mobile { display: none; }
+@media (max-width: 600px) {
+  .vc-rail { display: none; }
+  .vc-mobile { display: block; position: fixed; z-index: 10; right: 8px; bottom: 8px; padding: 8px; border-radius: 6px; background: #20232c; color: white; font: 13px system-ui; box-shadow: 0 2px 12px #0005; }
+  .vc-mobile select { max-width: 65vw; font: inherit; }
+}
+@media (prefers-reduced-motion: reduce) { .vc-rail button::after { transition: none; } }

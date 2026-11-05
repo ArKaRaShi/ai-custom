@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "modes": [
+    {
+      "mode": "bundle",
+      "when": "the pushed file is a fragment (no <!doctype>, no <html>), or --bundle is passed",
+      "gets": "frame + theme.js + components.css + components.js + client.js"
+    },
+    {
+      "mode": "plain",
+      "when": "the pushed file is a whole document, or --plain is passed",
+      "gets": "client.js only; the document keeps its own styling and fonts"
+    }
+  ],
+  "classes": [
+    { "name": "vc-card", "what": "bordered surface panel", "snippet": "<div class=\"vc-card\">…</div>" },
+    { "name": "vc-card-head", "what": "title row inside a card", "snippet": "<div class=\"vc-card-head\"><h2 class=\"vc-h2\">Title</h2><span class=\"vc-badge\">new</span></div>" },
+    { "name": "vc-badge", "what": "small pill label; data-tone=ok|warn|danger", "snippet": "<span class=\"vc-badge\" data-tone=\"warn\">slow</span>" },
+    { "name": "vc-btn", "what": "button; data-variant=primary|ghost", "snippet": "<button class=\"vc-btn\" data-variant=\"primary\">Apply</button>" },
+    { "name": "vc-options", "what": "vertical list of clickable choices", "snippet": "<div class=\"vc-options\"><button class=\"vc-option\" data-choice=\"a\"><span class=\"vc-letter\">A</span><span><h3>One</h3><p>why</p></span></button></div>" },
+    { "name": "vc-option", "what": "one choice; data-choice value is what gets recorded", "snippet": "<button class=\"vc-option\" data-choice=\"a\">…</button>" },
+    { "name": "vc-grid", "what": "equal columns; --vc-cols, --vc-cols-mobile", "snippet": "<div class=\"vc-grid\" style=\"--vc-cols: 3; --vc-cols-mobile: 1\">…</div>" },
+    { "name": "vc-split", "what": "two columns collapsing to one under 640px", "snippet": "<div class=\"vc-split\">…</div>" },
+    { "name": "vc-mockup", "what": "labelled preview frame: vc-mockup-head + vc-mockup-body", "snippet": "<div class=\"vc-mockup\"><div class=\"vc-mockup-head\">Preview</div><div class=\"vc-mockup-body\">…</div></div>" },
+    { "name": "vc-table", "what": "data table; td[data-numeric] right-aligns", "snippet": "<table class=\"vc-table\"><thead><tr><th>Name</th></tr></thead><tbody><tr><td>A</td></tr></tbody></table>" },
+    { "name": "vc-stat", "what": "metric block: vc-stat-value + label", "snippet": "<div class=\"vc-stat\"><div class=\"vc-label\">Users</div><div class=\"vc-stat-value\">1,240</div></div>" },
+    { "name": "vc-proscons", "what": "pros/cons pair: vc-pros, vc-cons", "snippet": "<div class=\"vc-proscons\"><div class=\"vc-pros\"><h4>Pros</h4><ul><li>fast</li></ul></div><div class=\"vc-cons\"><h4>Cons</h4><ul><li>costly</li></ul></div></div>" },
+    { "name": "vc-pre", "what": "code block surface", "snippet": "<pre class=\"vc-pre\"><code>npm run dev</code></pre>" },
+    { "name": "vc-placeholder", "what": "dashed empty area inside a mockup", "snippet": "<div class=\"vc-placeholder\">chart area</div>" },
+    { "name": "vc-input", "what": "text input styled to match", "snippet": "<input class=\"vc-input\" placeholder=\"Search\">" },
+    { "name": "vc-h1 / vc-h2 / vc-muted / vc-label", "what": "typography helpers", "snippet": "<h1 class=\"vc-h1\">Title</h1><p class=\"vc-muted\">subtitle</p>" },
+    { "name": "vc-stack / vc-row", "what": "vertical rhythm, horizontal cluster", "snippet": "<div class=\"vc-stack\">…</div>" }
+  ],
+  "elements": [
+    {
+      "name": "vc-tabs",
+      "attrs": { "active": "1-based tab number, default 1" },
+      "children": "<vc-tab label=\"…\">panel content</vc-tab>",
+      "events": "vc-tab-change, detail.index is zero-based"
+    },
+    {
+      "name": "vc-chart",
+      "attrs": { "data": "\"Label:12,Other:30\"", "height": "px, default 200", "max": "optional scale max", "label": "accessible name" },
+      "what": "renders a bar chart"
+    },
+    {
+      "name": "vc-code",
+      "children": "<pre class=\"vc-pre\"><code>…</code></pre>",
+      "what": "adds a copy button"
+    }
+  ],
+  "recorded": "Any element with data-choice reports {type:'choice', choice, text} on click. Put data-multiselect on an ancestor to allow several selections."
+}

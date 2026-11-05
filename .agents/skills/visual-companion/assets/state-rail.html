@@ -1,0 +1,240 @@
+<style data-rail-style>
+  html[data-rail-active] {
+    --rail-w: 28px;
+  }
+  /* Reserve the rail's gutter on both sides, so a centred layout stays
+     optically centred instead of shifting right by half the rail. */
+  html[data-rail-active] body {
+    padding-left: calc(var(--rail-w) + env(safe-area-inset-left, 0px)) !important;
+    padding-right: calc(var(--rail-w) + env(safe-area-inset-right, 0px)) !important;
+    box-sizing: border-box;
+  }
+  [data-rail] {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 28px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    z-index: 2147483000;
+    background: color-mix(in srgb, currentColor 4%, transparent);
+  }
+  [data-rail] button {
+    height: 18px;
+    width: 28px;
+    display: flex;
+    align-items: center;
+    padding: 0 0 0 5px;
+    margin: 0;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+  }
+  [data-rail] button > span {
+    display: block;
+    height: 10px;
+    border-radius: 2px;
+    background: #8a93a3;
+    transition: width 160ms ease-out, opacity 160ms ease-out, background 160ms ease-out;
+  }
+  [data-rail] button[aria-checked="true"] > span {
+    width: 9px;
+    opacity: 1;
+  }
+  [data-rail-label] {
+    position: fixed;
+    left: 34px;
+    transform: translateY(-50%);
+    padding: 12px 14px;
+    border-radius: 10px;
+    min-width: 145px;
+    box-shadow: 0 8px 24px #0004;
+    background: #14161a;
+    color: #e8eaee;
+    font: 10px/1.4 ui-monospace, monospace;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 2147483001;
+  }
+  @media (max-width: 480px) {
+    html[data-rail-active] {
+      --rail-w: 44px;
+    }
+    [data-rail] {
+      width: 44px;
+    }
+    [data-rail] button {
+      height: 26px;
+      width: 44px;
+      padding-left: 8px;
+    }
+  }
+</style>
+<script data-rail-script>
+  (function () {
+    "use strict";
+    var chips = Array.prototype.slice.call(document.querySelectorAll("[data-goto]"));
+    if (!chips.length || document.querySelector("[data-rail]")) return;
+
+    /* The design's own dock is replaced by the rail. Climb only while the
+       ancestor holds nothing but chips, so the form is never hidden with it. */
+    function dockOnly(node) {
+      if (!node) return false;
+      if (node.querySelector("input, select, textarea")) return false;
+      var actions = node.querySelectorAll("[data-action]");
+      for (var i = 0; i < actions.length; i += 1) {
+        if (!actions[i].hasAttribute("data-goto")) return false;
+      }
+      return true;
+    }
+    var dock = chips[0];
+    while (dock.parentElement && dock.parentElement !== document.body && dockOnly(dock.parentElement)) {
+      dock = dock.parentElement;
+    }
+    dock.style.display = "none";
+    dock.setAttribute("data-rail-hidden", "");
+
+    document.documentElement.setAttribute("data-rail-active", "");
+
+    var rail = document.createElement("div");
+    rail.setAttribute("data-rail", "");
+    rail.setAttribute("role", "radiogroup");
+    rail.setAttribute("aria-label", "Preview states");
+    document.body.appendChild(rail);
+
+    var label = document.createElement("div");
+    label.setAttribute("data-rail-label", "");
+    label.hidden = true;
+    document.body.appendChild(label);
+
+    function chipFor(state) {
+      return chips.filter(function (c) { return c.getAttribute("data-goto") === state; })[0] || null;
+    }
+
+    var valid = chips.map(function (c) { return c.getAttribute("data-goto"); });
+    var hash = /state=([a-z-]+)/.exec(location.hash || "");
+    var committed = hash && valid.indexOf(hash[1]) > -1 ? hash[1] : (document.body.dataset.state || valid[0]);
+    var previewing = null;
+    var ticks = {};
+
+    function apply(state) {
+      var chip = chipFor(state);
+      if (chip) chip.click();
+    }
+
+    function paint() {
+      valid.forEach(function (state) {
+        var tick = ticks[state];
+        if (!tick) return;
+        var bar = tick.firstElementChild;
+        var isCommitted = state === committed;
+        var isPreview = state === previewing;
+        var distance = previewing === null ? 99 : Math.abs(valid.indexOf(state) - valid.indexOf(previewing));
+        bar.style.width = distance === 0 ? "20px" : distance === 1 ? "15px" : distance === 2 ? "10px" : isCommitted ? "9px" : "6px";
+        bar.style.opacity = isPreview ? "1" : isCommitted ? "0.95" : "0.42";
+        bar.style.background = isPreview ? "#7d9bff" : isCommitted ? "#e8eaee" : "#8a93a3";
+        tick.setAttribute("aria-checked", isCommitted ? "true" : "false");
+      });
+    }
+
+    function preview(state) {
+      previewing = state;
+      apply(state);
+      paint();
+      document.documentElement.setAttribute("data-rail-preview", state);
+    }
+
+    function revert() {
+      if (previewing === null) return;
+      previewing = null;
+      label.hidden = true;
+      apply(committed);
+      paint();
+      document.documentElement.removeAttribute("data-rail-preview");
+    }
+
+    function commit(state) {
+      committed = state;
+      previewing = null;
+      label.hidden = true;
+      apply(state);
+      paint();
+      document.documentElement.removeAttribute("data-rail-preview");
+      try { history.replaceState(null, "", "#state=" + state); } catch (e) { /* file:// */ }
+    }
+
+    valid.forEach(function (state, index) {
+      var tick = document.createElement("button");
+      tick.type = "button";
+      tick.setAttribute("role", "radio");
+      tick.setAttribute("aria-label", state);
+      tick.setAttribute("aria-checked", "false");
+      var bar = document.createElement("span");
+      tick.appendChild(bar);
+      ticks[state] = tick;
+
+      function showLabel() {
+        var box = tick.getBoundingClientRect();
+        label.hidden = false;
+        label.replaceChildren();
+        var title = document.createElement("strong");
+        title.textContent = String(index + 1).padStart(2, "0") + " · " + state.replace(/-/g, " ");
+        var detail = document.createElement("div");
+        detail.textContent = "Previewing this state";
+        detail.style.cssText = "margin-top:6px;opacity:.65;font:11px/1.4 system-ui,sans-serif";
+        var thumbnail = document.createElement("div");
+        thumbnail.style.cssText = "width:144px;height:86px;overflow:hidden;border-radius:6px;margin-top:8px;background:#fff";
+        var frame = document.createElement("iframe");
+        frame.title = "Preview of " + state;
+        frame.tabIndex = -1;
+        frame.src = location.pathname + "#state=" + state;
+        frame.style.cssText = "width:720px;height:430px;border:0;transform:scale(.2);transform-origin:top left;pointer-events:none";
+        thumbnail.appendChild(frame);
+        label.append(title, detail, thumbnail);
+        label.style.top = Math.max(85, Math.min(innerHeight - 85, Math.round(box.top + box.height / 2))) + "px";
+      }
+
+      tick.addEventListener("pointerenter", function () { showLabel(); preview(state); });
+      tick.addEventListener("pointerleave", revert);
+      tick.addEventListener("click", function () { commit(state); });
+      tick.addEventListener("focus", function () { showLabel(); preview(state); });
+      tick.addEventListener("blur", revert);
+      tick.addEventListener("keydown", function (event) {
+        var all = valid.map(function (s) { return ticks[s]; });
+        if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+          event.preventDefault();
+          all[(index + 1) % all.length].focus();
+        } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+          event.preventDefault();
+          all[(index - 1 + all.length) % all.length].focus();
+        } else if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          commit(state);
+        }
+      });
+
+      rail.appendChild(tick);
+    });
+
+    document.addEventListener("keydown", function (event) {
+      if (/^[1-9]$/.test(event.key)) {
+        var target = valid[Number(event.key) - 1];
+        if (target) commit(target);
+      }
+    });
+
+    apply(committed);
+    paint();
+    window.addEventListener("hashchange", function () {
+      var next = /state=([a-z-]+)/.exec(location.hash || "");
+      if (next && valid.indexOf(next[1]) > -1 && next[1] !== committed) {
+        committed = next[1];
+        apply(committed);
+        paint();
+      }
+    });
+  })();
+</script>

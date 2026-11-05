@@ -1,0 +1,552 @@
+/*
+ * Visual companion components. Every rule is namespaced `vc-` so a fragment can
+ * drop the user's own markup inside a mockup without our styles reaching it.
+ * Theme with the --vc-* variables; no @import, no webfonts, no network.
+ */
+
+:root {
+  --vc-bg: #f6f6f7;
+  --vc-surface: #ffffff;
+  --vc-fg: #16181d;
+  --vc-muted: #5b6270;
+  --vc-border: #d9dce2;
+  --vc-accent: #3b62f6;
+  --vc-accent-fg: #ffffff;
+  --vc-ok: #1f7a4d;
+  --vc-warn: #9a5b00;
+  --vc-danger: #b3261e;
+  --vc-radius: 10px;
+  --vc-gap: 12px;
+  --vc-font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --vc-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-vc-theme="light"]):not([data-vc-theme="dark"]) {
+    --vc-bg: #14161a;
+    --vc-surface: #1c1f25;
+    --vc-fg: #e8eaee;
+    --vc-muted: #a2a9b6;
+    --vc-border: #2f343d;
+    --vc-accent: #7d9bff;
+    --vc-accent-fg: #10121a;
+    --vc-ok: #62c993;
+    --vc-warn: #e0a94a;
+    --vc-danger: #ff8a80;
+  }
+}
+
+:root[data-vc-theme="dark"] {
+  --vc-bg: #14161a;
+  --vc-surface: #1c1f25;
+  --vc-fg: #e8eaee;
+  --vc-muted: #a2a9b6;
+  --vc-border: #2f343d;
+  --vc-accent: #7d9bff;
+  --vc-accent-fg: #10121a;
+  --vc-ok: #62c993;
+  --vc-warn: #e0a94a;
+  --vc-danger: #ff8a80;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+.vc-body {
+  margin: 0;
+  background: var(--vc-bg);
+  color: var(--vc-fg);
+  font: 16px/1.55 var(--vc-font);
+  min-height: 100vh;
+}
+
+.vc-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: color-mix(in srgb, var(--vc-surface) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--vc-border);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--vc-muted);
+}
+
+.vc-bar-title {
+  font-weight: 600;
+  color: var(--vc-fg);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 13px;
+}
+
+.vc-bar-status {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vc-theme {
+  font: inherit;
+  color: var(--vc-fg);
+  background: var(--vc-surface);
+  border: 1px solid var(--vc-muted);
+  border-radius: 4px;
+}
+
+.vc-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--vc-muted);
+  transition: background 160ms ease;
+}
+
+.vc-dot[data-state="open"] {
+  background: var(--vc-ok);
+}
+
+.vc-dot[data-state="closed"] {
+  background: var(--vc-danger);
+}
+
+.vc-main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+
+.vc-empty {
+  min-height: calc(100vh - 110px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.vc-empty .vc-muted {
+  max-width: 38ch;
+  margin: 8px 0 0;
+}
+
+/* ---------- typography ---------- */
+
+.vc-h1 {
+  font-size: clamp(20px, 4vw, 28px);
+  line-height: 1.25;
+  margin: 0 0 4px;
+}
+
+.vc-h2 {
+  font-size: clamp(17px, 3vw, 20px);
+  margin: 0 0 8px;
+}
+
+.vc-muted {
+  color: var(--vc-muted);
+  margin: 0 0 16px;
+}
+
+.vc-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--vc-muted);
+}
+
+/* ---------- layout ---------- */
+
+.vc-stack > * + * {
+  margin-top: var(--vc-gap);
+}
+
+.vc-row {
+  display: flex;
+  gap: var(--vc-gap);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.vc-grid {
+  display: grid;
+  gap: var(--vc-gap);
+  grid-template-columns: repeat(var(--vc-cols, 2), minmax(0, 1fr));
+}
+
+.vc-split {
+  display: grid;
+  gap: var(--vc-gap);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 640px) {
+  .vc-grid {
+    grid-template-columns: repeat(var(--vc-cols-mobile, 1), minmax(0, 1fr));
+  }
+  .vc-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------- surfaces ---------- */
+
+.vc-card {
+  color: var(--vc-fg);
+  background: var(--vc-surface);
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius);
+  padding: 16px;
+}
+
+.vc-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.vc-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--vc-border);
+  font-size: 11px;
+  color: var(--vc-muted);
+}
+
+.vc-badge[data-tone="ok"] {
+  color: var(--vc-ok);
+  border-color: currentColor;
+}
+.vc-badge[data-tone="warn"] {
+  color: var(--vc-warn);
+  border-color: currentColor;
+}
+.vc-badge[data-tone="danger"] {
+  color: var(--vc-danger);
+  border-color: currentColor;
+}
+
+.vc-stat {
+  color: var(--vc-fg);
+  background: var(--vc-surface);
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius);
+  padding: 12px 14px;
+}
+
+.vc-stat-value {
+  font-size: 24px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+/* ---------- controls ---------- */
+
+.vc-btn {
+  appearance: none;
+  font: inherit;
+  font-size: 14px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--vc-border);
+  background: var(--vc-surface);
+  color: var(--vc-fg);
+  cursor: pointer;
+}
+
+.vc-btn[data-variant="primary"] {
+  background: var(--vc-accent);
+  border-color: var(--vc-accent);
+  color: var(--vc-accent-fg);
+}
+
+.vc-btn[data-variant="ghost"] {
+  background: transparent;
+}
+
+.vc-btn:hover {
+  filter: brightness(0.97);
+}
+
+/* ---------- choices (recorded on click) ---------- */
+
+.vc-options {
+  display: grid;
+  gap: var(--vc-gap);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.vc-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 14px 16px;
+  border-radius: var(--vc-radius);
+  border: 1px solid var(--vc-border);
+  background: var(--vc-surface);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 140ms ease, transform 140ms ease;
+}
+
+.vc-option:hover {
+  border-color: var(--vc-accent);
+}
+
+.vc-option[aria-pressed="true"] {
+  border-color: var(--vc-accent);
+  box-shadow: inset 0 0 0 1px var(--vc-accent);
+}
+
+.vc-letter {
+  flex: 0 0 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--vc-accent) 14%, transparent);
+  color: var(--vc-accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.vc-option h3 {
+  margin: 0 0 2px;
+  font-size: 15px;
+}
+
+.vc-option p {
+  margin: 0;
+  color: var(--vc-muted);
+  font-size: 13px;
+}
+
+/* ---------- table ---------- */
+
+.vc-table {
+  color: var(--vc-fg);
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--vc-surface);
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius);
+  overflow: hidden;
+  font-size: 14px;
+}
+
+.vc-table th,
+.vc-table td {
+  padding: 9px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--vc-border);
+}
+
+.vc-table th {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--vc-muted);
+  font-weight: 600;
+}
+
+.vc-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.vc-table td[data-numeric] {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- mockup scaffolding ---------- */
+
+.vc-mockup {
+  color: var(--vc-fg);
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius);
+  overflow: hidden;
+  background: var(--vc-surface);
+}
+
+.vc-mockup-head {
+  padding: 6px 12px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--vc-muted);
+  border-bottom: 1px solid var(--vc-border);
+  background: color-mix(in srgb, var(--vc-bg) 60%, var(--vc-surface));
+}
+
+.vc-mockup-body {
+  padding: 14px;
+}
+
+.vc-placeholder {
+  border: 1px dashed var(--vc-border);
+  border-radius: 8px;
+  padding: 18px;
+  text-align: center;
+  color: var(--vc-muted);
+  font-size: 13px;
+}
+
+/* ---------- pros / cons ---------- */
+
+.vc-proscons {
+  display: grid;
+  gap: var(--vc-gap);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 640px) {
+  .vc-proscons {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.vc-proscons h4 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.vc-proscons ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 14px;
+  color: var(--vc-muted);
+}
+
+.vc-proscons .vc-pros h4 {
+  color: var(--vc-ok);
+}
+
+.vc-proscons .vc-cons h4 {
+  color: var(--vc-warn);
+}
+
+/* ---------- code ---------- */
+
+.vc-pre {
+  color: var(--vc-fg);
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--vc-surface);
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius);
+  overflow-x: auto;
+  font-family: var(--vc-mono);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+vc-code {
+  display: block;
+  position: relative;
+}
+
+vc-code > .vc-copy {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+/* ---------- tabs ---------- */
+
+vc-tabs > .vc-tablist {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--vc-border);
+  margin-bottom: 12px;
+  overflow-x: auto;
+}
+
+vc-tabs .vc-tab {
+  appearance: none;
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 12px;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--vc-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+vc-tabs .vc-tab[aria-selected="true"] {
+  color: var(--vc-fg);
+  border-bottom-color: var(--vc-accent);
+}
+
+vc-tabs vc-tab {
+  display: none;
+}
+
+vc-tabs vc-tab[data-active] {
+  display: block;
+}
+
+/* ---------- chart ---------- */
+
+vc-chart svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+vc-chart .vc-tick {
+  fill: var(--vc-muted);
+  font-size: 10px;
+}
+
+/* ---------- forms ---------- */
+
+.vc-field {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.vc-input {
+  font: inherit;
+  font-size: 14px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--vc-border);
+  background: var(--vc-surface);
+  color: var(--vc-fg);
+}
+
+/* ---------- focus, motion, print ---------- */
+
+:where(.vc-btn, .vc-option, .vc-input, .vc-tab, .vc-theme, a):focus-visible {
+  outline: 2px solid var(--vc-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+

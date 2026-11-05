@@ -443,6 +443,15 @@
       "skill": {
         "origin": "authored"
       }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "visual-companion",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
     }
   ]
 }
