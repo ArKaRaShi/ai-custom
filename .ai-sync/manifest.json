@@ -375,15 +375,6 @@
     {
       "kind": "skill",
       "root": "agents",
-      "path": "engineering-principles",
-      "sync": true,
-      "skill": {
-        "origin": "authored"
-      }
-    },
-    {
-      "kind": "skill",
-      "root": "agents",
       "path": "principle-responsibility-boundaries",
       "sync": true,
       "skill": {
