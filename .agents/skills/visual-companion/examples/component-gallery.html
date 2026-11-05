@@ -1,0 +1,420 @@
+<h1 class="vc-h1">Component set</h1>
+<p class="vc-muted">Every class and element the companion ships, one live specimen each. Nothing on this page is a drawing of a component: each row renders the real markup with the real <code>components.css</code>. Narrow the window to 320 px, and switch Theme in the bar, to check both.</p>
+
+<div class="vc-answer">
+  <p><strong>Read this before judging a specimen.</strong> Ordering: structure first, then the pieces that carry the most meaning. Contrast, focus and control boundaries below are WCAG 2.2 AA and are asserted in <code>tests/contrast.test.ts</code>, not eyeballed.</p>
+</div>
+
+<nav class="vc-row" aria-label="Sections">
+  <a class="vc-btn" data-variant="ghost" href="#type">Type</a>
+  <a class="vc-btn" data-variant="ghost" href="#layout">Layout</a>
+  <a class="vc-btn" data-variant="ghost" href="#surface">Surfaces</a>
+  <a class="vc-btn" data-variant="ghost" href="#control">Controls</a>
+  <a class="vc-btn" data-variant="ghost" href="#choice">Choices</a>
+  <a class="vc-btn" data-variant="ghost" href="#data">Data</a>
+  <a class="vc-btn" data-variant="ghost" href="#explain">Explanation</a>
+  <a class="vc-btn" data-variant="ghost" href="#element">Elements</a>
+</nav>
+
+<section id="type" aria-labelledby="type-h" style="display:grid;grid-template-columns:minmax(0,1fr);gap:16px;padding:24px 0;border-top:1px solid var(--vc-border)">
+  <h2 class="vc-h2" id="type-h">Type</h2>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-h1</code>
+      <span class="vc-label">heading</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">Page title. One per screen; the bar already carries the screen's name.</p>
+    <h3 class="vc-h1" style="margin:0">Settle the migration order</h3>
+  </div>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-h2</code>
+      <span class="vc-label">heading</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">Section heading. Skip no levels: h2 under h1, never h3 under h1.</p>
+    <h3 class="vc-h2" style="margin:0">What changed in this release</h3>
+  </div>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-muted</code>
+      <span class="vc-label">text</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">Secondary prose. Stops at a 68-character measure however wide the page gets; 5.7:1 or better in both themes.</p>
+    <p class="vc-muted" style="margin:0">The rail shows which section is in view, so a long page never loses the reader between parts.</p>
+  </div>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-label</code>
+      <span class="vc-label">text</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">Small uppercase tag for a metric name or a row label. Never the only name for a control.</p>
+    <div class="vc-row"><span class="vc-label">Requests</span><span class="vc-label">Errors</span><span class="vc-label">p95</span></div>
+  </div>
+</section>
+
+<section id="layout" aria-labelledby="layout-h" style="display:grid;grid-template-columns:minmax(0,1fr);gap:16px;padding:32px 0;border-top:1px solid var(--vc-border)">
+  <h2 class="vc-h2" id="layout-h">Layout</h2>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-stack</code>
+      <span class="vc-label">class</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">Vertical rhythm between direct children. The default gap is the one to use.</p>
+    <div class="vc-stack">
+      <div class="vc-placeholder">first</div>
+      <div class="vc-placeholder">second</div>
+      <div class="vc-placeholder">third</div>
+    </div>
+  </div>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-row</code>
+      <span class="vc-label">class</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">Horizontal cluster that wraps instead of overflowing at narrow widths.</p>
+    <div class="vc-row">
+      <span class="vc-badge">Asia</span>
+      <span class="vc-badge" data-tone="ok">stable</span>
+      <span class="vc-badge" data-tone="warn">degraded</span>
+      <span class="vc-badge" data-tone="danger">down</span>
+    </div>
+  </div>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-grid</code>
+      <span class="vc-label">class</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">Equal columns via <code>--vc-cols</code>, collapsing to <code>--vc-cols-mobile</code> under 640 px.</p>
+    <div class="vc-grid" style="--vc-cols: 3; --vc-cols-mobile: 1">
+      <div class="vc-stat"><div class="vc-label">Users</div><div class="vc-stat-value">1,240</div></div>
+      <div class="vc-stat"><div class="vc-label">Churn</div><div class="vc-stat-value">2.1%</div></div>
+      <div class="vc-stat"><div class="vc-label">MRR</div><div class="vc-stat-value">$18k</div></div>
+    </div>
+  </div>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-split</code>
+      <span class="vc-label">class</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">Two columns for a side-by-side comparison; one column under 640 px.</p>
+    <div class="vc-split">
+      <div class="vc-card"><div class="vc-label">Before</div><p class="vc-muted" style="margin:4px 0 0">One queue, shared retries.</p></div>
+      <div class="vc-card"><div class="vc-label">After</div><p class="vc-muted" style="margin:4px 0 0">One queue per tenant.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="surface" aria-labelledby="surface-h" style="display:grid;grid-template-columns:minmax(0,1fr);gap:16px;padding:32px 0;border-top:1px solid var(--vc-border)">
+  <h2 class="vc-h2" id="surface-h">Surfaces</h2>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-card</code>
+      <span class="vc-label">class</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">Bordered surface panel. Holds any content; the border is decorative and stays a quiet hairline.</p>
+    <div class="vc-card">
+      <p style="margin:0">Content sits directly in the panel. No wrapper element, no inner padding class.</p>
+    </div>
+  </div>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-card-head</code>
+      <span class="vc-label">class</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">Title row inside a card: heading on the left, a badge or control pushed right.</p>
+    <div class="vc-card">
+      <div class="vc-card-head"><h3 class="vc-h2" style="margin:0">Requests per region</h3><span class="vc-badge">24h</span></div>
+      <p class="vc-muted" style="margin:0">Nothing else needed.</p>
+    </div>
+  </div>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-badge</code>
+      <span class="vc-label">class</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">Small pill. <code>data-tone="ok|warn|danger"</code> colors it; it never wraps, and it never carries meaning without a word.</p>
+    <div class="vc-row">
+      <span class="vc-badge">neutral</span>
+      <span class="vc-badge" data-tone="ok">passing</span>
+      <span class="vc-badge" data-tone="warn">slow</span>
+      <span class="vc-badge" data-tone="danger">failed</span>
+    </div>
+  </div>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-mockup</code>
+      <span class="vc-label">class</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">Labelled preview frame: <code>vc-mockup-head</code> names the variant, <code>vc-mockup-body</code> holds the drawing.</p>
+    <div class="vc-split">
+      <div class="vc-mockup">
+        <div class="vc-mockup-head">A — stats first</div>
+        <div class="vc-mockup-body">
+          <div class="vc-grid" style="--vc-cols: 2; --vc-cols-mobile: 2">
+            <div class="vc-stat"><div class="vc-label">Users</div><div class="vc-stat-value">1,240</div></div>
+            <div class="vc-stat"><div class="vc-label">Churn</div><div class="vc-stat-value">2.1%</div></div>
+          </div>
+          <div class="vc-placeholder" style="margin-top:12px">chart area</div>
+        </div>
+      </div>
+      <div class="vc-mockup">
+        <div class="vc-mockup-head">B — chart first</div>
+        <div class="vc-mockup-body">
+          <div class="vc-placeholder" style="padding:40px 12px">chart area</div>
+          <div class="vc-row" style="margin-top:12px">
+            <span class="vc-badge">1,240 users</span>
+            <span class="vc-badge" data-tone="warn">2.1% churn</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-placeholder</code>
+      <span class="vc-label">class</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">Dashed area standing in for content the drawing does not specify.</p>
+    <div class="vc-placeholder">table of 40 rows</div>
+  </div>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-stat</code>
+      <span class="vc-label">class</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">One metric: <code>vc-label</code> above, <code>vc-stat-value</code> below with tabular figures.</p>
+    <div class="vc-grid" style="--vc-cols: 3">
+      <div class="vc-stat"><div class="vc-label">p95</div><div class="vc-stat-value">412ms</div></div>
+      <div class="vc-stat"><div class="vc-label">Errors</div><div class="vc-stat-value">0.4%</div></div>
+      <div class="vc-stat"><div class="vc-label">Saved</div><div class="vc-stat-value">$1,410</div></div>
+    </div>
+  </div>
+</section>
+
+<section id="control" aria-labelledby="control-h" style="display:grid;grid-template-columns:minmax(0,1fr);gap:16px;padding:32px 0;border-top:1px solid var(--vc-border)">
+  <h2 class="vc-h2" id="control-h">Controls</h2>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-btn</code>
+      <span class="vc-label">class</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">Button. <code>data-variant="primary|ghost"</code>; hover, pressed and disabled are all defined, and the 36 px height clears the 24 px target minimum.</p>
+    <div class="vc-row">
+      <button class="vc-btn">Default</button>
+      <button class="vc-btn" data-variant="primary">Primary</button>
+      <button class="vc-btn" data-variant="ghost">Ghost</button>
+      <button class="vc-btn" disabled>Disabled</button>
+    </div>
+  </div>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-field + vc-input</code>
+      <span class="vc-label">class</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">Text input with a real <code>label</code>, not a placeholder standing in for one. The border is the 3:1 control token.</p>
+    <div class="vc-field" style="max-width:320px">
+      <label for="gallery-input">Project name</label>
+      <input class="vc-input" id="gallery-input" placeholder="checkout-api" />
+    </div>
+  </div>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-collapsed</code>
+      <span class="vc-label">class</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">A details element that folds context the reader can skip. Focusable summary, keyboard operable, no script.</p>
+    <details class="vc-collapsed">
+      <summary>6 steps unchanged since the last review</summary>
+      <p style="margin:8px 0 0">Bundle install, lint, typecheck, unit tests, build, and the smoke run all pass without changes.</p>
+    </details>
+  </div>
+</section>
+
+<section id="choice" aria-labelledby="choice-h" style="display:grid;grid-template-columns:minmax(0,1fr);gap:16px;padding:32px 0;border-top:1px solid var(--vc-border)">
+  <h2 class="vc-h2" id="choice-h">Choices</h2>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-options / vc-option / vc-letter</code>
+      <span class="vc-label">class</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">Clickable choices. <code>data-choice</code> is the value handed back; the selected state is a border plus an inset ring, so it does not depend on color alone. Clicking here records an event — harmless.</p>
+    <div class="vc-options">
+      <button class="vc-option" data-choice="a"><span class="vc-letter">A</span><span><h3>Stats first</h3><p>Numbers up top, chart underneath</p></span></button>
+      <button class="vc-option" data-choice="b"><span class="vc-letter">B</span><span><h3>Chart first</h3><p>Shape before numbers</p></span></button>
+    </div>
+  </div>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-proscons</code>
+      <span class="vc-label">class</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">Pros/cons pair. The headings carry the meaning; the colors are a second signal, not the only one.</p>
+    <div class="vc-proscons">
+      <div class="vc-pros"><h4>Pros</h4><ul><li>no migration</li><li>reversible today</li></ul></div>
+      <div class="vc-cons"><h4>Cons</h4><ul><li>no audit trail</li><li>one more service</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section id="data" aria-labelledby="data-h" style="display:grid;grid-template-columns:minmax(0,1fr);gap:16px;padding:32px 0;border-top:1px solid var(--vc-border)">
+  <h2 class="vc-h2" id="data-h">Data</h2>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-table + vc-scroll</code>
+      <span class="vc-label">class</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">Data table with <code>data-numeric</code> right-aligned columns. The table now keeps its rounded frame; a wide one goes inside <code>vc-scroll</code>, which is keyboard reachable at 320 px.</p>
+    <div class="vc-scroll" tabindex="0" role="region" aria-label="Endpoint cost, scrollable">
+      <table class="vc-table">
+        <thead>
+          <tr><th>Endpoint</th><th>Owner</th><th data-numeric>p95</th><th data-numeric>Cost / mo</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>/search</td><td>Discovery</td><td data-numeric>412ms</td><td data-numeric>$1,240</td></tr>
+          <tr><td>/checkout</td><td>Payments</td><td data-numeric>188ms</td><td data-numeric>$860</td></tr>
+          <tr><td>/recommend</td><td>Growth</td><td data-numeric>640ms</td><td data-numeric>$310</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-delta</code>
+      <span class="vc-label">class</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">Old value to new value. CSS draws the arrow: do not type one, or the mark doubles.</p>
+    <p style="margin:0">Cost per month: <span class="vc-delta"><del>$1,240</del><ins>$1,410</ins></span></p>
+  </div>
+</section>
+
+<section id="explain" aria-labelledby="explain-h" style="display:grid;grid-template-columns:minmax(0,1fr);gap:16px;padding:32px 0;border-top:1px solid var(--vc-border)">
+  <h2 class="vc-h2" id="explain-h">Explanation</h2>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-answer</code>
+      <span class="vc-label">class</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">The conclusion, first, in one or two sentences. Accent edge on the left, 17 px, capped at the reading measure.</p>
+    <div class="vc-answer"><p><strong>Rotate the old token last.</strong> Revoking it first strands the workers that still hold it, and they retry into a 401 loop.</p></div>
+  </div>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-steps / vc-step</code>
+      <span class="vc-label">class</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">Numbered steps. <code>data-diff="add|chg|del"</code> marks the change with a border style and width as well as color, and the text badge names it. A marked step keeps the same height as an unmarked one.</p>
+    <ol class="vc-steps">
+      <li class="vc-step" data-diff="chg">
+        <div><span class="vc-badge" data-tone="warn">Changed</span> Drain the old queue</div>
+        <p class="vc-step-note">Wait for depth 0 for two minutes before switching.</p>
+      </li>
+      <li class="vc-step">
+        <div>Deploy the reader</div>
+      </li>
+      <li class="vc-step" data-diff="add">
+        <div><span class="vc-badge" data-tone="ok">Added</span> Alert on consumer lag</div>
+      </li>
+      <li class="vc-step" data-diff="del">
+        <div><span class="vc-badge" data-tone="danger">Removed</span> Nightly replay job</div>
+      </li>
+    </ol>
+  </div>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-step-note</code>
+      <span class="vc-label">class</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">The second line of a step: the detail a reader needs only after reading the action.</p>
+    <ol class="vc-steps">
+      <li class="vc-step"><div>Run the migration</div><p class="vc-step-note">It is idempotent; a rerun after a failure is safe.</p></li>
+    </ol>
+  </div>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-pre / vc-code</code>
+      <span class="vc-label">class + element</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px"><code>vc-pre</code> is the code surface on its own; wrap it in <code>vc-code</code> only when the reader should copy it, which adds the button and reserves room for it.</p>
+    <pre class="vc-pre"><code>git rebase --onto main~2 main</code></pre>
+    <vc-code style="margin-top:12px;display:block"><pre class="vc-pre"><code>bun scripts/cli.ts push screen.html --title "Migration order"</code></pre></vc-code>
+  </div>
+</section>
+
+<section id="element" aria-labelledby="element-h" style="display:grid;grid-template-columns:minmax(0,1fr);gap:16px;padding:32px 0;border-top:1px solid var(--vc-border)">
+  <h2 class="vc-h2" id="element-h">Elements</h2>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-chart</code>
+      <span class="vc-label">element</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">Bar chart from <code>data</code>. Values are text, so the reading does not depend on bar length or color. Small values keep a 2 px stub instead of vanishing.</p>
+    <vc-chart data="Draft:2,Review:5,Blocked:1,Done:9" label="Items by state" height="180"></vc-chart>
+  </div>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-tabs / vc-tab</code>
+      <span class="vc-label">element</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">Authored states, one visible at a time. <code>active</code> is 1-based; <code>data-state</code> is flat JSON of strings. Without JavaScript the first panel still shows.</p>
+    <vc-tabs id="gallery-states" active="1">
+      <vc-tab label="Draft" data-state='{"status":"draft","owner":"none"}'>
+        <p style="margin:0">Nobody owns this yet. The panel is a plain container, so any component can sit inside it.</p>
+      </vc-tab>
+      <vc-tab label="Review" data-state='{"status":"review","owner":"payments"}'>
+        <p style="margin:0">Owned by payments. Two approvals are required before merge.</p>
+      </vc-tab>
+      <vc-tab label="Done" data-state='{"status":"done","owner":"payments"}'>
+        <p style="margin:0">Shipped on Tuesday. The migration ran once and was not replayed.</p>
+      </vc-tab>
+    </vc-tabs>
+  </div>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-scrub</code>
+      <span class="vc-label">element</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">Position control over a <code>vc-tabs</code>. Arrow keys, Home and End work; the state name is announced through <code>aria-valuetext</code>, not just a number.</p>
+    <vc-scrub for="gallery-states" label="Workflow state"></vc-scrub>
+  </div>
+
+  <div class="vc-card">
+    <div class="vc-card-head" style="margin-bottom:4px">
+      <code style="font:600 13px var(--vc-mono);color:var(--vc-accent)">vc-inspect</code>
+      <span class="vc-label">element</span>
+    </div>
+    <p class="vc-muted" style="margin:0 0 14px;font-size:13px">Reads the current panel's <code>data-state</code> as a table. A value that changed from the previous position gets a text badge; with no state declared it renders nothing.</p>
+    <vc-inspect for="gallery-states" caption="Declared state"></vc-inspect>
+  </div>
+</section>
+
+<div class="vc-answer">
+  <p><strong>What to check while reviewing.</strong> Tab through the page: every control shows a 2 px accent ring that the sticky bar never covers. Switch Theme: hover tints lighten on dark instead of darkening. Narrow to 320 px: the table scrolls inside its own region, and nothing pushes the page sideways.</p>
+</div>

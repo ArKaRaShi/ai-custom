@@ -11,6 +11,7 @@
 
   class VcTabs extends HTMLElement {
     #buttons = [];
+    #index = 0;
 
     connectedCallback() {
       if (this.dataset.ready) return;
@@ -49,18 +50,41 @@
     }
 
     select(index) {
-      const panels = Array.from(this.querySelectorAll(":scope > vc-tab"));
+      const panels = this.#panels();
+      if (panels.length === 0) return;
+      const next = Math.min(Math.max(Math.trunc(numberOr(index, 0)), 0), panels.length - 1);
+      this.#index = next;
       panels.forEach((panel, i) => {
-        if (i === index) panel.setAttribute("data-active", "");
+        if (i === next) panel.setAttribute("data-active", "");
         else panel.removeAttribute("data-active");
       });
       this.#buttons.forEach((button, i) => {
-        button.setAttribute("aria-selected", i === index ? "true" : "false");
-        button.tabIndex = i === index ? 0 : -1;
+        button.setAttribute("aria-selected", i === next ? "true" : "false");
+        button.tabIndex = i === next ? 0 : -1;
       });
       this.dispatchEvent(
-        new CustomEvent("vc-tab-change", { detail: { index }, bubbles: true }),
+        new CustomEvent("vc-tab-change", { detail: { index: next }, bubbles: true }),
       );
+    }
+
+    /** Public contract for vc-scrub and vc-inspect: labels and declared state, in order. */
+    get panels() {
+      return this.#panels().map((panel, index) => ({
+        label: panel.getAttribute("label") || `Tab ${index + 1}`,
+        state: readState(panel),
+      }));
+    }
+
+    get index() {
+      return this.#index;
+    }
+
+    currentState() {
+      return this.panels[this.#index]?.state ?? null;
+    }
+
+    #panels() {
+      return Array.from(this.querySelectorAll(":scope > vc-tab"));
     }
   }
 
@@ -122,6 +146,162 @@
     }
   }
 
+  /* ---------------- <vc-scrub for="tabsId" label="State"> ---------------- */
+
+  /* Moves the current position of an existing vc-tabs. A controller, never a container. */
+  class VcScrub extends HTMLElement {
+    #range = null;
+    #status = null;
+    #previous = null;
+    #next = null;
+
+    connectedCallback() {
+      if (this.dataset.ready) return;
+      this.dataset.ready = "1";
+
+      const name = this.getAttribute("label") || "State";
+
+      const previous = document.createElement("button");
+      previous.type = "button";
+      previous.className = "vc-btn";
+      previous.setAttribute("data-variant", "ghost");
+      previous.textContent = "Previous";
+      previous.addEventListener("click", () => this.#step(-1));
+
+      const range = document.createElement("input");
+      range.type = "range";
+      range.className = "vc-scrub-range";
+      range.min = "1";
+      range.max = "1";
+      range.step = "1";
+      range.value = "1";
+      range.setAttribute("aria-label", name);
+      range.addEventListener("input", () => this.#select(Number(range.value) - 1));
+
+      const next = document.createElement("button");
+      next.type = "button";
+      next.className = "vc-btn";
+      next.setAttribute("data-variant", "ghost");
+      next.textContent = "Next";
+      next.addEventListener("click", () => this.#step(1));
+
+      this.#previous = previous;
+      this.#range = range;
+      this.#status = document.createElement("p");
+      this.#status.className = "vc-scrub-status";
+      this.#next = next;
+      this.append(previous, range, this.#status, next);
+
+      const tabs = this.#tabs();
+      if (tabs) tabs.addEventListener("vc-tab-change", () => this.#sync());
+      this.#sync();
+    }
+
+    #tabs() {
+      const id = this.getAttribute("for");
+      if (!id) return null;
+      const element = document.getElementById(id);
+      return element && typeof element.select === "function" ? element : null;
+    }
+
+    #step(delta) {
+      const tabs = this.#tabs();
+      if (!tabs) return;
+      this.#select(numberOr(tabs.index, 0) + delta);
+    }
+
+    #select(index) {
+      const tabs = this.#tabs();
+      if (!tabs) return;
+      const count = tabs.panels.length;
+      if (count === 0) return;
+      tabs.select(Math.min(Math.max(index, 0), count - 1));
+    }
+
+    #sync() {
+      if (!this.#range) return;
+      const tabs = this.#tabs();
+      const panels = tabs ? tabs.panels : [];
+      const count = panels.length;
+      const index = count === 0 ? 0 : Math.min(Math.max(numberOr(tabs.index, 0), 0), count - 1);
+      const label = count === 0 ? "no states" : panels[index].label;
+
+      this.#range.max = String(Math.max(count, 1));
+      this.#range.value = String(index + 1);
+      this.#range.disabled = count < 2;
+      this.#range.setAttribute("aria-valuetext", label);
+      const position = count === 0 ? "No states to show" : `${index + 1} of ${count}`;
+      this.#status.textContent = count === 0 ? position : `${position} · ${withoutLeadingPosition(label, index)}`;
+      this.#previous.disabled = index <= 0;
+      this.#next.disabled = index >= count - 1;
+    }
+  }
+
+  /* ---------------- <vc-inspect for="tabsId" caption="Hidden state"> ---------------- */
+
+  /* Renders the current panel's declared fields. Silent when there is nothing declared. */
+  class VcInspect extends HTMLElement {
+    #order = [];
+    #rendered = null;
+
+    connectedCallback() {
+      if (this.dataset.ready) return;
+      this.dataset.ready = "1";
+      const tabs = this.#tabs();
+      if (tabs) tabs.addEventListener("vc-tab-change", () => this.#render());
+      this.#render();
+    }
+
+    #tabs() {
+      const id = this.getAttribute("for");
+      if (!id) return null;
+      const element = document.getElementById(id);
+      return element && typeof element.currentState === "function" ? element : null;
+    }
+
+    #render() {
+      const tabs = this.#tabs();
+      const state = tabs ? tabs.currentState() : null;
+      const previous = this.#rendered;
+      this.#rendered = state;
+      this.textContent = "";
+      if (!state) return;
+
+      for (const key of Object.keys(state)) if (!this.#order.includes(key)) this.#order.push(key);
+
+      const table = document.createElement("table");
+      table.className = "vc-table vc-inspect";
+      const captionText = this.getAttribute("caption");
+      if (captionText) {
+        const caption = document.createElement("caption");
+        caption.textContent = captionText;
+        table.append(caption);
+      }
+      const body = document.createElement("tbody");
+      for (const key of this.#order) {
+        if (!(key in state)) continue;
+        const row = document.createElement("tr");
+        const head = document.createElement("th");
+        head.setAttribute("scope", "row");
+        head.textContent = key;
+        const cell = document.createElement("td");
+        cell.textContent = state[key];
+        if (previous && key in previous && previous[key] !== state[key]) {
+          const badge = document.createElement("span");
+          badge.className = "vc-badge";
+          badge.setAttribute("data-tone", "warn");
+          badge.textContent = "Changed";
+          cell.textContent = `${state[key]} `;
+          cell.append(badge);
+        }
+        row.append(head, cell);
+        body.append(row);
+      }
+      table.append(body);
+      this.append(table);
+    }
+  }
+
   /* ---------------- <vc-code> ---------------- */
 
   class VcCode extends HTMLElement {
@@ -148,6 +328,33 @@
       });
       this.append(button);
     }
+  }
+
+  /* Authored state crosses into the components here, once. Invalid or nested data reads as no state. */
+  function readState(element) {
+    const raw = element.getAttribute("data-state");
+    if (raw === null) return null;
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return null;
+    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const state = {};
+    for (const key of Object.keys(parsed)) {
+      const value = parsed[key];
+      if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+        state[key] = String(value);
+      }
+    }
+    return Object.keys(state).length > 0 ? state : null;
+  }
+
+  /* Panel labels often start with their own number; the status line already carries it. */
+  function withoutLeadingPosition(label, index) {
+    const prefix = new RegExp(`^\\s*${index + 1}\\s*[·.:)\\-]\\s*`);
+    return label.replace(prefix, "");
   }
 
   function numberOr(value, fallback) {
@@ -223,6 +430,8 @@
   }
 
   if (!customElements.get("vc-tabs")) customElements.define("vc-tabs", VcTabs);
+  if (!customElements.get("vc-scrub")) customElements.define("vc-scrub", VcScrub);
+  if (!customElements.get("vc-inspect")) customElements.define("vc-inspect", VcInspect);
   if (!customElements.get("vc-chart")) customElements.define("vc-chart", VcChart);
   if (!customElements.get("vc-code")) customElements.define("vc-code", VcCode);
 })();

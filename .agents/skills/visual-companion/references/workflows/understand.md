@@ -1,6 +1,8 @@
-# Explain visually
+# Understand
 
-Use this playbook when the reader says they don't understand something, or asks you to explain, illustrate, walk through, or trace it. These screens explain concepts and use bundle mode with `--vc-*` tokens. Leave project CSS to product mockups.
+Use when the reader wants to understand how something works or what changed: "explain", "illustrate", "walk me through", "why is v2 different", "help me get this concept". These screens explain and use bundle mode with `--vc-*` tokens. Leave project CSS to product previews.
+
+Route elsewhere when the reader wants a specific number or event proved ([Investigate](investigate.md)), a choice between options ([Decide](decide.md)), or a proposed product page ([Design](design.md)).
 
 ## Pick a recipe
 
@@ -8,9 +10,8 @@ Use this playbook when the reader says they don't understand something, or asks 
 | --- | --- |
 | "How does X work?" "Walk me through it." | [walkthrough](recipes/walkthrough.md) |
 | "What changed?" "Why is v2 different?" | [change-story](recipes/change-story.md) |
-| "Where does this number come from?" | [trace](recipes/trace.md) |
 
-When a question fits two recipes, build one explanation. Start with the recipe that matches the question. Add the other recipe as a later section. Example: a change-story that needs proof of its effect ends with a trace section.
+When a question fits two recipes, build one explanation. Start with the recipe that matches the question, then add the other as a later section. Example: a change-story that needs proof of its effect ends with a short example section.
 
 When no recipe fits, use the five-part order and the rules below anyway. Add a new recipe only after two separate questions needed the same five-part layout.
 
@@ -24,7 +25,9 @@ Every explanation uses this order:
 4. **Example.** One worked example with real numbers that runs through every step.
 5. **Next action.** What the reader decides or does next.
 
-Publish a short explanation with `push`. Measure the page height with every `vc-collapsed` closed. When it exceeds about two viewport heights at 1280×800, split the parts into up to five section files and publish them with `page`, answer first. `page` stacks every section on one scrolling page with a thin section rail, so the reader can skim. With `page`, drop the recipe's `<h1>`: each section already gets a heading, and the companion title comes from `--title`. The next action becomes its own last section. Do not use `states` for explanations: it shows one part at a time.
+Publish a short explanation with `push`. Measure the page height with every `vc-collapsed` closed. When it exceeds about two viewport heights at 1280×800, split the parts into up to five section files and publish them with `page`, answer first. `page` stacks every section on one scrolling page with a thin section rail. With `page`, drop the recipe's `<h1>`: each section already gets a heading, and the companion title comes from `--title`. The next action becomes its own last section. Do not use `states` for explanations: it shows one part at a time.
+
+When the mechanism has positions the reader should move through — commits, requests, rounds, retries — add the position control and inspector from [interaction](../interaction.md) instead of writing steps the reader can only read. [examples/understand-rebase.html](../../examples/understand-rebase.html) is the worked blueprint.
 
 ## Rules
 
@@ -49,5 +52,6 @@ Open the rendered screen and confirm:
 2. Each `data-diff` step shows a text badge.
 3. Every fact the answer depends on is visible without opening `vc-collapsed`.
 4. The explanation uses five sections or fewer.
+5. Any position control announces the current state by name, and its inspector matches what the panel shows.
 
 Scroll to the top before a full-page screenshot. Otherwise the screenshot captures the sticky status bar mid-page.

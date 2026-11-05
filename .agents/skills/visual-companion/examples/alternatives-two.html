@@ -1,0 +1,361 @@
+<style>
+  /* Proposal layer only: nothing here is in components.css. Everything is scoped to .alt1
+     or .alt2 and overrides the real elements, so both columns run the shipped behaviour. */
+
+  .alt-screen {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .alt-screen-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--vc-border);
+  }
+
+  .alt-screen-body {
+    display: grid;
+    gap: 14px;
+    padding: 14px;
+  }
+
+  /* ---- ALT 1: console. Each component names itself and holds one action. ---- */
+
+  .alt1 vc-code {
+    display: block;
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius);
+    overflow: hidden;
+    background: var(--vc-surface);
+  }
+
+  .alt1 vc-code::before {
+    content: attr(data-file);
+    display: block;
+    padding: 5px 10px;
+    border-bottom: 1px solid var(--vc-border);
+    background: color-mix(in srgb, var(--vc-bg) 55%, var(--vc-surface));
+    font: 12px var(--vc-mono);
+    color: var(--vc-muted);
+  }
+
+  .alt1 vc-code > .vc-pre {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    padding: 12px 14px;
+  }
+
+  .alt1 vc-code > .vc-copy {
+    top: 3px;
+    right: 6px;
+    min-height: 22px;
+    height: 22px;
+    padding: 0 8px;
+    font-size: 11px;
+    border: 0;
+  }
+
+  .alt1 vc-scrub {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    align-items: center;
+    gap: 4px 10px;
+    margin-top: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius);
+    background: var(--vc-surface);
+  }
+
+  .alt1 vc-scrub > .vc-btn {
+    width: 28px;
+    min-height: 28px;
+    padding: 0;
+    font-size: 0;
+    grid-row: 1 / span 2;
+  }
+
+  .alt1 vc-scrub > .vc-btn::before {
+    content: "‹";
+    font-size: 16px;
+  }
+
+  .alt1 vc-scrub > .vc-btn:last-of-type::before {
+    content: "›";
+  }
+
+  .alt1 vc-scrub > .vc-btn:first-of-type {
+    grid-column: 1;
+  }
+
+  .alt1 vc-scrub > .vc-btn:last-of-type {
+    grid-column: 3;
+  }
+
+  .alt1 vc-scrub > .vc-scrub-status {
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0;
+    font-size: 15px;
+    font-weight: 650;
+    color: var(--vc-fg);
+  }
+
+  .alt1 vc-scrub > .vc-scrub-range {
+    grid-column: 2;
+    grid-row: 2;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .alt1 vc-inspect {
+    display: block;
+    border: 1px solid var(--vc-border);
+    border-radius: var(--vc-radius);
+    overflow: hidden;
+    background: var(--vc-surface);
+  }
+
+  /* The caption attribute already exists; today it renders as an unstyled browser caption. */
+  .alt1 vc-inspect::before {
+    content: attr(caption);
+    display: block;
+    padding: 5px 10px;
+    border-bottom: 1px solid var(--vc-border);
+    background: color-mix(in srgb, var(--vc-bg) 55%, var(--vc-surface));
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--vc-muted);
+  }
+
+  .alt1 vc-inspect caption {
+    display: none;
+  }
+
+  .alt1 vc-inspect .vc-table {
+    border: 0;
+    border-radius: 0;
+  }
+
+  /* ---- ALT 2: instrumented. The states are the control; the inspector collapses. ---- */
+
+  .alt2 vc-tabs > .vc-tablist {
+    display: flex;
+    gap: 6px;
+    border: 0;
+    margin-bottom: 12px;
+  }
+
+  .alt2 vc-tabs .vc-tab {
+    flex: 1;
+    padding: 7px 6px;
+    border: 1px solid var(--vc-border-strong);
+    border-bottom-width: 1px;
+    border-radius: var(--vc-radius-sm);
+    background: var(--vc-surface);
+    color: var(--vc-muted);
+    font-size: 12px;
+    font-weight: 650;
+    text-align: center;
+  }
+
+  .alt2 vc-tabs .vc-tab[aria-selected="true"] {
+    background: var(--vc-accent);
+    border-color: var(--vc-accent);
+    color: var(--vc-accent-fg);
+  }
+
+  .alt2 vc-code {
+    display: block;
+    border-radius: var(--vc-radius-sm);
+    background: color-mix(in srgb, var(--vc-fg) 5%, var(--vc-bg));
+  }
+
+  .alt2 vc-code::before {
+    content: attr(data-lang);
+    display: block;
+    padding: 8px 12px 0;
+    font: 11px var(--vc-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--vc-muted);
+  }
+
+  .alt2 vc-code > .vc-pre {
+    border: 0;
+    background: transparent;
+    padding: 6px 84px 12px 12px;
+  }
+
+  .alt2 vc-code > .vc-copy {
+    top: 6px;
+    right: 6px;
+    min-height: 22px;
+    height: 22px;
+    padding: 0 8px;
+    font-size: 11px;
+  }
+
+  .alt2 vc-inspect .vc-table {
+    display: block;
+    border: 0;
+    background: none;
+    border-radius: 0;
+  }
+
+  .alt2 vc-inspect caption {
+    display: none;
+  }
+
+  .alt2 vc-inspect tbody {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .alt2 vc-inspect tr {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 4px 10px;
+    border: 1px solid var(--vc-border-strong);
+    border-radius: 999px;
+    background: var(--vc-surface);
+  }
+
+  .alt2 vc-inspect th,
+  .alt2 vc-inspect td {
+    border: 0;
+    padding: 0;
+    font-size: 12px;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .alt2 vc-inspect th {
+    color: var(--vc-muted);
+    font-weight: 500;
+    font-family: var(--vc-mono);
+  }
+
+  .alt2 vc-inspect td {
+    font-family: var(--vc-mono);
+    color: var(--vc-fg);
+  }
+</style>
+
+<h1 class="vc-h1">Which of these two replaces code, scrub and inspect?</h1>
+<p class="vc-muted">The same screen, the same data, in both columns — and both are live: click a state in either column and its own inspector follows.</p>
+
+<div class="vc-answer">
+  <p><strong>One dimension separates them: where the state control lives.</strong> Alt 1 keeps a transport below the content and names every surface. Alt 2 deletes the transport, turns the states themselves into the control, and folds the inspector into a row of chips.</p>
+</div>
+
+<div class="vc-split" style="gap:20px">
+  <!-- ---------------- ALT 1 ---------------- -->
+  <section class="vc-stack" aria-labelledby="alt1-h">
+    <div class="vc-row" style="justify-content:space-between">
+      <h2 class="vc-h2" id="alt1-h" style="margin:0">Alt 1 — Console</h2>
+      <span class="vc-badge">recommended default</span>
+    </div>
+    <p class="vc-muted" style="font-size:13px">Every component gets a name strip and one action. The scrub stays a real transport: arrows, count, thin track.</p>
+
+    <div class="vc-card alt1 alt-screen">
+      <div class="alt-screen-head">
+        <span class="vc-label">Deploy queue</span>
+        <span class="vc-badge" style="margin-left:auto">staging</span>
+      </div>
+      <div class="alt-screen-body">
+        <vc-code data-file="deploy.sh"><pre class="vc-pre"><code>kubectl rollout status deploy/api --timeout=90s</code></pre></vc-code>
+
+        <vc-tabs id="alt1-states" active="1">
+          <vc-tab label="Draft" data-state='{"status":"draft","owner":"none"}'>
+            <p style="margin:0;font-size:14px">Nobody owns this build yet.</p>
+          </vc-tab>
+          <vc-tab label="Review" data-state='{"status":"review","owner":"payments"}'>
+            <p style="margin:0;font-size:14px">Two approvals required before rollout.</p>
+          </vc-tab>
+          <vc-tab label="Done" data-state='{"status":"done","owner":"payments"}'>
+            <p style="margin:0;font-size:14px">Shipped Tuesday, not replayed.</p>
+          </vc-tab>
+        </vc-tabs>
+
+        <vc-scrub for="alt1-states" label="Queue state"></vc-scrub>
+        <vc-inspect for="alt1-states" caption="Declared state"></vc-inspect>
+      </div>
+    </div>
+
+    <div class="vc-proscons">
+      <div class="vc-pros"><h4>Gains</h4><ul><li>works at any state count</li><li>CSS only over today's elements</li></ul></div>
+      <div class="vc-cons"><h4>Costs</h4><ul><li>four surfaces, each with a strip</li><li>the slider is still a slider</li></ul></div>
+    </div>
+  </section>
+
+  <!-- ---------------- ALT 2 ---------------- -->
+  <section class="vc-stack" aria-labelledby="alt2-h">
+    <div class="vc-row" style="justify-content:space-between">
+      <h2 class="vc-h2" id="alt2-h" style="margin:0">Alt 2 — Instrumented</h2>
+      <span class="vc-badge">densest</span>
+    </div>
+    <p class="vc-muted" style="font-size:13px">No transport at all. The states are the control, each a full target, and the inspector becomes chips that stay on one line.</p>
+
+    <div class="vc-card alt2 alt-screen">
+      <div class="alt-screen-head">
+        <span class="vc-label">Deploy queue</span>
+        <span class="vc-badge" style="margin-left:auto">staging</span>
+      </div>
+      <div class="alt-screen-body">
+        <vc-code data-lang="shell"><pre class="vc-pre"><code>kubectl rollout status deploy/api --timeout=90s</code></pre></vc-code>
+
+        <vc-tabs id="alt2-states" active="1">
+          <vc-tab label="Draft" data-state='{"status":"draft","owner":"none"}'>
+            <p style="margin:0;font-size:14px">Nobody owns this build yet.</p>
+          </vc-tab>
+          <vc-tab label="Review" data-state='{"status":"review","owner":"payments"}'>
+            <p style="margin:0;font-size:14px">Two approvals required before rollout.</p>
+          </vc-tab>
+          <vc-tab label="Done" data-state='{"status":"done","owner":"payments"}'>
+            <p style="margin:0;font-size:14px">Shipped Tuesday, not replayed.</p>
+          </vc-tab>
+        </vc-tabs>
+
+        <vc-inspect for="alt2-states" caption="Declared state"></vc-inspect>
+      </div>
+    </div>
+
+    <div class="vc-proscons">
+      <div class="vc-pros"><h4>Gains</h4><ul><li>one click per state, no slider semantics</li><li>the inspector stops eating vertical space</li></ul></div>
+      <div class="vc-cons"><h4>Costs</h4><ul><li>breaks past about six states</li><li>no position readout, and no place for a count</li></ul></div>
+    </div>
+  </section>
+</div>
+
+<section style="padding:32px 0 24px;border-top:1px solid var(--vc-border);margin-top:32px">
+  <h2 class="vc-h2">What each costs</h2>
+  <div class="vc-scroll" tabindex="0" role="region" aria-label="Trade-off table, scrollable">
+    <table class="vc-table">
+      <thead>
+        <tr><th>Alt</th><th>State control</th><th>Inspector</th><th>Works past 6 states</th><th>Library change</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1 — Console</td><td>transport + slider</td><td>bordered rows</td><td>yes</td><td>CSS + two attributes</td></tr>
+        <tr><td>2 — Instrumented</td><td>the states themselves</td><td>chip row</td><td>no</td><td>CSS + drop vc-scrub per screen</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="vc-answer" style="margin-bottom:24px">
+  <p><strong>Alt 1 as the library default; Alt 2 wherever the states are the whole story.</strong> Alt 1 keeps one control that works at any length and is a CSS change over elements you already ship. Alt 2 is better on a three-state walkthrough, and worse the moment a screen has eight. Reverse that if most screens have five or fewer states — then make Alt 2 the default and keep Alt 1 for the long ones.</p>
+</div>
+
+<h2 class="vc-h2">Pick one</h2>
+<div class="vc-options">
+  <button class="vc-option" data-choice="alt1"><span class="vc-letter">1</span><span><h3>Console — transport stays</h3><p>Named surfaces, real slider, works at any state count.</p></span></button>
+  <button class="vc-option" data-choice="alt2"><span class="vc-letter">2</span><span><h3>Instrumented — states are the control</h3><p>No transport, chip inspector, best at three or four states.</p></span></button>
+</div>

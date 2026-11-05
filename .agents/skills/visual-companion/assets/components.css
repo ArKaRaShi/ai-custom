@@ -10,13 +10,42 @@
   --vc-fg: #16181d;
   --vc-muted: #5b6270;
   --vc-border: #d9dce2;
+  /* 1.4.11 non-text contrast: a control's boundary needs 3:1. Hairlines for cards and
+     table rules are decorative, so they keep --vc-border and stay quiet. */
+  --vc-border-strong: #828896;
   --vc-accent: #3b62f6;
   --vc-accent-fg: #ffffff;
   --vc-ok: #1f7a4d;
   --vc-warn: #9a5b00;
   --vc-danger: #b3261e;
   --vc-radius: 10px;
+  --vc-radius-xs: 4px;
+  --vc-radius-sm: 8px;
+  --vc-radius-lg: 14px;
   --vc-gap: 12px;
+  --vc-space-1: 4px;
+  --vc-space-2: 8px;
+  --vc-space-3: 12px;
+  --vc-space-4: 16px;
+  --vc-space-5: 24px;
+  --vc-space-6: 32px;
+  --vc-space-7: 48px;
+  --vc-text-xs: 12px;
+  --vc-text-sm: 13px;
+  --vc-text-md: 14px;
+  --vc-text-base: 16px;
+  --vc-text-lg: 17px;
+  --vc-text-xl: 24px;
+  /* Prose stops at a readable measure even though .vc-main is 960px wide. */
+  --vc-measure: 68ch;
+  /* Sticky offsets derive from one number, so changing the bar cannot detach the rail. */
+  --vc-bar-h: 44px;
+  /* Hover tints with the text color: it darkens on light and lightens on dark, so one
+     token is correct in both palettes. A brightness() filter would darken in both. */
+  --vc-hover: color-mix(in srgb, var(--vc-fg) 6%, transparent);
+  --vc-press: color-mix(in srgb, var(--vc-fg) 11%, transparent);
+  --vc-shadow-sm: 0 1px 2px #0000000f;
+  --vc-shadow-lg: 0 10px 28px #00000033;
   --vc-font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --vc-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
@@ -28,6 +57,7 @@
     --vc-fg: #e8eaee;
     --vc-muted: #a2a9b6;
     --vc-border: #2f343d;
+    --vc-border-strong: #6b7280;
     --vc-accent: #7d9bff;
     --vc-accent-fg: #10121a;
     --vc-ok: #62c993;
@@ -42,6 +72,7 @@
   --vc-fg: #e8eaee;
   --vc-muted: #a2a9b6;
   --vc-border: #2f343d;
+  --vc-border-strong: #6b7280;
   --vc-accent: #7d9bff;
   --vc-accent-fg: #10121a;
   --vc-ok: #62c993;
@@ -69,12 +100,14 @@
   z-index: 10;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
+  gap: var(--vc-space-2);
+  /* min-height, not height: author or user text spacing must not clip the bar. */
+  min-height: var(--vc-bar-h);
+  padding: 6px var(--vc-space-4);
   background: color-mix(in srgb, var(--vc-surface) 88%, transparent);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--vc-border);
-  font-size: 12px;
+  font-size: var(--vc-text-xs);
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--vc-muted);
@@ -86,6 +119,16 @@
   text-transform: none;
   letter-spacing: 0;
   font-size: 13px;
+  /* The title shrinks and truncates; the status and theme control must not be pushed off. */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vc-bar > label,
+.vc-bar-status {
+  flex: none;
 }
 
 .vc-bar-status {
@@ -97,10 +140,21 @@
 
 .vc-theme {
   font: inherit;
+  font-size: var(--vc-text-xs);
+  /* The bar is uppercase; the control's own text is not. */
+  text-transform: none;
+  letter-spacing: 0;
+  height: 26px;
+  padding: 0 var(--vc-space-1);
   color: var(--vc-fg);
   background: var(--vc-surface);
-  border: 1px solid var(--vc-muted);
-  border-radius: 4px;
+  border: 1px solid var(--vc-border-strong);
+  border-radius: var(--vc-radius-sm);
+  cursor: pointer;
+}
+
+.vc-theme:hover {
+  border-color: var(--vc-fg);
 }
 
 .vc-dot {
@@ -122,11 +176,29 @@
 .vc-main {
   max-width: 960px;
   margin: 0 auto;
-  padding: 24px 16px 64px;
+  padding: var(--vc-space-5) var(--vc-space-4) 64px;
+}
+
+/* Rhythm belongs to the container, so components stay free of margin. .vc-main is a block
+   box: a `gap` here would do nothing at all. Margins collapse instead, which is what keeps
+   a heading and its subtitle 4px apart while surfaces never touch. */
+.vc-main > * + * {
+  margin-top: var(--vc-space-4);
+}
+
+/* A heading and the line under it are one pair, so the heading's own bottom margin decides
+   that distance. Anything else after a heading still gets the full gap. */
+.vc-main > :is(.vc-h1, .vc-h2) + .vc-muted {
+  margin-top: 0;
+}
+
+/* A label introduces what follows directly. */
+.vc-main > .vc-label + * {
+  margin-top: var(--vc-space-1);
 }
 
 .vc-empty {
-  min-height: calc(100vh - 110px);
+  min-height: calc(100svh - var(--vc-bar-h) - 88px);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -153,12 +225,13 @@
 }
 
 .vc-muted {
+  max-width: var(--vc-measure);
   color: var(--vc-muted);
-  margin: 0 0 16px;
+  margin: 0 0 var(--vc-space-4);
 }
 
 .vc-label {
-  font-size: 12px;
+  font-size: var(--vc-text-xs);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--vc-muted);
@@ -205,7 +278,10 @@
   background: var(--vc-surface);
   border: 1px solid var(--vc-border);
   border-radius: var(--vc-radius);
-  padding: 16px;
+  padding: var(--vc-space-4);
+  /* Inside a grid or flex track, the automatic minimum would let a wide table push the
+     track past the viewport. min-width:0 keeps the card at its track width. */
+  min-width: 0;
 }
 
 .vc-card-head {
@@ -218,10 +294,13 @@
 
 .vc-badge {
   display: inline-block;
-  padding: 2px 8px;
+  padding: 1px var(--vc-space-2);
   border-radius: 999px;
   border: 1px solid var(--vc-border);
-  font-size: 12px;
+  font-size: var(--vc-text-xs);
+  line-height: 1.6;
+  /* A pill that wraps to two lines reads as two badges. */
+  white-space: nowrap;
   color: var(--vc-muted);
 }
 
@@ -243,11 +322,11 @@
   background: var(--vc-surface);
   border: 1px solid var(--vc-border);
   border-radius: var(--vc-radius);
-  padding: 12px 14px;
+  padding: var(--vc-space-3) var(--vc-space-4);
 }
 
 .vc-stat-value {
-  font-size: 24px;
+  font-size: var(--vc-text-xl);
   font-weight: 650;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
@@ -258,13 +337,15 @@
 .vc-btn {
   appearance: none;
   font: inherit;
-  font-size: 14px;
-  padding: 8px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--vc-border);
+  font-size: var(--vc-text-md);
+  padding: var(--vc-space-2) var(--vc-space-3);
+  border-radius: var(--vc-radius-sm);
+  border: 1px solid var(--vc-border-strong);
+  min-height: 36px;
   background: var(--vc-surface);
   color: var(--vc-fg);
   cursor: pointer;
+  transition: background-image 120ms ease, border-color 120ms ease;
 }
 
 .vc-btn[data-variant="primary"] {
@@ -277,8 +358,21 @@
   background: transparent;
 }
 
+/* An overlay image tints any variant, including primary and ghost, in either palette. */
 .vc-btn:hover {
-  filter: brightness(0.97);
+  border-color: var(--vc-fg);
+  background-image: linear-gradient(var(--vc-hover), var(--vc-hover));
+}
+
+.vc-btn:active {
+  background-image: linear-gradient(var(--vc-press), var(--vc-press));
+}
+
+.vc-btn:disabled,
+.vc-btn[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-image: none;
 }
 
 /* ---------- choices (recorded on click) ---------- */
@@ -295,18 +389,24 @@
   gap: 12px;
   width: 100%;
   text-align: left;
-  padding: 14px 16px;
+  padding: var(--vc-space-3) var(--vc-space-4);
   border-radius: var(--vc-radius);
-  border: 1px solid var(--vc-border);
+  border: 1px solid var(--vc-border-strong);
   background: var(--vc-surface);
   color: inherit;
   font: inherit;
   cursor: pointer;
-  transition: border-color 140ms ease, transform 140ms ease;
+  min-height: 44px;
+  transition: border-color 140ms ease, background-color 140ms ease;
 }
 
 .vc-option:hover {
   border-color: var(--vc-accent);
+  background-color: color-mix(in srgb, var(--vc-accent) 5%, var(--vc-surface));
+}
+
+.vc-option:active {
+  background-color: color-mix(in srgb, var(--vc-accent) 11%, var(--vc-surface));
 }
 
 .vc-option[aria-pressed="true"] {
@@ -319,7 +419,8 @@
   height: 26px;
   display: grid;
   place-items: center;
-  border-radius: 6px;
+  /* Inner radius = outer radius minus the 16px padding around it. */
+  border-radius: var(--vc-radius-xs);
   background: color-mix(in srgb, var(--vc-accent) 14%, transparent);
   color: var(--vc-accent);
   font-size: 12px;
@@ -339,15 +440,41 @@
 
 /* ---------- table ---------- */
 
+/* border-collapse: collapse makes the browser ignore the radius, so the frame stays
+   square. Separate borders plus corner radii on the end cells keep the curve. */
 .vc-table {
   color: var(--vc-fg);
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   background: var(--vc-surface);
   border: 1px solid var(--vc-border);
   border-radius: var(--vc-radius);
-  overflow: hidden;
-  font-size: 14px;
+  font-size: var(--vc-text-md);
+}
+
+.vc-table > :first-child > tr:first-child > :first-child {
+  border-top-left-radius: calc(var(--vc-radius) - 1px);
+}
+
+.vc-table > :first-child > tr:first-child > :last-child {
+  border-top-right-radius: calc(var(--vc-radius) - 1px);
+}
+
+.vc-table > :last-child > tr:last-child > :first-child {
+  border-bottom-left-radius: calc(var(--vc-radius) - 1px);
+}
+
+.vc-table > :last-child > tr:last-child > :last-child {
+  border-bottom-right-radius: calc(var(--vc-radius) - 1px);
+}
+
+/* 1.4.10 Reflow: a wide table scrolls inside this container instead of pushing the page.
+   Pair it with tabindex="0" and a role so the region is reachable by keyboard. */
+.vc-scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  max-width: 100%;
 }
 
 .vc-table th,
@@ -358,7 +485,7 @@
 }
 
 .vc-table th {
-  font-size: 12px;
+  font-size: var(--vc-text-xs);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--vc-muted);
@@ -383,6 +510,7 @@
   border-radius: var(--vc-radius);
   overflow: hidden;
   background: var(--vc-surface);
+  min-width: 0;
 }
 
 .vc-mockup-head {
@@ -396,16 +524,16 @@
 }
 
 .vc-mockup-body {
-  padding: 14px;
+  padding: var(--vc-space-4);
 }
 
 .vc-placeholder {
   border: 1px dashed var(--vc-border);
-  border-radius: 8px;
-  padding: 18px;
+  border-radius: var(--vc-radius-sm);
+  padding: var(--vc-space-4);
   text-align: center;
   color: var(--vc-muted);
-  font-size: 13px;
+  font-size: var(--vc-text-sm);
 }
 
 /* ---------- pros / cons ---------- */
@@ -452,8 +580,9 @@
   border: 1px solid var(--vc-border);
   border-left: 4px solid var(--vc-accent);
   border-radius: var(--vc-radius);
-  padding: 16px 18px;
-  font-size: 17px;
+  padding: var(--vc-space-4);
+  max-width: var(--vc-measure);
+  font-size: var(--vc-text-lg);
   line-height: 1.5;
 }
 
@@ -479,14 +608,20 @@
   counter-increment: vc-step;
   display: grid;
   grid-template-columns: 28px minmax(0, 1fr);
-  gap: 4px 12px;
+  gap: var(--vc-space-1) var(--vc-space-3);
   color: var(--vc-fg);
   background: var(--vc-surface);
   border: 1px solid var(--vc-border);
   border-radius: var(--vc-radius);
-  padding: 12px 14px;
-  font-size: 15px;
+  padding: var(--vc-space-3) var(--vc-space-4);
+  font-size: var(--vc-text-md);
   line-height: 1.5;
+}
+
+/* A diff step thickens the border to 2px. Reclaiming 1px of padding keeps every
+   step the same height, so the list does not jump when the marks change. */
+.vc-step[data-diff] {
+  padding: calc(var(--vc-space-3) - 1px) calc(var(--vc-space-4) - 1px);
 }
 
 .vc-step > * {
@@ -525,7 +660,7 @@
 .vc-step-note {
   margin: 0;
   color: var(--vc-muted);
-  font-size: 14px;
+  font-size: var(--vc-text-sm);
 }
 
 .vc-delta {
@@ -552,8 +687,8 @@
   color: var(--vc-muted);
   border: 1px dashed var(--vc-border);
   border-radius: var(--vc-radius);
-  padding: 10px 14px;
-  font-size: 14px;
+  padding: var(--vc-space-2) var(--vc-space-3);
+  font-size: var(--vc-text-md);
 }
 
 .vc-collapsed > summary {
@@ -569,17 +704,27 @@
 .vc-page-body {
   display: flex;
   flex-direction: column;
-  gap: 48px;
+  gap: var(--vc-space-7);
   min-width: 0;
 }
 
 .vc-part {
-  scroll-margin-top: 56px;
+  scroll-margin-top: calc(var(--vc-bar-h) + 12px);
 }
 
 .vc-part + .vc-part {
   border-top: 1px solid var(--vc-border);
-  padding-top: 32px;
+  padding-top: var(--vc-space-6);
+}
+
+/* A part receives a fragment's children directly, so it carries the same rhythm rule as the
+   frame. Without this, two cards inside one pushed fragment touch. */
+.vc-part > * + * {
+  margin-top: var(--vc-space-4);
+}
+
+.vc-part > .vc-part-title + * {
+  margin-top: 0;
 }
 
 .vc-part-title {
@@ -625,9 +770,9 @@
   gap: 2px;
   border: 1px solid var(--vc-border);
   border-left: 0;
-  border-radius: 0 8px 8px 0;
+  border-radius: 0 var(--vc-radius-sm) var(--vc-radius-sm) 0;
   background: var(--vc-surface);
-  box-shadow: 0 2px 12px #0003;
+  box-shadow: var(--vc-shadow-lg);
 }
 
 .vc-toc li {
@@ -676,15 +821,15 @@
   left: 44px;
   top: 50%;
   transform: translateY(-50%);
-  padding: 6px 10px;
+  padding: var(--vc-space-1) var(--vc-space-2);
   border: 1px solid var(--vc-border);
-  border-radius: 6px;
+  border-radius: var(--vc-radius-sm);
   background: var(--vc-surface);
   color: var(--vc-fg);
-  font-size: 13px;
+  font-size: var(--vc-text-sm);
   font-weight: 600;
   white-space: nowrap;
-  box-shadow: 0 4px 16px #0004;
+  box-shadow: var(--vc-shadow-lg);
   pointer-events: none;
   opacity: 0;
 }
@@ -704,7 +849,7 @@
 @media (max-width: 760px) {
   .vc-toc {
     position: sticky;
-    top: 41px;
+    top: var(--vc-bar-h);
     transform: none;
     z-index: 5;
     margin: 0 -16px 16px;
@@ -765,7 +910,7 @@
   }
 
   .vc-part {
-    scroll-margin-top: 100px;
+    scroll-margin-top: calc(var(--vc-bar-h) + 56px);
   }
 }
 
@@ -780,14 +925,15 @@
 .vc-pre {
   color: var(--vc-fg);
   margin: 0;
-  padding: 12px 14px;
+  padding: var(--vc-space-3) var(--vc-space-4);
   background: var(--vc-surface);
   border: 1px solid var(--vc-border);
-  border-radius: var(--vc-radius);
+  border-radius: var(--vc-radius-sm);
   overflow-x: auto;
   font-family: var(--vc-mono);
-  font-size: 13px;
+  font-size: var(--vc-text-sm);
   line-height: 1.5;
+  tab-size: 2;
 }
 
 vc-code {
@@ -797,8 +943,13 @@ vc-code {
 
 vc-code > .vc-copy {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: var(--vc-space-2);
+  right: var(--vc-space-2);
+}
+
+/* The copy button floats over the first line; reserve its width so no code hides under it. */
+vc-code > .vc-pre {
+  padding-right: 84px;
 }
 
 /* ---------- tabs ---------- */
@@ -814,14 +965,19 @@ vc-tabs > .vc-tablist {
 vc-tabs .vc-tab {
   appearance: none;
   font: inherit;
-  font-size: 13px;
-  padding: 8px 12px;
+  font-size: var(--vc-text-sm);
+  padding: var(--vc-space-2) var(--vc-space-3);
   background: none;
   border: 0;
   border-bottom: 2px solid transparent;
   color: var(--vc-muted);
   cursor: pointer;
   white-space: nowrap;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+vc-tabs .vc-tab:hover {
+  color: var(--vc-fg);
 }
 
 vc-tabs .vc-tab[aria-selected="true"] {
@@ -834,6 +990,11 @@ vc-tabs vc-tab {
 }
 
 vc-tabs vc-tab[data-active] {
+  display: block;
+}
+
+/* Without JavaScript no panel carries data-active: show the first one so a static copy still reads. */
+vc-tabs:not(:has(> vc-tab[data-active])) > vc-tab:first-of-type {
   display: block;
 }
 
@@ -867,22 +1028,24 @@ vc-chart .vc-chart-col {
 vc-chart .vc-chart-bar {
   width: 100%;
   max-width: 72px;
+  /* A value near zero still shows a bar, so the column never looks empty. */
+  min-height: 2px;
   background: var(--vc-accent);
   opacity: 0.85;
-  border-radius: 4px 4px 0 0;
+  border-radius: var(--vc-radius-xs) var(--vc-radius-xs) 0 0;
 }
 
 vc-chart .vc-chart-value {
-  margin-bottom: 4px;
-  font-size: 12px;
+  margin-bottom: var(--vc-space-1);
+  font-size: var(--vc-text-xs);
   font-variant-numeric: tabular-nums;
   color: var(--vc-muted);
 }
 
 vc-chart .vc-chart-label {
-  padding-top: 6px;
+  padding-top: var(--vc-space-1);
   text-align: center;
-  font-size: 12px;
+  font-size: var(--vc-text-xs);
   color: var(--vc-muted);
   overflow-wrap: anywhere;
 }
@@ -891,31 +1054,125 @@ vc-chart .vc-chart-label {
 
 .vc-field {
   display: grid;
-  gap: 4px;
-  font-size: 13px;
+  gap: var(--vc-space-1);
+  font-size: var(--vc-text-sm);
 }
 
 .vc-input {
   font: inherit;
-  font-size: 14px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--vc-border);
+  font-size: var(--vc-text-md);
+  padding: var(--vc-space-2) var(--vc-space-3);
+  border-radius: var(--vc-radius-sm);
+  border: 1px solid var(--vc-border-strong);
+  min-height: 36px;
   background: var(--vc-surface);
   color: var(--vc-fg);
+  transition: border-color 120ms ease;
+}
+
+.vc-input:hover {
+  border-color: var(--vc-fg);
+}
+
+.vc-input::placeholder {
+  color: var(--vc-muted);
+  opacity: 1;
+}
+
+/* ---------- position control and state inspector ---------- */
+
+.vc-scrub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.vc-scrub-range {
+  flex: 1 1 120px;
+  min-width: 120px;
+  accent-color: var(--vc-accent);
+}
+
+.vc-scrub-status {
+  margin: 0;
+  font-size: var(--vc-text-xs);
+  color: var(--vc-muted);
+}
+
+.vc-inspect {
+  margin-top: 12px;
+}
+
+.vc-inspect th[scope="row"] {
+  color: var(--vc-muted);
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 /* ---------- focus, motion, print ---------- */
 
-:where(.vc-btn, .vc-option, .vc-input, .vc-tab, .vc-theme, a):focus-visible {
+:where(.vc-btn, .vc-option, .vc-input, .vc-tab, .vc-theme, .vc-scrub-range, .vc-collapsed > summary, [tabindex]:not([tabindex="-1"]), a):focus-visible {
   outline: 2px solid var(--vc-accent);
   outline-offset: 2px;
+}
+
+/* 2.4.11 Focus not obscured: the sticky bar must not cover a focused control.
+   scroll-padding reserves its height for every focus and anchor jump. */
+html {
+  scroll-padding-top: calc(var(--vc-bar-h) + 12px);
+}
+
+@media (max-width: 760px) {
+  html {
+    scroll-padding-top: calc(var(--vc-bar-h) + 56px);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   * {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+  }
+}
+
+/* 1.4.1: state must not hang on a color the system replaces. */
+@media (forced-colors: active) {
+  .vc-option[aria-pressed="true"],
+  .vc-toc a[aria-current="true"] {
+    outline: 2px solid;
+    outline-offset: -2px;
+  }
+
+  vc-chart .vc-chart-bar {
+    border: 1px solid CanvasText;
+  }
+
+  .vc-dot {
+    border: 1px solid;
+  }
+}
+
+/* Users who ask for more contrast get the strong border everywhere, and muted text
+   promoted to the foreground color. */
+@media (prefers-contrast: more) {
+  .vc-card,
+  .vc-stat,
+  .vc-table,
+  .vc-mockup,
+  .vc-step,
+  .vc-badge,
+  .vc-collapsed,
+  .vc-placeholder,
+  .vc-answer {
+    border-color: var(--vc-border-strong);
+  }
+
+  .vc-muted,
+  .vc-step-note,
+  .vc-badge {
+    color: var(--vc-fg);
   }
 }
 

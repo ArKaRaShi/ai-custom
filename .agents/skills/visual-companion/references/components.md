@@ -9,6 +9,10 @@ bun "$HOME/.agents/skills/visual-companion/scripts/cli.ts" components --json   #
 
 Everything is namespaced `vc-`. Components are plain CSS plus three custom elements; there is no framework or build step. Component behavior makes no network requests; the companion client connects to the local server.
 
+To see the whole set at once, push `examples/component-gallery.html`: every class and element with a live specimen and a one-line note. `tests/components.test.ts` fails when a catalogue entry has no specimen there, so the page cannot drift from the catalogue.
+
+Accessibility is part of the component, not a pass at the end. `tests/contrast.test.ts` reads the palette from `components.css` and fails below 4.5:1 for text or 3:1 for a control boundary and the focus ring. `--vc-border` is decorative and may remain below 3:1; `--vc-border-strong` is the boundary of buttons, inputs, selects and choices. Focus rings are a two-pixel outline that `scroll-padding-top` keeps clear of the sticky bar, controls meet the 24-pixel target minimum, and forced-colors plus `prefers-contrast: more` are handled.
+
 `vc-tabs` accepts a one-based `active` attribute. Its `vc-tab-change` event exposes the selected **zero-based** index as `event.detail.index`. `vc-chart` renders bars and defaults to a height of 200 pixels.
 
 ## Three worked examples
