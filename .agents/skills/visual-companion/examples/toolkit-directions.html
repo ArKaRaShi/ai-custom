@@ -1,0 +1,230 @@
+<h1 class="vc-h1">How much chrome should code, scrub and inspect carry?</h1>
+<p class="vc-muted">The same three components at three levels of structure. Judge the direction, not the pixels: everything below is static markup, so what you see is the shape, not a finished behaviour. Pick per row in chat if one row breaks the pattern.</p>
+
+<div class="vc-answer">
+  <p><strong>The complaint is structural, not cosmetic.</strong> Today these three are a bordered box with a floating button, a form control between two text buttons, and a table with an unstyled caption. All three read as <em>a widget dropped on a page</em> rather than part of one surface.</p>
+</div>
+
+<!-- ============ TODAY ============ -->
+<section style="display:grid;grid-template-columns:minmax(0,1fr);gap:16px;padding:32px 0;border-top:1px solid var(--vc-border)">
+  <h2 class="vc-h2" style="margin:0">Today — the reference row</h2>
+  <p class="vc-muted" style="margin:0">Shipped markup, unchanged, so the three directions are measured against something real.</p>
+
+  <div class="vc-grid" style="--vc-cols: 3; --vc-cols-mobile: 1">
+    <div>
+      <div class="vc-label" style="margin-bottom:8px">Code</div>
+      <vc-code><pre class="vc-pre"><code>git rebase --onto main~2 main</code></pre></vc-code>
+    </div>
+
+    <div>
+      <div class="vc-label" style="margin-bottom:8px">Scrub</div>
+      <div class="vc-scrub" style="margin-top:0">
+        <button class="vc-btn" data-variant="ghost" style="min-height:28px;padding:2px 10px">Previous</button>
+        <input class="vc-scrub-range" type="range" min="1" max="3" value="2" aria-label="State" />
+        <p class="vc-scrub-status">2 / 3 — Review</p>
+        <button class="vc-btn" data-variant="ghost" style="min-height:28px;padding:2px 10px">Next</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="vc-label" style="margin-bottom:8px">Inspect</div>
+      <table class="vc-table vc-inspect" style="margin-top:0">
+        <caption>Workflow state</caption>
+        <tbody>
+          <tr><th scope="row">status</th><td>review <span class="vc-badge" data-tone="warn">Changed</span></td></tr>
+          <tr><th scope="row">owner</th><td>payments <span class="vc-badge" data-tone="warn">Changed</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============ A ============ -->
+<section style="display:grid;grid-template-columns:minmax(0,1fr);gap:16px;padding:32px 0;border-top:1px solid var(--vc-border)">
+  <h2 class="vc-h2" style="margin:0">A — Quiet surface</h2>
+  <p class="vc-muted" style="margin:0">Remove the boxes and the pills. Structure stays exactly as it is; only the frames come off, and changed values show as an old-to-new delta instead of a badge.</p>
+
+  <div class="vc-grid" style="--vc-cols: 3; --vc-cols-mobile: 1">
+    <div>
+      <div class="vc-label" style="margin-bottom:8px">Code</div>
+      <div style="position:relative;background:var(--vc-bg);border-radius:var(--vc-radius-sm);padding:12px 92px 12px 14px">
+        <pre style="margin:0;overflow-x:auto;font:13px/1.6 var(--vc-mono)"><code>git rebase --onto main~2 main</code></pre>
+        <button class="vc-btn" data-variant="ghost" style="position:absolute;top:8px;right:8px;min-height:24px;padding:2px 8px;font-size:12px">Copy</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="vc-label" style="margin-bottom:8px">Scrub</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="vc-btn" style="min-height:28px;width:28px;padding:0">‹</button>
+        <div style="flex:1;min-width:0">
+          <input type="range" min="1" max="3" value="2" aria-label="State" style="width:100%;accent-color:var(--vc-accent)" />
+        </div>
+        <span style="font-size:12px;color:var(--vc-muted);font-variant-numeric:tabular-nums;white-space:nowrap">2 / 3</span>
+        <button class="vc-btn" style="min-height:28px;width:28px;padding:0">›</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="vc-label" style="margin-bottom:8px">Inspect</div>
+      <div style="font-size:14px">
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--vc-border)">
+          <span style="color:var(--vc-muted)">status</span>
+          <span style="font-family:var(--vc-mono);font-size:13px"><span class="vc-delta"><del>draft</del><ins>review</ins></span></span>
+        </div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0">
+          <span style="color:var(--vc-muted)">owner</span>
+          <span style="font-family:var(--vc-mono);font-size:13px"><span class="vc-delta"><del>none</del><ins>payments</ins></span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="vc-proscons">
+    <div class="vc-pros"><h4>Gains</h4><ul><li>no new markup, no new behaviour</li><li>reads as part of the page, not a widget</li></ul></div>
+    <div class="vc-cons"><h4>Costs</h4><ul><li>the scrub still looks like a form field</li><li>code loses its label, so a bare snippet has no context</li></ul></div>
+  </div>
+</section>
+
+<!-- ============ B ============ -->
+<section style="display:grid;grid-template-columns:minmax(0,1fr);gap:16px;padding:32px 0;border-top:1px solid var(--vc-border)">
+  <h2 class="vc-h2" style="margin:0">B — Console surface</h2>
+  <p class="vc-muted" style="margin:0">Each component gets a header strip that names it and holds its one action. The scrub becomes a transport: one state name large, previous and next as arrows, a segmented track underneath.</p>
+
+  <div class="vc-grid" style="--vc-cols: 3; --vc-cols-mobile: 1">
+    <div>
+      <div class="vc-label" style="margin-bottom:8px">Code</div>
+      <div style="border:1px solid var(--vc-border);border-radius:var(--vc-radius);overflow:hidden;background:var(--vc-surface)">
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 10px;border-bottom:1px solid var(--vc-border);background:color-mix(in srgb,var(--vc-bg) 55%,var(--vc-surface))">
+          <span class="vc-badge">shell</span>
+          <span style="font:12px var(--vc-mono);color:var(--vc-muted)">rebase.sh</span>
+          <button class="vc-btn" data-variant="ghost" style="margin-left:auto;min-height:24px;padding:2px 8px;font-size:12px">Copy</button>
+        </div>
+        <pre style="margin:0;padding:12px 14px;overflow-x:auto;font:13px/1.6 var(--vc-mono)"><code>git rebase --onto main~2 main</code></pre>
+      </div>
+    </div>
+
+    <div>
+      <div class="vc-label" style="margin-bottom:8px">Scrub</div>
+      <div style="border:1px solid var(--vc-border);border-radius:var(--vc-radius);padding:10px 12px;background:var(--vc-surface)">
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="vc-btn" data-variant="ghost" style="min-height:28px;width:28px;padding:0">‹</button>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:15px;font-weight:650;line-height:1.2">Review</div>
+            <div style="display:flex;gap:4px;margin-top:8px">
+              <div style="flex:1;height:6px;border-radius:999px;background:var(--vc-accent)"></div>
+              <div style="flex:1;height:6px;border-radius:999px;background:var(--vc-accent)"></div>
+              <div style="flex:1;height:6px;border-radius:999px;background:color-mix(in srgb,var(--vc-fg) 14%,transparent)"></div>
+            </div>
+          </div>
+          <button class="vc-btn" data-variant="ghost" style="min-height:28px;width:28px;padding:0">›</button>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:var(--vc-muted)">
+          <span>2 / 3</span><span>← → to step</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="vc-label" style="margin-bottom:8px">Inspect</div>
+      <div style="border:1px solid var(--vc-border);border-radius:var(--vc-radius);overflow:hidden;background:var(--vc-surface)">
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 10px;border-bottom:1px solid var(--vc-border);background:color-mix(in srgb,var(--vc-bg) 55%,var(--vc-surface))">
+          <span style="font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:var(--vc-muted)">State</span>
+          <span class="vc-badge" style="margin-left:auto">Review</span>
+        </div>
+        <div style="padding:2px 12px 8px">
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:6px 0;border-bottom:1px dotted var(--vc-border)">
+            <span style="font-size:13px;color:var(--vc-muted)">status</span>
+            <span style="font:13px var(--vc-mono)"><span class="vc-delta"><del>draft</del><ins>review</ins></span></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:6px 0">
+            <span style="font-size:13px;color:var(--vc-muted)">owner</span>
+            <span style="font:13px var(--vc-mono)"><span class="vc-delta"><del>none</del><ins>payments</ins></span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="vc-proscons">
+    <div class="vc-pros"><h4>Gains</h4><ul><li>every component names itself and holds one action</li><li>the scrub reads as a control, not a form field</li></ul></div>
+    <div class="vc-cons"><h4>Costs</h4><ul><li>a header per code block is overhead for a one-line command</li><li>needs new markup and a header variant in each component</li></ul></div>
+  </div>
+</section>
+
+<!-- ============ C ============ -->
+<section style="display:grid;grid-template-columns:minmax(0,1fr);gap:16px;padding:32px 0;border-top:1px solid var(--vc-border)">
+  <h2 class="vc-h2" style="margin:0">C — Instrumented</h2>
+  <p class="vc-muted" style="margin:0">Every state is a target. The scrub becomes a segmented stepper where each state is a labelled button, code gains a line-number gutter, and the inspector collapses to a row of key-value chips.</p>
+
+  <div class="vc-grid" style="--vc-cols: 3; --vc-cols-mobile: 1">
+    <div>
+      <div class="vc-label" style="margin-bottom:8px">Code</div>
+      <div style="border:1px solid var(--vc-border);border-radius:var(--vc-radius);overflow:hidden;background:var(--vc-surface)">
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 10px;border-bottom:1px solid var(--vc-border);background:color-mix(in srgb,var(--vc-bg) 55%,var(--vc-surface))">
+          <span class="vc-badge">shell</span>
+          <button class="vc-btn" data-variant="ghost" style="margin-left:auto;min-height:24px;padding:2px 8px;font-size:12px">Copied</button>
+        </div>
+        <div style="display:grid;grid-template-columns:30px minmax(0,1fr);padding:10px 0;font:13px/1.65 var(--vc-mono)">
+          <div style="text-align:right;padding-right:10px;color:var(--vc-muted);user-select:none">1<br />2</div>
+          <div style="overflow-x:auto;padding-right:12px">git fetch origin<br />git rebase --onto main~2 main</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="vc-label" style="margin-bottom:8px">Scrub</div>
+      <div style="display:flex;gap:6px">
+        <div style="flex:1;padding:7px 6px;border-radius:var(--vc-radius-sm);background:var(--vc-accent);color:var(--vc-accent-fg);font-size:12px;font-weight:650;text-align:center">Draft</div>
+        <div style="flex:1;padding:7px 6px;border-radius:var(--vc-radius-sm);border:1px solid var(--vc-accent);color:var(--vc-fg);font-size:12px;font-weight:650;text-align:center">Review</div>
+        <div style="flex:1;padding:7px 6px;border-radius:var(--vc-radius-sm);border:1px solid var(--vc-border-strong);color:var(--vc-muted);font-size:12px;text-align:center">Done</div>
+      </div>
+      <div style="margin-top:8px;font-size:12px;color:var(--vc-muted)">Each state is a 32-pixel target; no slider semantics.</div>
+    </div>
+
+    <div>
+      <div class="vc-label" style="margin-bottom:8px">Inspect</div>
+      <div style="border:1px solid var(--vc-border);border-radius:var(--vc-radius);padding:10px 12px;background:var(--vc-surface)">
+        <div class="vc-row" style="gap:6px">
+          <span class="vc-badge" style="font-family:var(--vc-mono)">status=<span class="vc-delta"><del>draft</del><ins>review</ins></span></span>
+          <span class="vc-badge" style="font-family:var(--vc-mono)">owner=<span class="vc-delta"><del>none</del><ins>payments</ins></span></span>
+        </div>
+        <div style="margin-top:8px;font-size:12px;color:var(--vc-muted)">One line, whatever the panel declares.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="vc-proscons">
+    <div class="vc-pros"><h4>Gains</h4><ul><li>the stepper is the most direct scrub: one click per state</li><li>a chip row stays readable as the state grows</li></ul></div>
+    <div class="vc-cons"><h4>Costs</h4><ul><li>breaks past about six states, where a range still works</li><li>line numbers are noise for four-line snippets</li></ul></div>
+  </div>
+</section>
+
+<!-- ============ TRADE-OFF ============ -->
+<section style="display:grid;grid-template-columns:minmax(0,1fr);gap:16px;padding:32px 0;border-top:1px solid var(--vc-border)">
+  <h2 class="vc-h2" style="margin:0">What each direction costs</h2>
+  <div class="vc-scroll" tabindex="0" role="region" aria-label="Trade-off table, scrollable">
+    <table class="vc-table">
+      <thead>
+        <tr><th>Direction</th><th>Chrome</th><th>New behaviour</th><th>Scales past 6 states</th><th>Ship cost</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>A — Quiet</td><td>none</td><td>none</td><td>yes, slider</td><td>CSS only</td></tr>
+        <tr><td>B — Console</td><td>header strip</td><td>header variant, transport</td><td>yes, segmented track</td><td>markup + CSS</td></tr>
+        <tr><td>C — Instrumented</td><td>header + gutter</td><td>stepper replaces the range</td><td>no</td><td>element rewrite</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ RECOMMENDATION + CHOICE ============ -->
+<div class="vc-answer" style="margin-bottom:24px">
+  <p><strong>B as the default, C for the scrub only.</strong> The scrub is the one genuinely dated piece — a slider is the wrong control for two or three named states — so it takes the stepper. Code and inspect only need their frames named, and a full header on every snippet would be heavier than the snippet. Reverse it if state lists routinely exceed six, or if screens are mostly one-line commands: then A wins and you delete the headers again.</p>
+</div>
+
+<h2 class="vc-h2">Which direction do you want?</h2>
+<div class="vc-options">
+  <button class="vc-option" data-choice="a"><span class="vc-letter">A</span><span><h3>Quiet surface</h3><p>Frames off, delta instead of badges. Cheapest, keeps the slider.</p></span></button>
+  <button class="vc-option" data-choice="b"><span class="vc-letter">B</span><span><h3>Console surface</h3><p>Named header per component, transport scrub. Recommended default.</p></span></button>
+  <button class="vc-option" data-choice="c"><span class="vc-letter">C</span><span><h3>Instrumented</h3><p>Segmented stepper, line-number gutter, chip inspector. Densest, least flexible.</p></span></button>
+</div>

@@ -19,10 +19,12 @@
     { "name": "vc-btn", "what": "button; data-variant=primary|ghost", "snippet": "<button class=\"vc-btn\" data-variant=\"primary\">Apply</button>" },
     { "name": "vc-options", "what": "vertical list of clickable choices", "snippet": "<div class=\"vc-options\"><button class=\"vc-option\" data-choice=\"a\"><span class=\"vc-letter\">A</span><span><h3>One</h3><p>why</p></span></button></div>" },
     { "name": "vc-option", "what": "one choice; data-choice value is what gets recorded", "snippet": "<button class=\"vc-option\" data-choice=\"a\">…</button>" },
+    { "name": "vc-letter", "what": "A/B/C marker inside a choice; sits at the start of the option", "snippet": "<span class=\"vc-letter\">A</span>" },
     { "name": "vc-grid", "what": "equal columns; --vc-cols, --vc-cols-mobile", "snippet": "<div class=\"vc-grid\" style=\"--vc-cols: 3; --vc-cols-mobile: 1\">…</div>" },
     { "name": "vc-split", "what": "two columns collapsing to one under 640px", "snippet": "<div class=\"vc-split\">…</div>" },
     { "name": "vc-mockup", "what": "labelled preview frame: vc-mockup-head + vc-mockup-body", "snippet": "<div class=\"vc-mockup\"><div class=\"vc-mockup-head\">Preview</div><div class=\"vc-mockup-body\">…</div></div>" },
-    { "name": "vc-table", "what": "data table; data-numeric on td and its th right-aligns the column", "snippet": "<table class=\"vc-table\"><thead><tr><th>Name</th><th data-numeric>Total</th></tr></thead><tbody><tr><td>A</td><td data-numeric>1,240</td></tr></tbody></table>" },
+    { "name": "vc-table", "what": "data table; data-numeric on td and its th right-aligns the column; wrap a wide one in vc-scroll", "snippet": "<table class=\"vc-table\"><thead><tr><th>Name</th><th data-numeric>Total</th></tr></thead><tbody><tr><td>A</td><td data-numeric>1,240</td></tr></tbody></table>" },
+    { "name": "vc-scroll", "what": "horizontal scroll container for a wide table at narrow widths; give it tabindex=0, role=region and a label so the keyboard can reach it", "snippet": "<div class=\"vc-scroll\" tabindex=\"0\" role=\"region\" aria-label=\"…\"><table class=\"vc-table\">…</table></div>" },
     { "name": "vc-stat", "what": "metric block: vc-stat-value + label", "snippet": "<div class=\"vc-stat\"><div class=\"vc-label\">Users</div><div class=\"vc-stat-value\">1,240</div></div>" },
     { "name": "vc-proscons", "what": "pros/cons pair: vc-pros, vc-cons", "snippet": "<div class=\"vc-proscons\"><div class=\"vc-pros\"><h4>Pros</h4><ul><li>fast</li></ul></div><div class=\"vc-cons\"><h4>Cons</h4><ul><li>costly</li></ul></div></div>" },
     { "name": "vc-answer", "what": "headline card that states the conclusion first", "snippet": "<div class=\"vc-answer\"><p><strong>{conclusion}</strong> {why it matters}</p></div>" },
@@ -38,9 +40,21 @@
   "elements": [
     {
       "name": "vc-tabs",
-      "attrs": { "active": "1-based tab number, default 1" },
-      "children": "<vc-tab label=\"…\">panel content</vc-tab>",
-      "events": "vc-tab-change, detail.index is zero-based"
+      "attrs": { "active": "1-based tab number, default 1", "id": "referred to by vc-scrub and vc-inspect" },
+      "children": "<vc-tab label=\"…\" data-state='{\"HEAD\":\"main\"}'>panel content</vc-tab>",
+      "events": "vc-tab-change, detail.index is zero-based",
+      "methods": "panels, index, select(i), currentState()",
+      "what": "holds authored states, one visible at a time; data-state is a flat JSON object of strings"
+    },
+    {
+      "name": "vc-scrub",
+      "attrs": { "for": "id of the vc-tabs it controls", "label": "accessible name for the range" },
+      "what": "range plus previous/next over an existing vc-tabs; emits no event of its own, announces the state label with aria-valuetext"
+    },
+    {
+      "name": "vc-inspect",
+      "attrs": { "for": "id of the vc-tabs it reads", "caption": "optional table caption" },
+      "what": "renders the current panel's data-state as a table; a value that differs from the previous position shows a Changed badge; renders nothing when no state is declared"
     },
     {
       "name": "vc-chart",

@@ -68,10 +68,33 @@ For neutral chat visuals, use the frame's `--vc-*` tokens instead of hardcoded c
 
 Variables: `--vc-bg`, `--vc-surface`, `--vc-fg`, `--vc-muted`, `--vc-border`, `--vc-accent`, `--vc-accent-fg`, `--vc-ok`, `--vc-warn`, `--vc-danger`, `--vc-radius`, `--vc-gap`, `--vc-font`, `--vc-mono`.
 
+The scale behind those: `--vc-radius-xs|sm|lg` beside `--vc-radius`, `--vc-space-1` through `--vc-space-5` for the 4/8/12/16/24 rhythm, `--vc-text-xs|sm|md|base|lg|xl`, `--vc-measure` (68ch) for prose, and `--vc-bar-h` for the sticky bar. Position anything sticky with `calc(var(--vc-bar-h) + …)` instead of a measured number. A long screen title truncates to one line rather than pushing the Theme control off a narrow screen.
+
+## Spacing belongs to containers, not components
+
+No component sets its own margin. A card, a stat, an answer and a table each sit flush against whatever follows, because a component that moves itself cannot be placed twice.
+
+Each container sets the distance between its children:
+
+| Container | Distance |
+| --- | --- |
+| `.vc-main` (the frame) | `--vc-space-4` between top-level children; a heading sets its own margin for the line under it |
+| `.vc-stack` | `--vc-gap` |
+| `.vc-grid`, `.vc-split`, `.vc-row` | their `gap`, which is `--vc-gap` |
+| `.vc-page-body` | `--vc-space-7`, then `--vc-space-6` above each part after the first |
+| inside a card | whatever the screen sets; nothing is inherited |
+
+A `gap` applies only to a flex or grid box. A block container needs margins, and that is what `.vc-main` uses. Sibling margins collapse: a heading's bottom margin and the next block's top margin become the larger of the two, never their sum.
+
+An inline `margin` on a child overrides the frame rule. That is the supported way to make one pair closer, and the reason a hand-set margin can look like a bug when it cancels the frame's `--vc-space-4`.
+
 ## Anti-patterns
 
 - A screen that asks three questions at once — split it.
 - Inline `style` on every element to fake a design system; the components already are one.
+- A wide table with no `vc-scroll` around it: on a narrow screen it pushes the whole page sideways instead of scrolling inside its own region.
+- Stacking cards as children of a bare `<div>` or `<section>`: the wrapper has no spacing rule and the cards touch. Wrap them in `.vc-stack`, or place them directly in `.vc-main`. `tests/spacing.test.ts` fails on this pattern and reports the file and line.
+- A grid or flex container built with `1fr` instead of `minmax(0, 1fr)`: the track grows to a child's minimum width and overflows the viewport.
 - `--plain` for a fragment: you lose the frame and the styles, and get unstyled markup.
 - Screens referencing remote images unnecessarily; stage selected local files with the CLI and use `/files/<name>`. See [CLI](cli.md#stage).
 - Pushing a fragment full of `<script>` tags. It runs, but nothing about the recording contract needs it.

@@ -65,3 +65,16 @@ test("every class the catalogue advertises has a rule in components.css", () => 
   const missing = names.filter((name) => !hasRule(name));
   expect(missing).toEqual([]);
 });
+
+test("the gallery shows every class and element the catalogue advertises", () => {
+  const gallery = readFileSync(new URL("../examples/component-gallery.html", import.meta.url), "utf8");
+  const catalogue = JSON.parse(
+    readFileSync(new URL("../assets/catalogue.json", import.meta.url), "utf8"),
+  ) as { classes: { name: string }[]; elements: { name: string }[] };
+  const names = [
+    ...catalogue.classes.flatMap((entry) => entry.name.split(" / ")),
+    ...catalogue.elements.map((entry) => entry.name),
+  ];
+  const missing = names.filter((name) => !gallery.includes(name));
+  expect(missing).toEqual([]);
+});
