@@ -28,7 +28,7 @@ Rules the steps above apply.
 | `agent` (default) | Model | Fewest tokens, one literal meaning | Vale spelling and grammar, `write-good`, `Bloat` structure rules, token-density, and the `ai-tells` rules for padding, filler, hedging, pleasantries, puffery, AI vocabulary, figurative and anthropomorphic wording |
 | `human` | Person | Reads like a person wrote it | Vale spelling and grammar, `write-good`, `proselint`, every `ai-tells` rule, and `ai-tells-commits` for commit and PR text. No `Bloat` length limits, no density warnings |
 
-`--mode=ai` is a deprecated alias of `agent`. It prints a notice on stderr and reports `agent`.
+`--mode=ai` is a deprecated alias of `agent`. It prints a notice on stderr and reports `agent`. Delete the alias once `grep -rn --include='*.md' -- '--mode=ai' ~/.agents/skills` finds only this line.
 
 ### Findings and severity
 
@@ -38,7 +38,13 @@ The `--format=json` result has `findings` for `lint`, `prose` (blocking), `warni
 
 Vale runs with `--no-global`. Only the bundled `assets/.vale/styles` and the `MarkdownQuality` vocabulary apply, so a Vale setup in your home directory cannot change results. Add accepted terms to `assets/.vale/styles/config/vocabularies/MarkdownQuality/accept.txt`.
 
-Agent mode enables `ai-tells` rules from an allowlist in `assets/modes/agent/.vale.ini`. A package update adds no rule there until the list names it.
+Agent mode enables `ai-tells` rules from an allowlist in `assets/modes/agent/.vale.ini`. A package update adds no rule there until the list names it. Vale ignores unknown rule names without a message, so after every package update run:
+
+```bash
+bun ~/.agents/skills/markdown-quality/scripts/rule-audit.ts
+```
+
+It exits 1 when the allowlist names a rule the package no longer ships, or when the package ships a rule absent from `assets/modes/ai-tells-reviewed.txt`. Add each wanted rule to the allowlist, then run `rule-audit.ts --accept` to record the decision.
 
 For rule lookup, suppressions, and false positives, read [tool-reference](references/tool-reference.md). For pre-commit, CI, and commit-msg hooks, read [ci-integration](references/ci-integration.md).
 

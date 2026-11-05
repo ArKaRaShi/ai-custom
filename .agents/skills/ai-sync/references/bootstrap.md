@@ -1,5 +1,7 @@
 # Bootstrap, discovery, conflicts
 
+Install absent external skills, record unlisted ones, and resolve conflicting files.
+
 ## Discovery and installers
 
 ```bash

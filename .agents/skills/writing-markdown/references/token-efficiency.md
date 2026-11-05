@@ -111,10 +111,10 @@ Rationale: ending procedures with a verification check gives the executing agent
 
 ## Density Check Benchmarks
 
-Run the `markdown-quality` density analyzer to assess documentation token density:
+Run the `markdown-quality` review in agent mode and read the `density` line of its tree (the JSON result has the same figures):
 
 ```bash
-bun ~/.agents/skills/markdown-quality/scripts/review.ts <file> --check-density
+bun ~/.agents/skills/markdown-quality/scripts/review.ts <file> --mode=agent
 ```
 
 Target benchmarks by document category:

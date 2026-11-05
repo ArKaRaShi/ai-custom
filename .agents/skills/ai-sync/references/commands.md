@@ -1,5 +1,7 @@
 # Commands
 
+Every `sync` command, grouped by what it changes.
+
 ## Contents
 
 - Setup
