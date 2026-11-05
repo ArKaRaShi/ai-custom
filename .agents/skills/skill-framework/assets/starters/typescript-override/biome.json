@@ -1,5 +1,0 @@
-{
-  "root": false,
-  "extends": "//",
-  "formatter": { "indentStyle": "space", "indentWidth": 4 }
-}
