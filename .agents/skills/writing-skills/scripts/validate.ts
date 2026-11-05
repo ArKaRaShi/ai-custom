@@ -74,17 +74,31 @@ function stepItems(body: string): string[] {
 }
 
 /**
+ * Section names accepted in place of a frame's main section. Only the principle-skill shape is
+ * aliased: its `## The Pattern` plays the role of `## Rules`.
+ */
+export const MAIN_SECTION_ALIASES: Readonly<Record<string, "Steps" | "Rules">> = {
+  "The Pattern": "Rules",
+};
+
+/** Reported when a body has neither main section; `report.ts` classifies on this exact text. */
+export const MISSING_MAIN_SECTION = "missing `## Steps` or `## Rules` main section";
+
+/**
  * Problems with the skill frame: a steps skill has `## Steps` with an `Exit:` on every step, and a
- * rules skill has `## Rules` and `## The tests`.
+ * rules skill has `## Rules` (or an alias) and `## The tests`.
  */
 export function frameProblems(body: string): string[] {
   const names = headings(body);
-  const hasSteps = names.includes("Steps");
-  const hasRules = names.includes("Rules");
+  const mains = names.map((name) => MAIN_SECTION_ALIASES[name] ?? name);
+  const hasSteps = mains.includes("Steps");
+  const hasRules = mains.includes("Rules");
   if (hasSteps && hasRules) return ["use either `## Steps` or `## Rules`, not both"];
-  if (!hasSteps && !hasRules) return ["missing `## Steps` or `## Rules` main section"];
+  if (!hasSteps && !hasRules) return [MISSING_MAIN_SECTION];
   if (hasRules) {
-    return names.includes("The tests") ? [] : ["a rules skill needs a `## The tests` section"];
+    return names.some((name) => name.toLowerCase() === "the tests")
+      ? []
+      : ["a rules skill needs a `## The tests` section"];
   }
   const items = stepItems(body);
   if (items.length === 0) return ["`## Steps` has no numbered steps"];

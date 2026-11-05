@@ -227,3 +227,55 @@ describe("given the skill frame, when a body breaks it, then warnings become err
     expect(run("--strict", dir)).toBe(1);
   });
 });
+
+describe("given a principle-shape skill, when validated, then The Pattern counts as the rules section", () => {
+  const principleBody = "## The Pattern\n\n- Do x.\n\n## The Tests\n\n- Did x?\n";
+
+  it("passes strict mode with The Pattern and The Tests, in any heading case", () => {
+    expect(frameProblems(principleBody)).toEqual([]);
+    expect(frameProblems("## The Pattern\n\n- Do x.\n\n## The tests\n\n- Did x?\n")).toEqual([]);
+    const dir = makeSkill("principle-ok", {
+      "SKILL.md": skillMd("principle-ok", "Does a job. Use when needed.", principleBody),
+    });
+    expect(validateSkill(dir, { strict: true })).toEqual([]);
+  });
+
+  it("still fails strict mode for a skill with neither frame, and only warns by default", () => {
+    const dir = makeSkill("no-frame", {
+      "SKILL.md": skillMd("no-frame", "Does a job. Use when needed.", "## Workflow\n\n1. Do it.\n\n## Guardrails\n\n- x\n"),
+    });
+    expect(validateSkill(dir).map((f) => f.level)).toEqual(["warning"]);
+    expect(validateSkill(dir, { strict: true }).map((f) => f.level)).toEqual(["error"]);
+    const run = (...args: string[]): number | null => Bun.spawnSync(["bun", cli, ...args]).exitCode;
+    expect(run("--strict", dir)).toBe(1);
+  });
+
+  it("does not mask other findings in an aliased skill", () => {
+    expect(frameProblems("## The Pattern\n\n- Do x.\n")).toEqual(["a rules skill needs a `## The tests` section"]);
+    expect(frameProblems("## Steps\n\n1. a. Exit: b.\n\n## The Pattern\n\n- x\n")).toEqual([
+      "use either `## Steps` or `## Rules`, not both",
+    ]);
+    const dir = makeSkill("principle-bad", {
+      "SKILL.md": skillMd("principle-wrong", "Does a job.", principleBody),
+    });
+    const messages = validateSkill(dir, { strict: true }).map((f) => `${f.level}: ${f.message}`);
+    expect(messages).toEqual([
+      "error: name 'principle-wrong' must equal the directory name",
+      "warning: description should say when to use the skill",
+    ]);
+  });
+
+  it("does not alias Workflow, Invariants, or Guardrails", () => {
+    for (const heading of ["Workflow", "Invariants", "Guardrails"]) {
+      expect(frameProblems(`## ${heading}\n\n- x\n\n## The tests\n\n- y\n`)).toEqual([
+        "missing `## Steps` or `## Rules` main section",
+      ]);
+    }
+  });
+
+  it("ignores a The Pattern heading inside a code fence", () => {
+    expect(frameProblems("## Notes\n\n```text\n## The Pattern\n```\n")).toEqual([
+      "missing `## Steps` or `## Rules` main section",
+    ]);
+  });
+});

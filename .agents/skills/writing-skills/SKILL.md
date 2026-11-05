@@ -30,6 +30,8 @@ Every skill is frontmatter, a title, one sentence on what it produces, then one 
 | Steps skill | `## Steps`, numbered, each step ending `Exit: <checkable condition>` | optional `## Reference` for what only some steps need |
 | Rules skill | `## Rules`, each a behavior to follow | `## The tests`, questions that check work against the rules |
 
+The validator accepts `## Steps`, `## Rules`, and `## The Pattern` (read as `## Rules`) as the main section, and matches `## The tests` in any letter case.
+
 ### Description
 
 The description is a context pointer. It says what the skill is and which cases should load it.
@@ -39,7 +41,7 @@ The description is a context pointer. It says what the skill is and which cases 
 - Third person, at most 1024 characters, without XML tags.
 - Leave out anything the body already says.
 
-`Test-driven development. Use when building features or fixing bugs test-first.`
+`Syncing local agent config with a git backup. Use when pushing, pulling, retiring a skill, tracking files, or resolving conflicts in ~/.omp or ~/.agents/skills.`
 
 ### Invocation
 
@@ -80,6 +82,8 @@ For arms, scenarios, repetitions, and the acceptance rule, read [evaluating](ref
 ### Validator
 
 `scripts/validate.ts` only reads files and exits 1 on any error. Without `--strict`, frame findings are warnings. With `--strict` they are errors. Requires Bun 1.4 or later.
+
+To audit every authored skill listed in the ai-sync manifest, run `bun ~/.agents/skills/writing-skills/scripts/report.ts`. It prints one status per skill (`ok`, `warnings`, `legacy shape`, `errors`) and exits 1 only on `errors`.
 
 ### Credits
 

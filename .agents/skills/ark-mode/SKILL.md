@@ -1,6 +1,6 @@
 ---
 name: ark-mode
-description: Use at the start of any non-trivial coding task (bug, feature, refactor, review, or read-only investigation) to pick a playbook and run its steps from a task list.
+description: Playbook router. Use when starting a non-trivial bug fix, feature, refactor, review, or read-only investigation, to pick its playbook and run the steps from a task list.
 ---
 
 # Ark mode
@@ -9,13 +9,13 @@ Router. Picks one playbook for the task and runs its steps in order.
 
 ## Steps
 
-1. State the task type: bug fix, feature, refactor, review, or investigation.
-2. Read `playbooks/<type>.md` in this skill directory.
-3. Copy its steps verbatim into the task list.
-4. Run one step at a time. Finish a step's exit check before starting the next.
-5. Read each principle in the table below whose trigger fits the task, in full, before the first edit. Also read every `principle-*` skill that a playbook step cites.
-6. In the first reply, state the playbook and each principle read, with the choice each one changed. Cite only principles you read this session. If none applies, write `no principle applies` and the reason.
-7. If no playbook fits, say so and ask one question.
+1. State the task type: bug fix, feature, refactor, review, or investigation. Exit: you named one of the five types.
+2. Read `playbooks/<type>.md` in this skill directory. Exit: you read the playbook in full this session.
+3. Copy its steps verbatim into the task list. Exit: the task list has one item per playbook step, with the playbook's wording unchanged.
+4. Run one step at a time. Finish a step's exit check before starting the next. Exit: you met every playbook step's exit check, in order.
+5. Read each principle in the table below whose trigger fits the task, in full, before the first edit. Also read every `principle-*` skill that a playbook step cites. Exit: you read each such principle in full before the first edit.
+6. In the first reply, state the playbook and each principle read, with the choice each one changed. Cite only principles you read this session. If none applies, write `no principle applies` and the reason. Exit: the first reply states the playbook and either each principle with its changed choice or `no principle applies` with the reason.
+7. If no playbook fits, say so and ask one question. Exit: you asked the question and started no step.
 
 ## Playbooks
 
