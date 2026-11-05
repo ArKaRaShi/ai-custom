@@ -443,6 +443,60 @@
       "skill": {
         "origin": "authored"
       }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "ark-mode",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "principle-migrate-callers-then-delete-legacy-apis",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "principle-attack-the-premise",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "principle-test-behavior-not-implementation",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "principle-make-operations-idempotent",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "principle-fix-root-causes",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
     }
   ]
 }
