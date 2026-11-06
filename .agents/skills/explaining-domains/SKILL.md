@@ -1,6 +1,7 @@
 ---
 name: explaining-domains
 description: Explaining unfamiliar domains. Use when a reader without the background gets lost, such as equipment, a calculation pipeline, an unfamiliar area of a codebase, a legal or financial process, or jargon-heavy output. Readers who already know the domain get `how` or `why` instead.
+disable-model-invocation: true
 ---
 
 # Explaining Domains

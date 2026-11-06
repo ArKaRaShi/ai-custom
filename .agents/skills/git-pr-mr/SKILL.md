@@ -1,6 +1,7 @@
 ---
 name: git-pr-mr
 description: Use when drafting, revising, or reviewing a GitHub pull request or GitLab merge request title or description from a branch, diff, issue, or existing PR or MR. Do not use for commit messages.
+disable-model-invocation: true
 ---
 
 # Git PR and MR

@@ -1,6 +1,7 @@
 ---
 name: writing-markdown
 description: Use when authoring, structuring, or updating Markdown documentation, instructions, context notes, runbooks, architecture decision records, or technical guides for AI consumption
+disable-model-invocation: true
 ---
 
 # Writing Markdown

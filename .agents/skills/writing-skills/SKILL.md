@@ -1,6 +1,7 @@
 ---
 name: writing-skills
 description: Writing agent skills. Use when creating, editing, or reviewing a SKILL.md.
+disable-model-invocation: true
 ---
 
 # Writing Skills

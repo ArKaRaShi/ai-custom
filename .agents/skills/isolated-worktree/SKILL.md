@@ -1,6 +1,7 @@
 ---
 name: isolated-worktree
 description: Use when creating an isolated Git worktree for feature development, experimentation, subagents, or testing while leaving the parent checkout and branch untouched. Never merges back automatically.
+disable-model-invocation: true
 ---
 
 # Isolated Worktree

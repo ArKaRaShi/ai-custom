@@ -1,6 +1,7 @@
 ---
 name: data-closure
 description: Use when copying a scoped dataset between databases and the transfer requires dependency closure, supplemental exports, manifests, atomic application, verification, or safe cleanup
+disable-model-invocation: true
 ---
 
 # Data Closure

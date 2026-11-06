@@ -1,6 +1,7 @@
 ---
 name: engineer-principles
 description: Use before non-trivial coding work (bug fix, feature, refactor, review, measurement) to pick which principle skills to read. The principle-* skills are hidden from the skill list and load only through this index.
+disable-model-invocation: true
 ---
 
 # Engineer principles

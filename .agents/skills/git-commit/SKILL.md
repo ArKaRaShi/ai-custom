@@ -1,6 +1,7 @@
 ---
 name: git-commit
 description: Use when generating, drafting, or writing a git commit message. Covers Conventional Commits with or without emoji/unicode symbols, adaptive body, or when asked for an emoji commit, a plain conventional commit, or just "write a commit".
+disable-model-invocation: true
 ---
 
 Draft concise Conventional Commit messages for each proposed change group.

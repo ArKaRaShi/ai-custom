@@ -1,6 +1,7 @@
 ---
 name: writing-omp-agents
 description: Use when authoring or refining OMP task-agent definitions to enforce narrow tool access and evidence-based completion.
+disable-model-invocation: true
 ---
 
 # Writing OMP Agents

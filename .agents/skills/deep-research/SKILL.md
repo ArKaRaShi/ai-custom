@@ -1,6 +1,7 @@
 ---
 name: deep-research
 description: Use when investigating unfamiliar libraries or verifying technical specifications before writing code
+disable-model-invocation: true
 ---
 
 # Deep Research

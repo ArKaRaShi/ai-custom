@@ -1,6 +1,7 @@
 ---
 name: markdown-quality
 description: Markdown QA. Use when creating, editing, formatting, reviewing, or validating Markdown files, documentation, READMEs, agent instruction files (AGENTS.md, CLAUDE.md), commit messages, or PR text. Skip for source code.
+disable-model-invocation: true
 ---
 
 # Markdown Quality

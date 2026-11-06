@@ -1,6 +1,7 @@
 ---
 name: mentor
 description: Use when the user explicitly asks for a lesson, explanation, or guided walkthrough of an unfamiliar codebase, system, technical domain, or technology.
+disable-model-invocation: true
 ---
 
 # `mentor`

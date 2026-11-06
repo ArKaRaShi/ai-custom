@@ -1,6 +1,7 @@
 ---
 name: visual-companion
 description: Show mockups, layouts, architecture sketches, step-through explanations, and side-by-side options in a local browser tab, then read back which one the user clicked. Use when a question is better seen than read and the user has agreed to a browser tab.
+disable-model-invocation: true
 ---
 
 # Visual Companion
