@@ -15,3 +15,7 @@ bun.lockb
 .agents/skills/markdown-quality/assets/.vale/styles/ai-tells/
 .worktrees/
 docs/superpowers/
+
+# Vale styles downloaded per Mac (run vale sync)
+.agents/skills/markdown-quality/assets/.vale/styles/
+.agents/skills/markdown-quality/.tmp-markdown-quality/
