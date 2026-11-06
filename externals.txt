@@ -1,0 +1,26 @@
+# External skills: installed by their own tool, kept per Mac, never linked from this repo.
+# Format:  <skill name> | <install command> [| note]
+# install.sh --apply asks before running each command for a skill that is missing.
+# A version pin has to live inside the command itself; the note is only shown.
+# Skills not listed here and not in the repo show up in: ./install.sh --status
+
+web-design-guidelines | npx skills add vercel-labs/agent-skills -g
+scrawl | bunx skills add kitlangton/scrawl -g
+diagram-design | npx -y skills add cathrynlavery/diagram-design --skill diagram-design --global --agent codex --yes | version 2.6
+
+create-verification-skill | npx -y skills add https://github.com/backnotprop/pstack --skill create-verification-skill --global --agent codex --yes
+maintain-verification-skill | npx -y skills add https://github.com/backnotprop/pstack --skill maintain-verification-skill --global --agent codex --yes
+
+setup-matt-pocock-skills | npx -y skills add mattpocock/skills --skill setup-matt-pocock-skills -g
+to-spec | npx -y skills add mattpocock/skills --skill to-spec -g
+to-tickets | npx -y skills add mattpocock/skills --skill to-tickets -g
+implement | npx -y skills add mattpocock/skills --skill implement -g
+tdd | npx -y skills add mattpocock/skills --skill tdd -g
+code-review | npx -y skills add mattpocock/skills --skill code-review -g
+domain-modeling | npx -y skills add mattpocock/skills --skill domain-modeling -g
+grill-with-docs | npx -y skills add mattpocock/skills --skill grill-with-docs -g
+grill-me | npx -y skills add mattpocock/skills --skill grill-me -g
+grilling | npx -y skills add mattpocock/skills --skill grilling -g
+prototype | npx -y skills add mattpocock/skills --skill prototype -g
+wayfinder | npx -y skills add mattpocock/skills --skill wayfinder -g
+triage | npx -y skills add mattpocock/skills --skill triage -g
