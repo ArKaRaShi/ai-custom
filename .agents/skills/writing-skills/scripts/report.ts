@@ -19,27 +19,15 @@ export interface SkillResult {
 
 export interface Report {
   results: SkillResult[];
-  /** Authored skills in the manifest that have no folder under the skills directory. */
-  missing: string[];
 }
 
-/** Names of authored skills under the `agents` skill root, in manifest order. Throws on a malformed manifest. */
-export function authoredSkills(manifestText: string): string[] {
-  let manifest: unknown;
-  try {
-    manifest = JSON.parse(manifestText);
-  } catch (error) {
-    throw new Error(`manifest is not valid JSON: ${(error as Error).message}`);
-  }
-  const entries = (manifest as { entries?: unknown } | null)?.entries;
-  if (!Array.isArray(entries)) throw new Error("manifest has no `entries` array");
-  const names: string[] = [];
-  for (const entry of entries as Array<Record<string, unknown> | null>) {
-    if (entry?.kind !== "skill" || entry.root !== "agents" || typeof entry.path !== "string") continue;
-    const origin = (entry.skill as { origin?: unknown } | undefined)?.origin;
-    if (origin === "authored") names.push(entry.path);
-  }
-  return names;
+/** Names of authored skills: every non-hidden folder in the repo's skills directory, sorted. Throws when it cannot be read. */
+export function authoredSkills(skillsDir: string): string[] {
+  return fs
+    .readdirSync(skillsDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && !entry.name.startsWith("."))
+    .map((entry) => entry.name)
+    .sort();
 }
 
 export function classify(findings: Finding[]): SkillStatus {
@@ -58,16 +46,14 @@ export function renderStatus(status: SkillStatus): string {
     : status.kind;
 }
 
-/** Validates each authored skill that has a folder in `skillsDir`; the rest are reported as missing. */
+/** Validates each named skill folder under `skillsDir`. */
 export function buildReport(names: string[], skillsDir: string): Report {
-  const results: SkillResult[] = [];
-  const missing: string[] = [];
-  for (const name of names) {
-    const dir = path.join(skillsDir, name);
-    if (!fs.existsSync(dir)) missing.push(name);
-    else results.push({ name, status: classify(validateSkill(dir)) });
-  }
-  return { results, missing };
+  const results = names.map((name) => {
+    const skillDir = path.join(skillsDir, name);
+    const findings = validateSkill(skillDir);
+    return { name, status: classify(findings) };
+  });
+  return { results };
 }
 
 export function renderReport(report: Report): string[] {
@@ -76,21 +62,20 @@ export function renderReport(report: Report): string[] {
     report.results.filter((r) => r.status.kind === kind).length;
   lines.push(
     `${report.results.length} authored skills: ${count("ok")} ok, ${count("warnings")} warnings, ` +
-      `${count("legacy shape")} legacy shape, ${count("errors")} errors` +
-      ` (${report.missing.length} without a local folder skipped)`,
+      `${count("legacy shape")} legacy shape, ${count("errors")} errors`,
   );
   return lines;
 }
 
 const USAGE =
-  "Usage: bun report.ts [--manifest <file>] [--skills-dir <dir>]\n" +
-  "Validates every authored skill listed in the ai-sync manifest, in default mode. Read-only.\n" +
-  "Defaults: manifest $AI_CUSTOM_REPO/.ai-sync/manifest.json, else ~/Disk/ai-custom/.ai-sync/manifest.json;\n" +
-  "skills dir ~/.agents/skills. Exits 1 when any skill has errors, 2 on bad arguments or manifest.";
+  "Usage: bun report.ts [--skills-dir <dir>]\n" +
+  "Validates every authored skill, meaning every folder in the ai-custom repo's skills directory, in default mode. Read-only.\n" +
+  "Default skills dir: $AI_CUSTOM_REPO/.agents/skills, else ~/Disk/ai-custom/.agents/skills.\n" +
+  "Exits 1 when any skill has errors, 2 on bad arguments or an unreadable skills dir.";
 
-function defaultManifest(): string {
+function defaultSkillsDir(): string {
   const repo = process.env.AI_CUSTOM_REPO || path.join(os.homedir(), "Disk", "ai-custom");
-  return path.join(repo, ".ai-sync", "manifest.json");
+  return path.join(repo, ".agents", "skills");
 }
 
 function main(argv: string[]): number {
@@ -98,25 +83,22 @@ function main(argv: string[]): number {
     console.log(USAGE);
     return 0;
   }
-  let manifestPath = defaultManifest();
-  let skillsDir = path.join(os.homedir(), ".agents", "skills");
+  let skillsDir = defaultSkillsDir();
   for (let i = 0; i < argv.length; i += 2) {
     const flag = argv[i];
     const value = argv[i + 1];
-    if ((flag !== "--manifest" && flag !== "--skills-dir") || value === undefined) {
+    if (flag !== "--skills-dir" || value === undefined) {
       console.error(`report: unexpected argument '${flag}'${value === undefined ? " (missing value)" : ""}\n${USAGE}`);
       return 2;
     }
-    if (flag === "--manifest") manifestPath = path.resolve(value);
-    else skillsDir = path.resolve(value);
+    skillsDir = path.resolve(value);
   }
 
   let names: string[];
   try {
-    const manifestText = fs.readFileSync(manifestPath, "utf8");
-    names = authoredSkills(manifestText);
+    names = authoredSkills(skillsDir);
   } catch (error) {
-    console.error(`report: cannot use manifest ${manifestPath}: ${(error as Error).message}`);
+    console.error(`report: cannot read skills dir ${skillsDir}: ${(error as Error).message}`);
     return 2;
   }
   const report = buildReport(names, skillsDir);

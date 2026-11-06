@@ -83,7 +83,7 @@ For arms, scenarios, repetitions, and the acceptance rule, read [evaluating](ref
 
 `scripts/validate.ts` only reads files and exits 1 on any error. Without `--strict`, frame findings are warnings. With `--strict` they are errors. Requires Bun 1.4 or later.
 
-To audit every authored skill listed in the ai-sync manifest, run `bun ~/.agents/skills/writing-skills/scripts/report.ts`. It prints one status per skill (`ok`, `warnings`, `legacy shape`, `errors`) and exits 1 only on `errors`.
+To audit every authored skill, meaning every folder in the ai-custom repo's skills directory, run `bun ~/.agents/skills/writing-skills/scripts/report.ts`. It prints one status per skill (`ok`, `warnings`, `legacy shape`, `errors`) and exits 1 only on `errors`.
 
 ### Credits
 
