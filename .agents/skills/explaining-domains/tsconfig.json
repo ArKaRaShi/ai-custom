@@ -1,0 +1,4 @@
+{
+  "compilerOptions": { "target": "ESNext", "module": "ESNext", "moduleResolution": "bundler", "strict": true, "noEmit": true, "types": ["bun"] },
+  "include": ["scripts", "tests"]
+}
