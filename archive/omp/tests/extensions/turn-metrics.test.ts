@@ -78,7 +78,7 @@ describe("given turn-metrics extension, when formatting tokens or detecting suba
     // Main session file (starts with ISO timestamp)
     const parentCtx = {
       sessionManager: {
-        getSessionFile: () => "/Users/ponthep/.omp/agent/sessions/--path--/2026-08-19T12-29-32-013Z_01a0.jsonl",
+        getSessionFile: () => "/Users/example/.omp/agent/sessions/--path--/2026-08-19T12-29-32-013Z_01a0.jsonl",
       },
     };
     expect(isSubagent(parentCtx)).toBe(false);
@@ -86,7 +86,7 @@ describe("given turn-metrics extension, when formatting tokens or detecting suba
     // Subagent session file (named after agent)
     const subagentCtx = {
       sessionManager: {
-        getSessionFile: () => "/Users/ponthep/.omp/agent/sessions/--path--/TestSonic.jsonl",
+        getSessionFile: () => "/Users/example/.omp/agent/sessions/--path--/TestSonic.jsonl",
       },
     };
     expect(isSubagent(subagentCtx)).toBe(true);

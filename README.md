@@ -7,7 +7,7 @@ Cross-machine AI coding harness configuration, OMP extensions, TTSR rules, lifec
 ```text
 ~/Disk/ai-custom/
 ├── .omp/                  # OMP config, linked file by file into ~/.omp/agent
-│   ├── extensions/        # Extensions (quota-status, turn-metrics, ...)
+│   ├── extensions/        # Extensions (quota-status, ...)
 │   ├── hooks/             # Lifecycle hooks (pre: safety guards, post: redaction and alerts)
 │   ├── rules/             # TTSR Python and TypeScript code-quality rules
 │   └── tests/             # Tests for the rules and hooks
@@ -18,6 +18,7 @@ Cross-machine AI coding harness configuration, OMP extensions, TTSR rules, lifec
 ├── lib.sh                 # Shared setup for the scripts above
 ├── tests/smoke.sh         # Smoke tests for the scripts above
 ├── docs/                  # ADRs and agent docs
+├── archive/               # Retired files kept for reference; never linked
 └── GLOSSARY.md            # Terms used in this repo
 ```
 
