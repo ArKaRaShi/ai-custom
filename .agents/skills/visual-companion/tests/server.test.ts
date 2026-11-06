@@ -137,6 +137,45 @@ describe("http surface", () => {
     }
   });
 
+  test("the frame loads the component modules from a nested asset path, served as JavaScript", async () => {
+    await store.push("<p>frame</p>");
+    const html = await (await fetch(`${base}/`, { headers: auth })).text();
+    expect(html).toContain('<script type="module" src="/assets/components/index.js"></script>');
+    expect(html.match(/<script[^>]*src="\/assets\/components/g)).toHaveLength(1);
+    for (const name of ["index.js", "core.js", "tabs.js"]) {
+      const response = await fetch(`${base}/assets/components/${name}`, { headers: auth });
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-type")).toContain("text/javascript");
+    }
+    for (const path of ["/assets/components/../../scripts/cli.ts", "/assets/components/.hidden", "/assets/components/", "/assets/components"]) {
+      expect((await fetch(`${base}${path}`, { headers: auth })).status).toBe(404);
+    }
+  });
+
+  test("a whole document with data-vc-components gets the stylesheet, the module and a pinned palette", async () => {
+    await store.push('<!doctype html><html lang="en" data-vc-components><head><title>t</title></head><body><vc-tabs><vc-tab label="a">x</vc-tab></vc-tabs></body></html>');
+    const html = await (await fetch(`${base}/`, { headers: auth })).text();
+    expect(html).toContain('data-vc-theme="light"');
+    expect(html).toContain('<link rel="stylesheet" href="/assets/components.css">');
+    expect(html.indexOf("/assets/components/index.js")).toBeLessThan(html.indexOf("/assets/client.js"));
+    expect(html).not.toContain("vc-bar");
+  });
+
+  test("the opt-in is not inferred from vc-* markup in the document", async () => {
+    await store.push('<!doctype html><html><body><div class="vc-card">mine</div></body></html>');
+    const html = await (await fetch(`${base}/`, { headers: auth })).text();
+    expect(html).not.toContain("/assets/components.css");
+    expect(html).not.toContain("/assets/components/index.js");
+  });
+
+  test("an isolated plain document with the opt-in gets the stylesheet and no script", async () => {
+    await store.push('<!doctype html><html data-vc-components="dark"><head></head><body>p</body></html>', { isolated: true });
+    const html = await (await fetch(`${base}/files/__preview`, { headers: auth })).text();
+    expect(html).toContain('data-vc-theme="dark"');
+    expect(html).toContain('<link rel="stylesheet" href="/assets/components.css">');
+    expect(html).not.toContain("<script");
+  });
+
   test("a file dropped into files/ is served", async () => {
     await mkdir(store.filesDir, { recursive: true });
     await writeFile(join(store.filesDir, "shot.svg"), "<svg xmlns='http://www.w3.org/2000/svg'/>");

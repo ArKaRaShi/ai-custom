@@ -1,0 +1,24 @@
+<!-- Bundle fragment for push. The request and retry path are illustrative. -->
+<h1 class="vc-h1">Follow a branching request</h1>
+<div class="vc-stack">
+  <div class="vc-answer"><p><strong>The API can answer from cache or queue work for a worker.</strong> A failed job can retry; a reply is not a dependency.</p></div>
+  <p>Select a node to explore its dependencies. Hover or focus a <vc-term data-node="queue" def="A holding area for work until a worker can process it.">queue</vc-term> or <vc-term data-node="worker" def="A process that takes work from a queue and performs it.">worker</vc-term> to find it in the diagram.</p>
+  <vc-diagram for="request-steps" label="A branching request with a retry and a return">
+    flow
+    client[Client] --> lb[Load balancer] --> api[API]
+    api --> cache[Cache]
+    api --> queue[Queue]
+    queue -.-> worker[Worker] --> db[Database]
+    worker -->|retry| queue
+    worker --> @return api
+  </vc-diagram>
+  <div class="vc-card vc-stack">
+    <vc-tabs id="request-steps" active="1" arrows>
+      <vc-tab label="Arrive" data-focus="client lb api">The client reaches the API through the load balancer.</vc-tab>
+      <vc-tab label="Check cache" data-focus="api cache">The API checks the cache before asking for more work.</vc-tab>
+      <vc-tab label="Queue work" data-focus="api queue worker">On a miss, the API queues work for a worker.</vc-tab>
+      <vc-tab label="Process" data-focus="queue worker db">The worker reads the database; a failure can send the job back to the queue.</vc-tab>
+      <vc-tab label="Reply" data-focus="worker api client">The worker returns its result through the API to the client.</vc-tab>
+    </vc-tabs>
+  </div>
+</div>

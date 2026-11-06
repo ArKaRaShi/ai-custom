@@ -1,44 +1,26 @@
-import { beforeEach, expect, test } from "bun:test";
+import "./globals";
+import { afterEach, beforeEach, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { runInNewContext } from "node:vm";
+import { ELEMENTS } from "../assets/components/index.js";
 import { createDom, FakeElement, FakeEvent, type FakeDom } from "./dom";
+import { installDocument, instantiate, removeDocument } from "./globals";
 
-const source = readFileSync(new URL("../assets/components.js", import.meta.url), "utf8");
-
-type Components = { document: unknown; HTMLElement: unknown; customElements: { get(name: string): any; define(name: string, ctor: any): void }; CustomEvent: unknown };
+type Tabs = FakeElement & {
+  index: number;
+  panels: { label: string; state: unknown }[];
+  select(index: number): void;
+};
 
 let dom: FakeDom;
 
-/* Load components.js against the fake DOM, the same way the chart test does. */
+/* Install a fresh fake document; the element classes come from ELEMENTS. */
 function load(): void {
   dom = createDom();
-  const registry = new Map<string, any>();
-  const global = {
-    HTMLElement: FakeElement,
-    document: dom.document,
-    CustomEvent: FakeEvent,
-    customElements: {
-      get: (name: string) => registry.get(name),
-      // Custom elements know their own tag name; the fake base class needs it explicitly.
-      define: (name: string, ctor: any) =>
-        registry.set(
-          name,
-          class extends ctor {
-            constructor() {
-              super(name);
-            }
-          },
-        ),
-    },
-  } satisfies Components;
-  runInNewContext(source, global);
-  elements = registry;
+  installDocument(dom.document);
 }
 
-let elements = new Map<string, any>();
-
-function build(panelCount: number, states: (string | null)[] = []): { tabs: FakeElement; scrub: FakeElement; inspect: FakeElement } {
-  const tabs = new (elements.get("vc-tabs"))();
+function build(panelCount: number, states: (string | null)[] = []): { tabs: Tabs; scrub: FakeElement; inspect: FakeElement } {
+  const tabs = instantiate<Tabs>(ELEMENTS, "vc-tabs");
   tabs.setAttribute("id", "rebase");
   for (let i = 0; i < panelCount; i++) {
     const panel = dom.document.createElement("vc-tab");
@@ -49,11 +31,11 @@ function build(panelCount: number, states: (string | null)[] = []): { tabs: Fake
   }
   dom.root.append(tabs);
 
-  const scrub = new (elements.get("vc-scrub"))();
+  const scrub = instantiate(ELEMENTS, "vc-scrub");
   scrub.setAttribute("for", "rebase");
   scrub.setAttribute("label", "Rebase state");
 
-  const inspect = new (elements.get("vc-inspect"))();
+  const inspect = instantiate(ELEMENTS, "vc-inspect");
   inspect.setAttribute("for", "rebase");
   inspect.setAttribute("caption", "Hidden state");
 
@@ -81,6 +63,7 @@ function rows(inspect: FakeElement): FakeElement[][] {
 }
 
 beforeEach(load);
+afterEach(removeDocument);
 
 test("scrub moves the tabs and announces the state label, not the number", () => {
   const { tabs, scrub } = build(3);
@@ -157,14 +140,14 @@ test("inspector renders the declared fields as a labelled table", () => {
   ]);
 });
 
-test("a field that changed since the previous position carries a text badge", () => {
+test("changed fields show their previous value", () => {
   const { scrub, inspect } = build(2, ['{"HEAD":"main","index":"clean"}', '{"HEAD":"detached c3d4","index":"conflict"}']);
-
   button(scrub, "Next").click();
-
-  const changed = rows(inspect).filter((cells) => cells[1].textContent.includes("Changed"));
-  expect(changed.map((cells) => cells[0].textContent)).toEqual(["HEAD", "index"]);
-  expect(changed[0][1].textContent).toBe("detached c3d4 Changed");
+  const cells = rows(inspect);
+  const changed = cells.filter((row) => row[1].textContent.includes(" was "));
+  const labels = changed.map((row) => row[0].textContent);
+  expect(labels).toEqual(["HEAD", "index"]);
+  expect(changed[0][1].textContent).toBe("detached c3d4 was main");
 });
 
 test("no declared state renders nothing at all", () => {
@@ -187,4 +170,85 @@ test("state values are rendered as text, so markup in data-state cannot execute"
   const cells = rows(inspect)[0];
   expect(cells[1].textContent).toBe("<img src=x onerror=alert(1)>");
   expect(dom.find(inspect, (node) => node.tagName === "img")).toBeUndefined();
+});
+
+test("walkthrough readers follow arrows and clickable segments", () => {
+  const tabs = instantiate<Tabs>(ELEMENTS, "vc-tabs");
+  tabs.setAttribute("id", "walk");
+  tabs.setAttribute("arrows", "");
+  const first = dom.document.createElement("vc-tab");
+  first.setAttribute("label", "Start");
+  first.setAttribute("data-node", "API");
+  first.setAttribute("data-cause", "The request arrives.");
+  first.setAttribute("data-value", "0");
+  first.setAttribute("data-state", '{"wait":"0 ms"}');
+  const second = dom.document.createElement("vc-tab");
+  second.setAttribute("label", "Wait");
+  second.setAttribute("data-cause", "A connection is busy.");
+  second.setAttribute("data-value", "1200");
+  second.setAttribute("data-state", '{"wait":"1.2 s"}');
+  tabs.append(first, second);
+  dom.root.append(tabs);
+  dom.connect(tabs);
+  const cause = instantiate(ELEMENTS, "vc-cause");
+  cause.setAttribute("for", "walk");
+  const timebar = instantiate(ELEMENTS, "vc-timebar");
+  timebar.setAttribute("for", "walk");
+  timebar.setAttribute("unit", "ms");
+  const inspect = instantiate(ELEMENTS, "vc-inspect");
+  inspect.setAttribute("for", "walk");
+  inspect.setAttribute("fold", "");
+  dom.root.append(cause, timebar, inspect);
+  dom.connect(cause);
+  dom.connect(timebar);
+  dom.connect(inspect);
+  const list = tabs.children[0];
+  const arrows = list.children[2];
+  const previous = arrows.children[0];
+  const next = arrows.children[1];
+  expect(previous.disabled).toBe(true);
+  expect(cause.textContent).toBe("API: The request arrives.");
+  const bar = timebar.children[0];
+  const caption = timebar.children[1];
+  expect(bar.children[0].textContent).toBe("● API");
+  expect(bar.children[1].textContent).toBe("Wait");
+  expect(bar.children[0].style.flexGrow).toBe("0.06");
+  expect(caption.textContent).toBe("Waited so far: 0 ms · This step: 0 ms (0% of all waiting)");
+  expect(inspect.children[0].children[0].textContent).toBe("Show the raw values");
+  next.click();
+  expect(next.disabled).toBe(true);
+  expect(bar.children[0].textContent).toBe("API");
+  expect(bar.children[1].textContent).toBe("● Wait");
+  expect(cause.textContent).toBe("Wait: A connection is busy.");
+  expect(caption.textContent).toBe("Waited so far: 1.2 s · This step: 1.2 s (100% of all waiting)");
+  expect(inspect.textContent).toContain("1.2 s was 0 ms");
+  const current = bar.children[1].getAttribute("aria-current");
+  expect(current).toBe("step");
+  bar.children[0].click();
+  expect(tabs.index).toBe(0);
+});
+
+test("invalid shares are reported and missing causes and empty hints stay silent", () => {
+  const tabs = instantiate<Tabs>(ELEMENTS, "vc-tabs");
+  tabs.setAttribute("id", "invalid");
+  const panel = dom.document.createElement("vc-tab");
+  panel.setAttribute("label", "Bad value");
+  panel.setAttribute("data-value", "-5");
+  tabs.append(panel);
+  dom.root.append(tabs);
+  dom.connect(tabs);
+  const alert = tabs.children.find((child) => child.getAttribute("role") === "alert");
+  expect(alert?.textContent).toContain("Invalid data-value");
+  const cause = instantiate(ELEMENTS, "vc-cause");
+  cause.setAttribute("for", "invalid");
+  const timebar = instantiate(ELEMENTS, "vc-timebar");
+  timebar.setAttribute("for", "invalid");
+  timebar.setAttribute("unit", "ms");
+  timebar.setAttribute("hint", "");
+  dom.root.append(cause, timebar);
+  dom.connect(cause);
+  dom.connect(timebar);
+  expect(cause.textContent).toBe("");
+  expect(timebar.children[1].textContent).toBe("Waited so far: 0 ms · This step: 0 ms (0% of all waiting)");
+  expect(timebar.children[2].textContent).toBe("");
 });

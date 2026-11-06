@@ -8,7 +8,7 @@ bun "$HOME/.agents/skills/visual-companion/scripts/cli.ts" <command> [args] [--j
 
 `--json` (or `--format=json`) returns structured output for every command. Exit codes: `0` ok, `1` failure, `2` usage error.
 
-Every command except `components` picks its session with `<session>`, which means either `--project-dir <repo>` or `--run-dir <dir>`. Use the same flag and value on every command in one session.
+Every command except `components` and `gallery` picks its session with `<session>`, which means either `--project-dir <repo>` or `--run-dir <dir>`. Use the same flag and value on every command in one session.
 
 ## start
 
@@ -100,9 +100,17 @@ bun "$HOME/.agents/skills/visual-companion/scripts/cli.ts" events --clear
 ## components
 
 ```bash
-bun "$HOME/.agents/skills/visual-companion/scripts/cli.ts" components         # compact list
+bun "$HOME/.agents/skills/visual-companion/scripts/cli.ts" components         # compact list, grouped
 bun "$HOME/.agents/skills/visual-companion/scripts/cli.ts" components --json  # raw catalogue
 ```
+
+## gallery
+
+```bash
+bun "$HOME/.agents/skills/visual-companion/scripts/cli.ts" gallery [--out <file>]
+```
+
+Generates the component gallery from the catalogue snippets. Without `--out` it writes `examples/component-gallery.html`.
 
 ## Files on disk
 

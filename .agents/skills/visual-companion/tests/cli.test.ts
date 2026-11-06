@@ -147,7 +147,8 @@ describe("cli end to end", () => {
     const response = await fetch(info.url);
     const html = await response.text();
     expect(html).toContain('class="vc-bar"');
-    expect(html).toContain('href="#vc-part-2"');
+    expect(html).toContain('<vc-contents variant="rail"></vc-contents>');
+    expect(html).toContain('id="vc-part-2"');
     expect(html).toContain("Why &lt;it&gt;");
     expect(html.indexOf('id="first"')).toBeLessThan(html.indexOf('id="second"'));
     expect(html).not.toContain("<iframe");
@@ -279,5 +280,30 @@ describe("cli end to end", () => {
     const usage = await run(["nonsense"]);
     expect(usage.code).toBe(2);
     expect(usage.err).toContain("unknown command");
+  }, 20_000);
+
+  test("components prints the grouped v2 catalogue, and --json prints every entry", async () => {
+    const text = await run(["components"]);
+    expect(text.code).toBe(0);
+    expect(text.out).toContain("Layout:");
+    expect(text.out).toContain("<vc-tabs> (active, id, variant, arrows, hide-tabs)");
+    expect(text.out).toContain("vc-options / vc-option");
+    const structured = JSON.parse((await run(["components", "--json"])).out) as { version: number; entries: { names: string[] }[]; groups: unknown[] };
+    expect(structured.version).toBe(2);
+    expect(structured.entries.flatMap((entry) => entry.names)).toContain("vc-grid");
+    expect(structured.groups.length).toBeGreaterThan(0);
+  }, 20_000);
+
+  test("gallery writes a page with one specimen per catalogue entry to the chosen file", async () => {
+    const out = join(project, "gallery.html");
+    const result = await run(["gallery", "--out", out, "--json"]);
+    expect(result.code).toBe(0);
+    const summary = JSON.parse(result.out) as { path: string; entries: number; groups: number };
+    expect(summary.path).toBe(out);
+    const html = await readFile(out, "utf8");
+    expect(html).toContain('<vc-contents variant="rail"></vc-contents>');
+    expect(html.match(/<section class="vc-part"/g)).toHaveLength(summary.groups);
+    expect(html.match(/<h3 class="vc-h2"><code>/g)).toHaveLength(summary.entries);
+    expect((await run(["gallery", "extra"])).code).toBe(2);
   }, 20_000);
 });

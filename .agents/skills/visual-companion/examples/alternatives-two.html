@@ -263,7 +263,7 @@
       <h2 class="vc-h2" id="alt1-h" style="margin:0">Alt 1 — Console</h2>
       <span class="vc-badge">recommended default</span>
     </div>
-    <p class="vc-muted" style="font-size:13px">Every component gets a name strip and one action. The scrub stays a real transport: arrows, count, thin track.</p>
+    <p class="vc-muted" style="font-size:13px">Every component gets a name strip and one action. Tabs and arrows share one position control.</p>
 
     <div class="vc-card alt1 alt-screen">
       <div class="alt-screen-head">
@@ -273,7 +273,7 @@
       <div class="alt-screen-body">
         <vc-code data-file="deploy.sh"><pre class="vc-pre"><code>kubectl rollout status deploy/api --timeout=90s</code></pre></vc-code>
 
-        <vc-tabs id="alt1-states" active="1">
+        <vc-tabs id="alt1-states" active="1" arrows>
           <vc-tab label="Draft" data-state='{"status":"draft","owner":"none"}'>
             <p style="margin:0;font-size:14px">Nobody owns this build yet.</p>
           </vc-tab>
@@ -285,14 +285,13 @@
           </vc-tab>
         </vc-tabs>
 
-        <vc-scrub for="alt1-states" label="Queue state"></vc-scrub>
         <vc-inspect for="alt1-states" caption="Declared state"></vc-inspect>
       </div>
     </div>
 
     <div class="vc-proscons">
-      <div class="vc-pros"><h4>Gains</h4><ul><li>works at any state count</li><li>CSS only over today's elements</li></ul></div>
-      <div class="vc-cons"><h4>Costs</h4><ul><li>four surfaces, each with a strip</li><li>the slider is still a slider</li></ul></div>
+      <div class="vc-pros"><h4>Gains</h4><ul><li>named positions and arrows</li><li>CSS only over today's elements</li></ul></div>
+      <div class="vc-cons"><h4>Costs</h4><ul><li>four surfaces, each with a strip</li><li>tabs need space for longer sequences</li></ul></div>
     </div>
   </section>
 
@@ -356,6 +355,6 @@
 
 <h2 class="vc-h2">Pick one</h2>
 <div class="vc-options">
-  <button class="vc-option" data-choice="alt1"><span class="vc-letter">1</span><span><h3>Console — transport stays</h3><p>Named surfaces, real slider, works at any state count.</p></span></button>
-  <button class="vc-option" data-choice="alt2"><span class="vc-letter">2</span><span><h3>Instrumented — states are the control</h3><p>No transport, chip inspector, best at three or four states.</p></span></button>
+  <button class="vc-option" data-choice="alt1"><h3>Console — transport stays</h3><p>Named surfaces, real slider, works at any state count.</p></button>
+  <button class="vc-option" data-choice="alt2"><h3>Instrumented — states are the control</h3><p>No transport, chip inspector, best at three or four states.</p></button>
 </div>

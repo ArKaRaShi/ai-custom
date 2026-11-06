@@ -10,7 +10,7 @@
   <h2 class="vc-h2" style="margin:0">Today — the reference row</h2>
   <p class="vc-muted" style="margin:0">Shipped markup, unchanged, so the three directions are measured against something real.</p>
 
-  <div class="vc-grid" style="--vc-cols: 3; --vc-cols-mobile: 1">
+  <div class="vc-grid" style="--vc-cols: 3">
     <div>
       <div class="vc-label" style="margin-bottom:8px">Code</div>
       <vc-code><pre class="vc-pre"><code>git rebase --onto main~2 main</code></pre></vc-code>
@@ -44,7 +44,7 @@
   <h2 class="vc-h2" style="margin:0">A — Quiet surface</h2>
   <p class="vc-muted" style="margin:0">Remove the boxes and the pills. Structure stays exactly as it is; only the frames come off, and changed values show as an old-to-new delta instead of a badge.</p>
 
-  <div class="vc-grid" style="--vc-cols: 3; --vc-cols-mobile: 1">
+  <div class="vc-grid" style="--vc-cols: 3">
     <div>
       <div class="vc-label" style="margin-bottom:8px">Code</div>
       <div style="position:relative;background:var(--vc-bg);border-radius:var(--vc-radius-sm);padding:12px 92px 12px 14px">
@@ -91,7 +91,7 @@
   <h2 class="vc-h2" style="margin:0">B — Console surface</h2>
   <p class="vc-muted" style="margin:0">Each component gets a header strip that names it and holds its one action. The scrub becomes a transport: one state name large, previous and next as arrows, a segmented track underneath.</p>
 
-  <div class="vc-grid" style="--vc-cols: 3; --vc-cols-mobile: 1">
+  <div class="vc-grid" style="--vc-cols: 3">
     <div>
       <div class="vc-label" style="margin-bottom:8px">Code</div>
       <div style="border:1px solid var(--vc-border);border-radius:var(--vc-radius);overflow:hidden;background:var(--vc-surface)">
@@ -157,7 +157,7 @@
   <h2 class="vc-h2" style="margin:0">C — Instrumented</h2>
   <p class="vc-muted" style="margin:0">Every state is a target. The scrub becomes a segmented stepper where each state is a labelled button, code gains a line-number gutter, and the inspector collapses to a row of key-value chips.</p>
 
-  <div class="vc-grid" style="--vc-cols: 3; --vc-cols-mobile: 1">
+  <div class="vc-grid" style="--vc-cols: 3">
     <div>
       <div class="vc-label" style="margin-bottom:8px">Code</div>
       <div style="border:1px solid var(--vc-border);border-radius:var(--vc-radius);overflow:hidden;background:var(--vc-surface)">
@@ -224,7 +224,7 @@
 
 <h2 class="vc-h2">Which direction do you want?</h2>
 <div class="vc-options">
-  <button class="vc-option" data-choice="a"><span class="vc-letter">A</span><span><h3>Quiet surface</h3><p>Frames off, delta instead of badges. Cheapest, keeps the slider.</p></span></button>
-  <button class="vc-option" data-choice="b"><span class="vc-letter">B</span><span><h3>Console surface</h3><p>Named header per component, transport scrub. Recommended default.</p></span></button>
-  <button class="vc-option" data-choice="c"><span class="vc-letter">C</span><span><h3>Instrumented</h3><p>Segmented stepper, line-number gutter, chip inspector. Densest, least flexible.</p></span></button>
+  <button class="vc-option" data-choice="a"><h3>Quiet surface</h3><p>Frames off, delta instead of badges. Cheapest, keeps the slider.</p></button>
+  <button class="vc-option" data-choice="b"><h3>Console surface</h3><p>Named header per component, transport scrub. Recommended default.</p></button>
+  <button class="vc-option" data-choice="c"><h3>Instrumented</h3><p>Segmented stepper, line-number gutter, chip inspector. Densest, least flexible.</p></button>
 </div>

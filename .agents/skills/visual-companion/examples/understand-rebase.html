@@ -4,7 +4,7 @@
   <p class="vc-muted">Like rewriting a shopping list from a different starting point: each item is copied across in order, and you stop when the paper underneath disagrees.</p>
   <p class="vc-muted"><strong>base:</strong> the commit your work is replayed onto. <strong>HEAD:</strong> the commit you are standing on right now — detached means it has no branch name.</p>
 
-  <vc-tabs id="rebase" active="1">
+  <vc-tabs id="rebase" active="1" arrows>
     <vc-tab label="1 · before" data-state='{"HEAD":"main (f3a91c)","base":"main","index":"clean","status":"ready"}'>
       <div class="vc-card">
         <div class="vc-card-head"><h2 class="vc-h2">main</h2><span class="vc-badge" data-tone="ok">3 commits to replay</span></div>
@@ -59,16 +59,15 @@ Retries stop after two attempts.
     </vc-tab>
   </vc-tabs>
 
-  <vc-scrub for="rebase" label="Rebase state"></vc-scrub>
   <vc-inspect for="rebase" caption="What Git is holding at this position"></vc-inspect>
 
   <div class="vc-card">
     <h2 class="vc-h2">What should this page unpack next?</h2>
     <p class="vc-muted">Choosing one sends it to the agent. Nothing else on this page leaves the browser.</p>
     <div class="vc-options">
-      <button class="vc-option" data-choice="conflict"><span class="vc-letter">A</span><span><h3>The conflict step</h3><p>How the &lt;&lt;&lt;&lt;&lt;&lt;&lt; markers and git add decide the result</p></span></button>
-      <button class="vc-option" data-choice="detached"><span class="vc-letter">B</span><span><h3>Detached HEAD</h3><p>Why the copy has no branch during the replay</p></span></button>
-      <button class="vc-option" data-choice="reflog"><span class="vc-letter">C</span><span><h3>Getting the old commits back</h3><p>What the reflog keeps and for how long</p></span></button>
+      <button class="vc-option" data-choice="conflict"><h3>The conflict step</h3><p>How the &lt;&lt;&lt;&lt;&lt;&lt;&lt; markers and git add decide the result</p></button>
+      <button class="vc-option" data-choice="detached"><h3>Detached HEAD</h3><p>Why the copy has no branch during the replay</p></button>
+      <button class="vc-option" data-choice="reflog"><h3>Getting the old commits back</h3><p>What the reflog keeps and for how long</p></button>
     </div>
   </div>
 

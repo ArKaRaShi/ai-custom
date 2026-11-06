@@ -1,0 +1,32 @@
+<!doctype html>
+<!-- Whole document for plain mode; data-vc-components opts in to the component layer. -->
+<html lang="en" data-vc-components>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Billing export — field reference</title>
+    <style>
+      body { font: 1rem/1.5 system-ui, sans-serif; margin: 2rem auto; max-width: 48rem; padding: 0 1rem; }
+      .doc-button { font: inherit; margin: .5rem .5rem 0 0; padding: .5rem 1rem; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Billing export</h1>
+      <p>Each row is one <vc-term>settled charge</vc-term>. Refunds appear as negative rows of the same shape.</p>
+      <vc-tabs variant="ladder" active="1">
+        <vc-tab label="Overview">One CSV per day, one row per settled charge.</vc-tab>
+        <vc-tab label="Columns"><code>id</code>, <code>customer_id</code>, <code>amount_minor</code>, <code>currency</code>, <code>settled_at</code>.</vc-tab>
+        <vc-tab label="Example"><pre><code>ch_91f,cus_17,1999,EUR,2026-11-05T09:12:00Z</code></pre></vc-tab>
+      </vc-tabs>
+      <h2>Glossary</h2>
+      <dl>
+        <dt>settled charge</dt>
+        <dd>A charge the customer has already been invoiced for.</dd>
+      </dl>
+      <p>Does the column order match what your importer expects?</p>
+      <button class="doc-button" data-choice="yes">Yes, it matches</button>
+      <button class="doc-button" data-choice="no">No, it differs</button>
+    </main>
+  </body>
+</html>

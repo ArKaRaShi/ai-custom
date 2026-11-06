@@ -1,7 +1,11 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { boundarySelectors, loadCatalogue } from "../scripts/catalogue";
+import { parseCss, stripComments } from "./css";
 
-const css = readFileSync(new URL("../assets/components.css", import.meta.url), "utf8");
+// Comments are stripped first: this file finds palette blocks by text, so a comment that spells
+// out a root selector followed by braces would otherwise become "the first block".
+const css = stripComments(readFileSync(new URL("../assets/components.css", import.meta.url), "utf8"));
 
 function luminance(hex: string): number {
   const value = hex.replace("#", "");
@@ -67,11 +71,19 @@ test("WCAG 1.4.11: the focus ring reaches 3:1 against the surface it sits on", (
   }
 });
 
+test("the dark palette under prefers-color-scheme equals the pinned dark palette, so the duplicate cannot drift", () => {
+  const followsOs = palette(/:root:not\(\[data-vc-theme="light"\]\):not\(\[data-vc-theme="dark"\]\)/);
+  expect(Object.keys(dark).length).toBeGreaterThanOrEqual(11);
+  expect(followsOs).toEqual(dark);
+});
+
 test("every control boundary uses the 3:1 token, not the decorative hairline", () => {
-  for (const selector of [".vc-btn {", ".vc-input {", ".vc-theme {", ".vc-option {"]) {
-    const start = css.indexOf(selector);
-    expect(start).toBeGreaterThan(-1);
-    const rule = css.slice(start, css.indexOf("}", start));
-    expect(rule).toContain("var(--vc-border-strong)");
+  const selectors = boundarySelectors(loadCatalogue());
+  expect(selectors.length).toBeGreaterThanOrEqual(4);
+  const rules = parseCss(css).rules;
+  for (const selector of selectors) {
+    const rule = rules.find((candidate) => candidate.selector === selector);
+    expect(rule, `no rule for ${selector}`).toBeDefined();
+    expect(rule?.body).toContain("var(--vc-border-strong)");
   }
 });

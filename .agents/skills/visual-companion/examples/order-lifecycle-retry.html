@@ -1,0 +1,36 @@
+<!-- Bundle fragment for push. The order rules and counts are illustrative. -->
+<h1 class="vc-h1">How an order retries payment</h1>
+<div class="vc-stack">
+  <div class="vc-answer"><p><strong>Only a timeout retries by itself, in place. A decline stops the order in <code>failed</code> until the customer retries or gives up.</strong> Both retries lead back to <code>charging</code>, and every order ends in <code>shipped</code> or <code>cancelled</code>.</p></div>
+  <p class="vc-muted">The order rules and counts are illustrative.</p>
+  <p>An order is always in exactly one <vc-term def="One named condition of a thing, such as placed or paid. It stays there until an event moves it.">state</vc-term>, and each arrow is an event that moves it. <vc-term data-node="failed" def="The order is stopped here, not finished. It waits for the customer to retry or give up.">failed</vc-term> is not the end. A <vc-term def="A state with no way out: the order is finished.">terminal state</vc-term> is joined to the end marker, here <code>shipped</code> and <code>cancelled</code>.</p>
+  <p>Select <code>failed</code>, then choose <strong>What this feeds</strong>. Reach handles the loop back to <code>charging</code> and still marks the states past it.</p>
+  <vc-diagram for="order" label="Order states with a retry in place and a retry after a failure">
+    state
+    [*] --> placed
+    placed --> charging: submit
+    charging --> charging: timeout retry
+    charging --> paid: card accepted
+    charging --> failed: declined
+    failed --> charging: customer retries
+    failed --> cancelled: customer gives up
+    paid --> shipped: packed
+    shipped --> [*]
+    cancelled --> [*]
+  </vc-diagram>
+  <div class="vc-card vc-stack">
+    <vc-tabs id="order" active="1" hide-tabs>
+      <vc-tab label="1 · placed" data-focus="placed" data-node="Placed" data-cause="The order exists, but no payment has been tried yet." data-state='{"status":"placed","charge attempts":"0","card charged":"no"}'></vc-tab>
+      <vc-tab label="2 · charging" data-focus="placed charging" data-node="Charging" data-cause="Submitting the order starts the first attempt to charge the card." data-state='{"status":"charging","charge attempts":"1","card charged":"no"}'></vc-tab>
+      <vc-tab label="3 · timeout retry" data-focus="charging" data-node="Charging" data-cause="The bank did not answer in time, so the order tries again without leaving charging." data-state='{"status":"charging","charge attempts":"2","card charged":"no"}'></vc-tab>
+      <vc-tab label="4 · declined" data-focus="charging failed" data-node="Failed" data-cause="The bank said no. A decline is an answer, so it is not retried automatically." data-state='{"status":"failed","charge attempts":"2","card charged":"no"}'></vc-tab>
+      <vc-tab label="5 · customer retries" data-focus="failed charging" data-node="Charging" data-cause="The customer picks another card, and the order goes back to charging." data-state='{"status":"charging","charge attempts":"3","card charged":"no"}'></vc-tab>
+      <vc-tab label="6 · paid" data-focus="charging paid" data-node="Paid" data-cause="The bank accepted the card, so the money is taken." data-state='{"status":"paid","charge attempts":"3","card charged":"yes"}'></vc-tab>
+      <vc-tab label="7 · shipped" data-focus="paid shipped" data-node="Shipped" data-cause="The parcel is packed and sent. This state has no way out, so the order is finished." data-state='{"status":"shipped","charge attempts":"3","card charged":"yes"}'></vc-tab>
+    </vc-tabs>
+    <vc-scrub for="order" label="Order position"></vc-scrub>
+    <vc-cause for="order"></vc-cause>
+    <vc-inspect for="order" caption="The order at this position"></vc-inspect>
+  </div>
+  <div class="vc-card"><strong>Next:</strong> decide how many timeout retries an order gets before it moves to <code>failed</code>.</div>
+</div>

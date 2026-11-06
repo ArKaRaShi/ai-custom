@@ -1,6 +1,6 @@
 /*
  * A deliberately small DOM for testing the behaviour components.
- * It supports only what assets/components.js uses: attributes, children,
+ * It supports only what assets/components/ uses: attributes, children,
  * listeners, and a bubbling CustomEvent. No parsing, no rendering.
  */
 
@@ -40,6 +40,8 @@ export class FakeElement {
   step = "";
   tabIndex = 0;
   disabled = false;
+  style: Record<string, string> = {};
+  open = false;
 
   constructor(tagName: string) {
     this.tagName = tagName.toLowerCase();
@@ -73,6 +75,11 @@ export class FakeElement {
 
   hasAttribute(name: string): boolean {
     return this.attributes.has(name);
+  }
+
+  toggleAttribute(name: string, force: boolean): void {
+    if (force) this.setAttribute(name, "");
+    else this.removeAttribute(name);
   }
 
   append(...nodes: FakeElement[]): void {

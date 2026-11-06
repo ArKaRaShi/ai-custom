@@ -1,0 +1,31 @@
+<!-- Bundle fragment for push. The retry schedule is illustrative. -->
+<h1 class="vc-h1">Retries, from the idea to the numbers</h1>
+<div class="vc-stack">
+  <vc-contents></vc-contents>
+  <h2 class="vc-h2">The idea</h2>
+  <p>A <vc-term def="Sending the same request again after it failed.">retry</vc-term> trades extra load for a better chance of success. Hover a level to preview it, or click to keep it.</p>
+  <vc-tabs variant="ladder" active="1">
+    <vc-tab label="Idea">Try again, because many failures are brief.</vc-tab>
+    <vc-tab label="Policy">Try again <strong>up to three times</strong>, waiting longer each time, and only for failures that can pass, such as timeouts or 503, never for a 400.</vc-tab>
+    <vc-tab label="Schedule">
+      <p>Illustrative schedule:</p>
+      <table class="vc-table">
+        <thead><tr><th>Attempt</th><th data-numeric>Wait before</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td data-numeric>0 ms</td></tr>
+          <tr><td>2</td><td data-numeric>200 ms</td></tr>
+          <tr><td>3</td><td data-numeric>400 ms</td></tr>
+          <tr><td>4</td><td data-numeric>800 ms</td></tr>
+        </tbody>
+      </table>
+    </vc-tab>
+  </vc-tabs>
+  <h2 class="vc-h2">What can go wrong</h2>
+  <p>If every client retries on the same schedule, they arrive together: a <vc-term def="Many clients retrying at the same moment, which makes the overload worse.">retry storm</vc-term>. Random <vc-term def="Random extra delay so clients do not retry in lockstep.">jitter</vc-term> spreads retries over time.</p>
+  <div class="vc-proscons">
+    <div class="vc-pros"><h4>With jitter</h4><ul><li>Retries spread out</li></ul></div>
+    <div class="vc-cons"><h4>Without jitter</h4><ul><li>A <vc-term>retry storm</vc-term> can keep the service down</li></ul></div>
+  </div>
+  <h2 class="vc-h2">Where to look next</h2>
+  <p>Open the client's retry setting and check whether it adds <vc-term>jitter</vc-term>.</p>
+</div>

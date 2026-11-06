@@ -1,0 +1,38 @@
+<!-- Bundle fragment for push. All timings are illustrative. -->
+<h1 class="vc-h1">Where one slow request spends its time</h1>
+<div class="vc-stack">
+  <div class="vc-answer"><p><strong>Most of a slow request is waiting, not working.</strong> In this example, a database connection queue dominates the slowest requests.</p></div>
+  <p class="vc-muted">All timings are illustrative.</p>
+  <div class="vc-grid" style="--vc-cols: 4">
+    <div class="vc-stat"><div class="vc-label">Median</div><div class="vc-stat-value">42 ms</div></div>
+    <div class="vc-stat"><div class="vc-label"><vc-term def="The time that 95 of every 100 requests beat.">p95</vc-term></div><div class="vc-stat-value">180 ms</div></div>
+    <div class="vc-stat"><div class="vc-label">p99</div><div class="vc-stat-value">1.2 s</div></div>
+    <div class="vc-stat"><div class="vc-label">Timeout</div><div class="vc-stat-value">3 s</div></div>
+  </div>
+  <vc-diagram for="req" label="Path of one request" marker="request">
+    graph LR
+    lb[Load balancer] --> api[API]
+    api --> cache(Cache)
+    api -->|miss| db[Database]
+  </vc-diagram>
+  <div class="vc-card vc-stack" id="walkthrough">
+    <vc-tabs id="req" active="1" arrows>
+      <vc-tab label="1 · arrive" at="lb" data-node="Load balancer" data-cause="It accepts the connection and picks a server." data-value="0" data-state='{"waiting":"0 ms","holding":"the connection"}'></vc-tab>
+      <vc-tab label="2 · handle" at="api" data-node="API" data-cause="It parses the request and checks the cache; most requests stop here." data-value="3" data-state='{"waiting":"3 ms","holding":"a worker thread"}'></vc-tab>
+      <vc-tab label="3 · cache miss" at="db" data-node="Database" data-cause="On a miss, the query waits for a free connection before it runs." data-value="1100" data-state='{"waiting":"1.1 s","holding":"a worker thread and a database connection"}'></vc-tab>
+    </vc-tabs>
+    <vc-cause for="req"></vc-cause>
+    <vc-timebar for="req" unit="ms"></vc-timebar>
+    <vc-inspect for="req" caption="What the request holds at this hop" fold></vc-inspect>
+  </div>
+  <vc-predict label="Before you move on: which hop owns the p99?">
+    <p>Pick one and lock it in. The answer stays hidden until you do.</p>
+    <div class="vc-options">
+      <button class="vc-option" data-pick="lb"><h3>Load balancer</h3><p>It sees every request</p></button>
+      <button class="vc-option" data-pick="api"><h3>API</h3><p>It does the parsing and the work</p></button>
+      <button class="vc-option" data-pick="db" data-correct><h3>Database, after a cache miss</h3><p>Rare, but the queue behind it is long</p></button>
+    </div>
+    <vc-reveal><p>The database. Misses are rare, so they barely move the median, but each one waits in a queue.</p></vc-reveal>
+  </vc-predict>
+  <div class="vc-card"><strong>Next:</strong> compare the connection-pool size with the number of workers.</div>
+</div>

@@ -1,0 +1,35 @@
+<!-- Bundle fragment for push. All timings are illustrative. -->
+<h1 class="vc-h1">What happens on a cache miss</h1>
+<div class="vc-stack">
+  <div class="vc-answer"><p><strong>A miss costs one extra trip, to the database, and fills the cache so the next request is a hit.</strong> In this example, the database read is almost all of the wait.</p></div>
+  <p class="vc-muted">All timings are illustrative.</p>
+  <p>The <vc-term data-node="cache" def="A small, fast store of answers the program has already worked out.">cache</vc-term> is asked first because it is much faster than the <vc-term data-node="db" def="The system of record: slower to read, but it always has the answer.">database</vc-term>. A <vc-term def="The cache was asked and did not have the answer.">miss</vc-term> sends the API on to the database.</p>
+  <p>Select the client, then choose <strong>What this feeds</strong> to mark the API, cache and database. <strong>What feeds this</strong> finds nothing: reply lines run back to the client, but a reply is not a dependency.</p>
+  <vc-diagram for="miss" label="Messages between client, API, cache and database on a cache miss">
+    sequence
+    participant client as Client
+    participant api as API
+    participant cache as Cache
+    participant db as Database
+    client -> api: GET item 42
+    api -> cache: look up item 42
+    cache --> api: miss
+    api -> db: read item 42
+    db --> api: row
+    api ->> cache: store row
+    api --> client: item 42
+  </vc-diagram>
+  <div class="vc-card vc-stack">
+    <vc-tabs id="miss" active="1" arrows>
+      <vc-tab label="1 · request" data-focus="client api" data-node="API" data-cause="The client asks for item 42 and waits for the answer." data-value="2" data-state='{"cache":"empty","client waits for":"API","elapsed":"2 ms"}'></vc-tab>
+      <vc-tab label="2 · lookup" data-focus="api cache" data-node="Cache" data-cause="The API tries the cache first, and the cache replies that it has nothing for item 42." data-value="1" data-state='{"cache":"empty (miss)","client waits for":"API","elapsed":"3 ms"}'></vc-tab>
+      <vc-tab label="3 · database" data-focus="api db" data-node="Database" data-cause="The miss sends the API to the database, which is slow but always has the row." data-value="48" data-state='{"cache":"empty","client waits for":"database row","elapsed":"51 ms"}'></vc-tab>
+      <vc-tab label="4 · fill" data-focus="api cache" data-node="Cache" data-cause="The API stores the row in the cache in the background and does not wait for it." data-value="0" data-state='{"cache":"filling in the background","client waits for":"API","elapsed":"51 ms"}'></vc-tab>
+      <vc-tab label="5 · reply" data-focus="api client" data-node="Client" data-cause="The API sends the item back, and the next request for item 42 finds it in the cache." data-value="2" data-state='{"cache":"holds item 42","client waits for":"nothing","elapsed":"53 ms"}'></vc-tab>
+    </vc-tabs>
+    <vc-cause for="miss"></vc-cause>
+    <vc-timebar for="miss" unit="ms"></vc-timebar>
+    <vc-inspect for="miss" caption="What each side holds at this message" fold></vc-inspect>
+  </div>
+  <div class="vc-card"><strong>Next:</strong> compare this with a cache hit, where the trip to the database never happens.</div>
+</div>

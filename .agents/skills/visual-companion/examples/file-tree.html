@@ -1,0 +1,40 @@
+<!-- Bundle fragment for push. The project layout is illustrative. -->
+<h1 class="vc-h1">Where login lives in a project</h1>
+<div class="vc-stack">
+  <div class="vc-answer"><p><strong>The code that decides how long a login lasts sits under <code>src/auth/</code>.</strong> A folder holds what is inside it and sits in exactly one parent folder, so a file's position tells you where to look.</p></div>
+  <p class="vc-muted">The project layout is illustrative.</p>
+  <p>Think of nested drawers: each drawer holds files or smaller drawers, and nothing is in two drawers at once. Hover or focus <vc-term data-node="routes" def="The folder of files that match a web address to the code that answers it.">routes</vc-term> or <vc-term data-node="auth" def="The folder of code that checks who the user is and keeps them signed in.">auth</vc-term> to find it in the tree.</p>
+  <p>Select a folder, then choose <strong>What this feeds</strong> to mark everything inside it. Select a file, then choose <strong>What feeds this</strong> to mark the folders above it.</p>
+  <vc-diagram for="tour" label="Folders and files of a small web project">
+    tree
+    app[app/]
+      src[src/]
+        server[server.ts]
+        routes[routes/]
+          login[login.ts]
+          orders[orders.ts]
+        auth[auth/]
+          session[session.ts]
+          token[token.ts]
+      tests[tests/]
+        login_test[login.test.ts]
+  </vc-diagram>
+  <div class="vc-card vc-stack">
+    <vc-tabs id="tour" active="1" arrows>
+      <vc-tab label="Top level" data-focus="app src tests">The project has two folders: <code>src</code> holds the program and <code>tests</code> holds its checks.</vc-tab>
+      <vc-tab label="Routes" data-focus="routes login orders">Inside <code>src</code>, <code>routes</code> holds one file per web address. <code>login.ts</code> receives the login request.</vc-tab>
+      <vc-tab label="Auth" data-focus="auth session token">Also inside <code>src</code>, <code>auth</code> holds the code that checks who the user is: <code>token.ts</code> checks a token and <code>session.ts</code> decides how long a login lasts.</vc-tab>
+      <vc-tab label="Tests" data-focus="tests login_test">Beside <code>src</code>, <code>tests</code> holds <code>login.test.ts</code>, the check for the login behaviour.</vc-tab>
+    </vc-tabs>
+  </div>
+  <vc-predict label="Before you move on: which folder would you open to change how long a login lasts?">
+    <p>Pick one and lock it in. The answer stays hidden until you do.</p>
+    <div class="vc-options">
+      <button class="vc-option" data-pick="routes"><h3>routes</h3><p>It receives the login request</p></button>
+      <button class="vc-option" data-pick="auth" data-correct><h3>auth</h3><p>It keeps the user signed in</p></button>
+      <button class="vc-option" data-pick="tests"><h3>tests</h3><p>It checks the behaviour</p></button>
+    </div>
+    <vc-reveal><p><code>auth</code>. <code>session.ts</code> decides how long a login lasts. <code>routes</code> only receives the request and <code>tests</code> only checks the result.</p></vc-reveal>
+  </vc-predict>
+  <div class="vc-card"><strong>Next:</strong> open the matching folder in your own project and find where a login's lifetime is set.</div>
+</div>

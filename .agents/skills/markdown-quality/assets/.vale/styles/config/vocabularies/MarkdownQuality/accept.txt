@@ -121,3 +121,8 @@ EQs
 nullable
 Pocock
 pstack
+Gentner
+Kokkonen
+Schalk
+Fyfe
+Kaminski

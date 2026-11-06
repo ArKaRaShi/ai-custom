@@ -1,71 +1,665 @@
 {
-  "version": 1,
+  "version": 2,
   "modes": [
     {
       "mode": "bundle",
       "when": "the pushed file is a fragment (no <!doctype>, no <html>), or --bundle is passed",
-      "gets": "frame + theme.js + components.css + components.js + client.js"
+      "gets": "frame + theme.js + components.css + components/index.js (ES module) + client.js"
     },
     {
       "mode": "plain",
       "when": "the pushed file is a whole document, or --plain is passed",
-      "gets": "client.js only; the document keeps its own styling and fonts"
+      "gets": "client.js only; the document keeps its own styling and fonts. Put data-vc-components on <html> to also load components.css and the element module: the vc-* classes and elements then work, scoped, and your own CSS wins any collision. The value picks the palette: light (default), dark, or auto (follow the OS). Isolated previews (compare, states, --isolate) get the stylesheet only, never scripts."
     }
   ],
-  "classes": [
-    { "name": "vc-card", "what": "bordered surface panel", "snippet": "<div class=\"vc-card\">…</div>" },
-    { "name": "vc-card-head", "what": "title row inside a card", "snippet": "<div class=\"vc-card-head\"><h2 class=\"vc-h2\">Title</h2><span class=\"vc-badge\">new</span></div>" },
-    { "name": "vc-badge", "what": "small pill label; data-tone=ok|warn|danger", "snippet": "<span class=\"vc-badge\" data-tone=\"warn\">slow</span>" },
-    { "name": "vc-btn", "what": "button; data-variant=primary|ghost", "snippet": "<button class=\"vc-btn\" data-variant=\"primary\">Apply</button>" },
-    { "name": "vc-options", "what": "vertical list of clickable choices", "snippet": "<div class=\"vc-options\"><button class=\"vc-option\" data-choice=\"a\"><span class=\"vc-letter\">A</span><span><h3>One</h3><p>why</p></span></button></div>" },
-    { "name": "vc-option", "what": "one choice; data-choice value is what gets recorded", "snippet": "<button class=\"vc-option\" data-choice=\"a\">…</button>" },
-    { "name": "vc-letter", "what": "A/B/C marker inside a choice; sits at the start of the option", "snippet": "<span class=\"vc-letter\">A</span>" },
-    { "name": "vc-grid", "what": "equal columns; --vc-cols, --vc-cols-mobile", "snippet": "<div class=\"vc-grid\" style=\"--vc-cols: 3; --vc-cols-mobile: 1\">…</div>" },
-    { "name": "vc-split", "what": "two columns collapsing to one under 640px", "snippet": "<div class=\"vc-split\">…</div>" },
-    { "name": "vc-mockup", "what": "labelled preview frame: vc-mockup-head + vc-mockup-body", "snippet": "<div class=\"vc-mockup\"><div class=\"vc-mockup-head\">Preview</div><div class=\"vc-mockup-body\">…</div></div>" },
-    { "name": "vc-table", "what": "data table; data-numeric on td and its th right-aligns the column; wrap a wide one in vc-scroll", "snippet": "<table class=\"vc-table\"><thead><tr><th>Name</th><th data-numeric>Total</th></tr></thead><tbody><tr><td>A</td><td data-numeric>1,240</td></tr></tbody></table>" },
-    { "name": "vc-scroll", "what": "horizontal scroll container for a wide table at narrow widths; give it tabindex=0, role=region and a label so the keyboard can reach it", "snippet": "<div class=\"vc-scroll\" tabindex=\"0\" role=\"region\" aria-label=\"…\"><table class=\"vc-table\">…</table></div>" },
-    { "name": "vc-stat", "what": "metric block: vc-stat-value + label", "snippet": "<div class=\"vc-stat\"><div class=\"vc-label\">Users</div><div class=\"vc-stat-value\">1,240</div></div>" },
-    { "name": "vc-proscons", "what": "pros/cons pair: vc-pros, vc-cons", "snippet": "<div class=\"vc-proscons\"><div class=\"vc-pros\"><h4>Pros</h4><ul><li>fast</li></ul></div><div class=\"vc-cons\"><h4>Cons</h4><ul><li>costly</li></ul></div></div>" },
-    { "name": "vc-answer", "what": "headline card that states the conclusion first", "snippet": "<div class=\"vc-answer\"><p><strong>{conclusion}</strong> {why it matters}</p></div>" },
-    { "name": "vc-steps / vc-step", "what": "numbered steps; data-diff=add|chg|del marks a change and needs a text badge too; vc-step-note for the second line", "snippet": "<ol class=\"vc-steps\"><li class=\"vc-step\" data-diff=\"chg\"><div><span class=\"vc-badge\" data-tone=\"warn\">Changed</span> {step}</div><p class=\"vc-step-note\">{detail}</p></li></ol>" },
-    { "name": "vc-delta", "what": "old → new value; del is old, ins is new; CSS draws the arrow, so do not type one", "snippet": "<span class=\"vc-delta\"><del>{old}</del><ins>{new}</ins></span>" },
-    { "name": "vc-collapsed", "what": "details element that folds context the reader can skip", "snippet": "<details class=\"vc-collapsed\"><summary>{N} steps unchanged</summary>…</details>" },
-    { "name": "vc-pre", "what": "code block surface; wrap it in <vc-code> only when the reader should copy the code", "snippet": "<pre class=\"vc-pre\"><code>npm run dev</code></pre>" },
-    { "name": "vc-placeholder", "what": "dashed empty area inside a mockup", "snippet": "<div class=\"vc-placeholder\">chart area</div>" },
-    { "name": "vc-input", "what": "text input styled to match", "snippet": "<input class=\"vc-input\" placeholder=\"Search\">" },
-    { "name": "vc-h1 / vc-h2 / vc-muted / vc-label", "what": "typography helpers", "snippet": "<h1 class=\"vc-h1\">Title</h1><p class=\"vc-muted\">subtitle</p>" },
-    { "name": "vc-stack / vc-row", "what": "vertical rhythm, horizontal cluster", "snippet": "<div class=\"vc-stack\">…</div>" }
-  ],
-  "elements": [
+  "groups": [
     {
-      "name": "vc-tabs",
-      "attrs": { "active": "1-based tab number, default 1", "id": "referred to by vc-scrub and vc-inspect" },
-      "children": "<vc-tab label=\"…\" data-state='{\"HEAD\":\"main\"}'>panel content</vc-tab>",
-      "events": "vc-tab-change, detail.index is zero-based",
+      "id": "type",
+      "title": "Type and labels"
+    },
+    {
+      "id": "layout",
+      "title": "Layout"
+    },
+    {
+      "id": "surface",
+      "title": "Surfaces"
+    },
+    {
+      "id": "control",
+      "title": "Controls"
+    },
+    {
+      "id": "choice",
+      "title": "Choices"
+    },
+    {
+      "id": "data",
+      "title": "Data"
+    },
+    {
+      "id": "explain",
+      "title": "Explanation"
+    },
+    {
+      "id": "position",
+      "title": "Positions and states"
+    },
+    {
+      "id": "reference",
+      "title": "Reference aids"
+    }
+  ],
+  "entries": [
+    {
+      "kind": "class",
+      "names": [
+        "vc-h1",
+        "vc-h2",
+        "vc-muted",
+        "vc-label"
+      ],
+      "group": "type",
+      "what": "typography: vc-h1 is the page title (one per screen), vc-h2 a section heading, vc-muted secondary prose that stops at a readable measure, vc-label a small uppercase tag for a metric or row name",
+      "snippet": "<h1 class=\"vc-h1\">Settle the migration order</h1><p class=\"vc-muted\">Why the order matters, in one line.</p><h2 class=\"vc-h2\">What changed</h2><div class=\"vc-label\">Requests</div>",
+      "spacing": {
+        "surface": false,
+        "spaces": false
+      }
+    },
+    {
+      "kind": "class",
+      "names": [
+        "vc-badge"
+      ],
+      "group": "type",
+      "what": "small pill label; data-tone=ok|warn|danger; it never carries meaning without a word",
+      "snippet": "<span class=\"vc-badge\" data-tone=\"warn\">slow</span>",
+      "spacing": {
+        "surface": false,
+        "spaces": false
+      }
+    },
+    {
+      "kind": "class",
+      "names": [
+        "vc-stack",
+        "vc-row"
+      ],
+      "group": "layout",
+      "what": "vc-stack spaces its children vertically by --vc-gap; vc-row is a horizontal cluster that wraps instead of overflowing",
+      "snippet": "<div class=\"vc-stack\"><div class=\"vc-placeholder\">first</div><div class=\"vc-placeholder\">second</div></div>",
+      "spacing": {
+        "surface": false,
+        "spaces": true
+      }
+    },
+    {
+      "kind": "class",
+      "names": [
+        "vc-grid"
+      ],
+      "group": "layout",
+      "what": "equal columns; --vc-cols is the MAXIMUM column count, and the grid wraps by its container's width, never the viewport's. A grid of vc-stat tiles wraps at a tighter minimum on its own",
+      "snippet": "<div class=\"vc-grid\" style=\"--vc-cols: 3\"><div class=\"vc-stat\"><div class=\"vc-label\">Users</div><div class=\"vc-stat-value\">1,240</div></div><div class=\"vc-stat\"><div class=\"vc-label\">Churn</div><div class=\"vc-stat-value\">2.1%</div></div><div class=\"vc-stat\"><div class=\"vc-label\">MRR</div><div class=\"vc-stat-value\">$18k</div></div></div>",
+      "spacing": {
+        "surface": true,
+        "spaces": true
+      }
+    },
+    {
+      "kind": "class",
+      "names": [
+        "vc-split"
+      ],
+      "group": "layout",
+      "what": "two columns for a side-by-side comparison when there is room, one when there is not (by container width)",
+      "snippet": "<div class=\"vc-split\"><div class=\"vc-card\"><div class=\"vc-label\">Before</div><p class=\"vc-muted\">One queue, shared retries.</p></div><div class=\"vc-card\"><div class=\"vc-label\">After</div><p class=\"vc-muted\">One queue per tenant.</p></div></div>",
+      "spacing": {
+        "surface": true,
+        "spaces": true
+      }
+    },
+    {
+      "kind": "class",
+      "names": [
+        "vc-card"
+      ],
+      "parts": [
+        "vc-card-head"
+      ],
+      "group": "surface",
+      "what": "bordered surface panel; vc-card-head is the title row",
+      "snippet": "<div class=\"vc-card\"><div class=\"vc-card-head\"><h2 class=\"vc-h2\">Requests per region</h2><span class=\"vc-badge\">24h</span></div><p class=\"vc-muted\">Content sits directly in the panel.</p></div>",
+      "spacing": {
+        "surface": true,
+        "spaces": false
+      }
+    },
+    {
+      "kind": "class",
+      "names": [
+        "vc-mockup"
+      ],
+      "parts": [
+        "vc-mockup-head",
+        "vc-mockup-body"
+      ],
+      "group": "surface",
+      "what": "labelled preview frame: vc-mockup-head names the variant, vc-mockup-body holds the drawing",
+      "snippet": "<div class=\"vc-mockup\"><div class=\"vc-mockup-head\">A — stats first</div><div class=\"vc-mockup-body\"><div class=\"vc-placeholder\">chart area</div></div></div>",
+      "spacing": {
+        "surface": true,
+        "spaces": false
+      }
+    },
+    {
+      "kind": "class",
+      "names": [
+        "vc-placeholder"
+      ],
+      "group": "surface",
+      "what": "dashed empty area standing in for content the drawing does not specify",
+      "snippet": "<div class=\"vc-placeholder\">table of 40 rows</div>",
+      "spacing": {
+        "surface": true,
+        "spaces": false
+      }
+    },
+    {
+      "kind": "class",
+      "names": [
+        "vc-btn"
+      ],
+      "group": "control",
+      "what": "button; data-variant=primary|ghost",
+      "snippet": "<button class=\"vc-btn\" data-variant=\"primary\">Apply</button>",
+      "spacing": {
+        "surface": false,
+        "spaces": false
+      },
+      "boundary": ".vc-btn"
+    },
+    {
+      "kind": "class",
+      "names": [
+        "vc-field",
+        "vc-input"
+      ],
+      "group": "control",
+      "what": "text input with a real label: vc-field stacks the label above a vc-input",
+      "snippet": "<div class=\"vc-field\"><label for=\"project-name\">Project name</label><input class=\"vc-input\" id=\"project-name\" placeholder=\"checkout-api\"></div>",
+      "spacing": {
+        "surface": false,
+        "spaces": false
+      },
+      "boundary": ".vc-input"
+    },
+    {
+      "kind": "class",
+      "names": [
+        "vc-options",
+        "vc-option"
+      ],
+      "group": "choice",
+      "what": "vertical list of clickable choices; the letters A, B, C are drawn for you; data-choice on an option is the value that gets recorded",
+      "snippet": "<div class=\"vc-options\"><button class=\"vc-option\" data-choice=\"a\"><h3>One</h3><p>why</p></button><button class=\"vc-option\" data-choice=\"b\"><h3>Two</h3><p>why</p></button></div>",
+      "spacing": {
+        "surface": true,
+        "spaces": true
+      },
+      "boundary": ".vc-option"
+    },
+    {
+      "kind": "class",
+      "names": [
+        "vc-table"
+      ],
+      "group": "data",
+      "what": "data table; data-numeric on td and its th right-aligns the column; wrap a wide one in vc-scroll",
+      "snippet": "<table class=\"vc-table\"><thead><tr><th>Name</th><th data-numeric>Total</th></tr></thead><tbody><tr><td>A</td><td data-numeric>1,240</td></tr></tbody></table>",
+      "spacing": {
+        "surface": true,
+        "spaces": false
+      }
+    },
+    {
+      "kind": "class",
+      "names": [
+        "vc-scroll"
+      ],
+      "group": "data",
+      "what": "horizontal scroll container for a wide table at narrow widths; give it tabindex=0, role=region and a label so the keyboard can reach it",
+      "snippet": "<div class=\"vc-scroll\" tabindex=\"0\" role=\"region\" aria-label=\"Endpoint cost, scrollable\"><table class=\"vc-table\"><thead><tr><th>Endpoint</th><th data-numeric>p95</th></tr></thead><tbody><tr><td>/search</td><td data-numeric>412 ms</td></tr></tbody></table></div>",
+      "spacing": {
+        "surface": true,
+        "spaces": false
+      }
+    },
+    {
+      "kind": "class",
+      "names": [
+        "vc-stat"
+      ],
+      "parts": [
+        "vc-stat-value"
+      ],
+      "group": "data",
+      "what": "metric block: a vc-label above a vc-stat-value. Put tiles in a vc-grid; the grid wraps them by width",
+      "snippet": "<div class=\"vc-stat\"><div class=\"vc-label\">Users</div><div class=\"vc-stat-value\">1,240</div></div>",
+      "spacing": {
+        "surface": true,
+        "spaces": false
+      }
+    },
+    {
+      "kind": "class",
+      "names": [
+        "vc-pre"
+      ],
+      "group": "data",
+      "what": "code block surface; wrap it in <vc-code> only when the reader should copy the code",
+      "snippet": "<pre class=\"vc-pre\"><code>npm run dev</code></pre>",
+      "spacing": {
+        "surface": false,
+        "spaces": false
+      }
+    },
+    {
+      "kind": "class",
+      "names": [
+        "vc-proscons"
+      ],
+      "parts": [
+        "vc-pros",
+        "vc-cons"
+      ],
+      "group": "explain",
+      "what": "pros/cons pair: vc-pros and vc-cons; the headings carry the meaning, the colors are a second signal",
+      "snippet": "<div class=\"vc-proscons\"><div class=\"vc-pros\"><h4>Pros</h4><ul><li>fast</li></ul></div><div class=\"vc-cons\"><h4>Cons</h4><ul><li>costly</li></ul></div></div>",
+      "spacing": {
+        "surface": true,
+        "spaces": true
+      }
+    },
+    {
+      "kind": "class",
+      "names": [
+        "vc-answer"
+      ],
+      "group": "explain",
+      "what": "headline card that states the conclusion first",
+      "snippet": "<div class=\"vc-answer\"><p><strong>Rebase replays your commits onto a new base.</strong> Nothing is lost: the old commits stay reachable from the reflog.</p></div>",
+      "spacing": {
+        "surface": true,
+        "spaces": false
+      }
+    },
+    {
+      "kind": "class",
+      "names": [
+        "vc-steps",
+        "vc-step"
+      ],
+      "parts": [
+        "vc-step-note"
+      ],
+      "group": "explain",
+      "what": "numbered steps; data-diff=add|chg|del marks a change and needs a text badge too; vc-step-note for the second line",
+      "snippet": "<ol class=\"vc-steps\"><li class=\"vc-step\" data-diff=\"chg\"><div><span class=\"vc-badge\" data-tone=\"warn\">Changed</span> Replay the second commit</div><p class=\"vc-step-note\">It now applies on top of the new base.</p></li><li class=\"vc-step\"><div>Move the branch pointer</div></li></ol>",
+      "spacing": {
+        "surface": true,
+        "spaces": true
+      }
+    },
+    {
+      "kind": "class",
+      "names": [
+        "vc-delta"
+      ],
+      "group": "explain",
+      "what": "old → new value; del is old, ins is new; CSS draws the arrow, so do not type one",
+      "snippet": "<span class=\"vc-delta\"><del>24.0%</del><ins>22.8%</ins></span>",
+      "spacing": {
+        "surface": false,
+        "spaces": false
+      }
+    },
+    {
+      "kind": "class",
+      "names": [
+        "vc-collapsed"
+      ],
+      "group": "explain",
+      "what": "details element that folds context the reader can skip",
+      "snippet": "<details class=\"vc-collapsed\"><summary>6 steps unchanged</summary><p>Install, lint, typecheck, test, build and smoke all pass.</p></details>",
+      "spacing": {
+        "surface": true,
+        "spaces": false
+      }
+    },
+    {
+      "kind": "element",
+      "names": [
+        "vc-tabs"
+      ],
+      "parts": [
+        "vc-tab"
+      ],
+      "group": "position",
+      "what": "the one owner of a position: holds authored states, one visible at a time; data-state is a flat JSON object of strings",
+      "attrs": {
+        "active": "1-based tab number, default 1",
+        "id": "referred to by position readers and controllers",
+        "variant": "ladder previews abstraction levels on hover or focus",
+        "arrows": "show previous and next buttons in the tab row",
+        "hide-tabs": "hide the tab bar when a scrub controls a longer sequence"
+      },
+      "children": "<vc-tab label=\"…\" data-focus=\"node-id another-id\" data-cause=\"…\" data-node=\"…\" data-value=\"3\" data-state='{\"HEAD\":\"main\"}'>panel content</vc-tab>; data-focus names diagram nodes for the current step",
+      "events": {
+        "vc-tab-change": "detail.index, zero-based; the only event"
+      },
       "methods": "panels, index, select(i), currentState()",
-      "what": "holds authored states, one visible at a time; data-state is a flat JSON object of strings"
+      "snippet": "<vc-tabs active=\"1\"><vc-tab label=\"Compact\">One line.</vc-tab><vc-tab label=\"Detailed\">The mechanism.</vc-tab></vc-tabs>",
+      "spacing": {
+        "surface": true,
+        "spaces": true
+      },
+      "degrade": [
+        {
+          "shows": "first-panel"
+        }
+      ]
     },
     {
-      "name": "vc-scrub",
-      "attrs": { "for": "id of the vc-tabs it controls", "label": "accessible name for the range" },
-      "what": "range plus previous/next over an existing vc-tabs; emits no event of its own, announces the state label with aria-valuetext"
+      "kind": "element",
+      "names": [
+        "vc-scrub"
+      ],
+      "group": "position",
+      "what": "range plus previous/next over an existing vc-tabs; emits no event of its own, announces the state label with aria-valuetext",
+      "attrs": {
+        "for": "id of the vc-tabs it controls",
+        "label": "accessible name for the range"
+      },
+      "snippet": "<vc-tabs id=\"scrub-demo\" hide-tabs><vc-tab label=\"1 · before\">a</vc-tab><vc-tab label=\"2 · after\">b</vc-tab></vc-tabs><vc-scrub for=\"scrub-demo\" label=\"Step\"></vc-scrub>",
+      "spacing": {
+        "surface": true,
+        "spaces": false
+      },
+      "degrade": [
+        {
+          "shows": "nothing"
+        }
+      ]
     },
     {
-      "name": "vc-inspect",
-      "attrs": { "for": "id of the vc-tabs it reads", "caption": "optional table caption" },
-      "what": "renders the current panel's data-state as a table; a value that differs from the previous position shows a Changed badge; renders nothing when no state is declared"
+      "kind": "element",
+      "names": ["vc-cause"],
+      "group": "position",
+      "what": "reads the current tab's data-node and data-cause; renders nothing without a cause",
+      "attrs": { "for": "id of the vc-tabs it reads" },
+      "snippet": "<vc-tabs id=\"cause-demo\"><vc-tab label=\"Start\" data-node=\"API\" data-cause=\"The request arrives.\">Start</vc-tab></vc-tabs><vc-cause for=\"cause-demo\"></vc-cause>",
+      "spacing": { "surface": false, "spaces": false },
+      "degrade": [{ "shows": "nothing" }]
     },
     {
-      "name": "vc-chart",
-      "attrs": { "data": "\"Label:12,Other:30\"", "height": "px, default 200", "max": "optional scale max", "label": "accessible name" },
-      "what": "renders a bar chart"
+      "kind": "element",
+      "names": ["vc-timebar"],
+      "group": "position",
+      "what": "clickable segments show each tab's data-value share and the current position",
+      "attrs": { "for": "id of the vc-tabs it reads", "unit": "value unit, such as ms", "hint": "optional hint; empty hides the text" },
+      "snippet": "<vc-tabs id=\"timebar-demo\"><vc-tab label=\"Start\" data-value=\"3\">Start</vc-tab><vc-tab label=\"Wait\" data-value=\"1000\">Wait</vc-tab></vc-tabs><vc-timebar for=\"timebar-demo\" unit=\"ms\"></vc-timebar>",
+      "spacing": { "surface": false, "spaces": false },
+      "degrade": [{ "shows": "nothing" }]
     },
     {
-      "name": "vc-code",
+      "kind": "element",
+      "names": [
+        "vc-inspect"
+      ],
+      "group": "position",
+      "what": "renders the current panel's data-state as a table; changed values show the previous value; renders nothing when no state is declared",
+      "attrs": {
+        "for": "id of the vc-tabs it reads",
+        "caption": "optional table caption",
+        "fold": "wrap the table in a details element"
+      },
+      "snippet": "<vc-tabs id=\"inspect-demo\"><vc-tab label=\"1 · clean\" data-state='{\"HEAD\":\"main\"}'>a</vc-tab><vc-tab label=\"2 · detached\" data-state='{\"HEAD\":\"c3d4\"}'>b</vc-tab></vc-tabs><vc-inspect for=\"inspect-demo\" caption=\"Hidden state\"></vc-inspect>",
+      "spacing": {
+        "surface": true,
+        "spaces": false
+      },
+      "degrade": [
+        {
+          "shows": "nothing"
+        }
+      ]
+    },
+    {
+      "kind": "element",
+      "names": [
+        "vc-chart"
+      ],
+      "group": "data",
+      "what": "renders a bar chart as plain HTML at real pixel size, so its text never scales with the container",
+      "attrs": {
+        "data": "\"Label:12,Other:30\"",
+        "height": "px, default 200",
+        "max": "optional scale max",
+        "label": "accessible name"
+      },
+      "snippet": "<vc-chart data=\"EU:120,US:210,APAC:64\" label=\"Requests per region\"></vc-chart>",
+      "spacing": {
+        "surface": true,
+        "spaces": true
+      },
+      "degrade": [
+        {
+          "shows": "nothing"
+        }
+      ]
+    },
+    {
+      "kind": "element",
+      "names": [
+        "vc-diagram"
+      ],
+      "group": "position",
+      "what": "laid-out diagram from a short text source whose first line names the kind (flow, tree, sequence, state; flow when omitted) or from authored SVG; select a node to explore what feeds it or what it feeds, and a tab or term lights its nodes",
+      "attrs": {
+        "for": "id of the vc-tabs whose data-focus selects nodes or whose at places the marker",
+        "label": "required accessible name",
+        "marker": "text on the marker for at, default here"
+      },
+      "children": "text source, first line the kind. Edge kinds: @default, @emphasis, @return, @async, @security. flow: `a[A] --> b(B)`, `-.->`, `-->|label|`, kind before the destination as in `a -->|label| @return b`. tree: indented `id[Label]` lines (a child is indented deeper than its parent), or `parent --> child` with the same label and kind forms; one parent per node, no cycles. sequence: optional `participant id` or `participant id as Label`, then in time order `a -> b: text` request, `b --> a: text` return, `a ->> b: text` async, or `a -> b: @security text` for another kind; participants are the nodes. state: `[*] --> id` initial, `id --> [*]` terminal, `id --> id: label` or `id -->|label| id` transition; a self-loop is valid only here. Authored SVG: nodes carry data-node, edges data-from, data-to and optional data-kind",
+      "snippet": "<vc-diagram label=\"Branching request\">flow\napi[API] --> cache[Cache]\napi --> queue[Queue]\nqueue -.-> worker[Worker]\nworker -->|retry| queue\nworker --> @return api</vc-diagram>",
+      "spacing": {
+        "surface": true,
+        "spaces": false
+      },
+      "boundary": ".vc-node",
+      "degrade": [
+        {
+          "shows": "content"
+        },
+        {
+          "shows": "source-text"
+        }
+      ]
+    },
+    {
+      "kind": "element",
+      "names": [
+        "vc-term"
+      ],
+      "group": "reference",
+      "what": "a word with a definition: hover or focus previews it, and clicking pins it in a tray. Definitions may also come from a native dl glossary; the first definition in document order wins",
+      "attrs": {
+        "def": "inline definition; optional when a glossary or another use defines the term",
+        "term": "lookup key when the text is inflected; defaults to the text",
+        "data-node": "diagram node id to highlight on hover or focus, and reciprocally highlight this term"
+      },
+      "children": "the word",
+      "snippet": "<p>Each <vc-term def=\"A charge already invoiced.\">settled charge</vc-term> is one row; a <vc-term>settled charge</vc-term> never changes.</p>",
+      "spacing": {
+        "surface": false,
+        "spaces": false
+      },
+      "degrade": [
+        {
+          "shows": "definition-on-hover"
+        }
+      ]
+    },
+    {
+      "kind": "element",
+      "names": [
+        "vc-predict"
+      ],
+      "parts": [
+        "vc-reveal"
+      ],
+      "group": "explain",
+      "what": "guess, then reveal: options use data-pick; locking in a guess records the choice and reveals the answer",
+      "attrs": {
+        "label": "the question, as the accessible name"
+      },
+      "children": "prose, a vc-options list of data-pick buttons, then <vc-reveal>the answer</vc-reveal>",
+      "snippet": "<vc-predict label=\"Which is faster?\"><div class=\"vc-options\"><button class=\"vc-option\" data-pick=\"a\"><h3>A</h3></button><button class=\"vc-option\" data-pick=\"b\"><h3>B</h3></button></div><vc-reveal>B, because it skips the copy.</vc-reveal></vc-predict>",
+      "spacing": {
+        "surface": true,
+        "spaces": true
+      },
+      "boundary": ".vc-option",
+      "degrade": [
+        {
+          "shows": "answer"
+        }
+      ]
+    },
+    {
+      "kind": "element",
+      "names": [
+        "vc-contents"
+      ],
+      "group": "reference",
+      "what": "contents list built from screen headings, with the current section marked; variant=rail renders a thin edge rail",
+      "attrs": {
+        "variant": "list (default) | rail",
+        "depth": "2 (default) | 3"
+      },
+      "children": "optional authored nav containing a list of links to section ids; otherwise headings generate the list",
+      "snippet": "<vc-contents></vc-contents><h2 class=\"vc-h2\">First</h2><p>text</p><h2 class=\"vc-h2\">Second</h2><p>text</p>",
+      "spacing": {
+        "surface": false,
+        "spaces": false
+      },
+      "degrade": [
+        {
+          "shows": "nothing"
+        }
+      ]
+    },
+    {
+      "kind": "element",
+      "names": [
+        "vc-code"
+      ],
+      "group": "data",
+      "what": "adds a copy button to a code block",
+      "attrs": {},
       "children": "<pre class=\"vc-pre\"><code>…</code></pre>",
-      "what": "adds a copy button"
+      "snippet": "<vc-code><pre class=\"vc-pre\"><code>npm run dev</code></pre></vc-code>",
+      "spacing": {
+        "surface": true,
+        "spaces": false
+      },
+      "degrade": [
+        {
+          "shows": "content"
+        }
+      ]
     }
   ],
-  "recorded": "Any element with data-choice reports {type:'choice', choice, text} on click. Put data-multiselect on an ancestor to allow several selections."
+  "internal": [
+    {
+      "names": [
+        "vc-main",
+        "vc-part",
+        "vc-page-body"
+      ],
+      "why": "frame containers that space their children; never authored by hand",
+      "scope": "frame",
+      "spaces": true
+    },
+    {
+      "names": [
+        "vc-body",
+        "vc-bar",
+        "vc-bar-title",
+        "vc-bar-status",
+        "vc-dot",
+        "vc-empty",
+        "vc-page",
+        "vc-part-title"
+      ],
+      "why": "companion shell and `page` layout; never authored by hand",
+      "scope": "frame"
+    },
+    {
+      "names": [
+        "vc-theme"
+      ],
+      "why": "the shell's theme select",
+      "scope": "frame",
+      "boundary": ".vc-theme"
+    },
+    {
+      "names": [
+        "vc-tablist",
+        "vc-tab-arrows",
+        "vc-tab-arrow",
+        "vc-timebar-bar",
+        "vc-timebar-segment",
+        "vc-timebar-caption",
+        "vc-timebar-hint",
+        "vc-inspect-was",
+        "vc-scrub-range",
+        "vc-scrub-status",
+        "vc-chart-plot",
+        "vc-chart-col",
+        "vc-chart-bar",
+        "vc-chart-value",
+        "vc-chart-labels",
+        "vc-chart-label",
+        "vc-copy",
+        "vc-contents-num",
+        "vc-contents-name",
+        "vc-term-btn",
+        "vc-term-bubble",
+        "vc-pins",
+        "vc-pins-status",
+        "vc-pin-x",
+        "vc-diagram-stage",
+        "vc-node",
+        "vc-diagram-edges",
+        "vc-diagram-lifeline",
+        "vc-edge-label",
+        "vc-diagram-marker",
+        "vc-diagram-caption",
+        "vc-diagram-anchors",
+        "vc-diagram-error",
+        "vc-diagram-tools",
+        "vc-diagram-status",
+        "vc-diagram-legend",
+        "vc-diagram-depth",
+        "vc-diagram-geometry",
+        "vc-diagram-budget",
+        "vc-predict-status"
+      ],
+      "why": "rendered by an element; authors may provide vc-diagram-legend for the no-script view"
+    }
+  ],
+  "recorded": "Any element with data-choice reports {type:'choice', choice, text} on click. Put data-multiselect on an ancestor to allow several selections. vc-predict records a choice at lock-in."
 }

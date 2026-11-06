@@ -7,7 +7,7 @@ A screen is one HTML file. How it is served depends on what is in it.
 | | Bundle | Plain |
 | --- | --- | --- |
 | Trigger | no `<!doctype>`/`<html>` (or `--bundle`) | whole document (or `--plain`) |
-| Gets | frame, `components.css`, `components.js`, client | client only, nothing restyled |
+| Gets | frame, `components.css`, the `components/index.js` module, client | client only, nothing restyled (unless opted in, below) |
 | Use for | quick layout options, mockups, diagrams | the user's real design language, pasted components, screenshots wrapped in a page |
 
 Both modes share one rule: **any element with `data-choice` records a click.** The attribute value is what the agent receives.
@@ -15,14 +15,8 @@ Both modes share one rule: **any element with `data-choice` records a click.** T
 ```html
 <!-- bundle: short, consistent, cheap -->
 <div class="vc-options">
-  <button class="vc-option" data-choice="a">
-    <span class="vc-letter">A</span>
-    <span><h3>Single column</h3><p>One reading column, no chrome</p></span>
-  </button>
-  <button class="vc-option" data-choice="b">
-    <span class="vc-letter">B</span>
-    <span><h3>Sidebar + content</h3><p>Persistent navigation on the left</p></span>
-  </button>
+  <button class="vc-option" data-choice="a"><h3>Single column</h3><p>One reading column, no chrome</p></button>
+  <button class="vc-option" data-choice="b"><h3>Sidebar + content</h3><p>Persistent navigation on the left</p></button>
 </div>
 ```
 
@@ -39,6 +33,12 @@ Both modes share one rule: **any element with `data-choice` records a click.** T
 ```
 
 Put a `data-multiselect` attribute on an ancestor to allow more than one selection.
+
+### Plain opt-in
+
+Put `data-vc-components` on `<html>` of a whole document and the server adds `components.css`, the `components/index.js` module and the palette: bare or `="light"` pins light, `="dark"` pins dark, `="auto"` follows the OS (set through `data-vc-theme` on `<html>`). Unless the document already has a `theme-color` meta tag, the server adds one matching the pinned palette or two matching the OS schemes. The server never infers this from `vc-` markup. Isolated previews (`compare`, `states`, `--isolate`) get the stylesheet and theme-color metadata, never scripts. Component CSS uses cascade layers, so the page's own CSS takes precedence in a collision.
+
+See [plain reference](../examples/plain-reference.html) for an opt-in document with its own CSS and interactive components. Without the attribute, a whole document receives only the client; writing `vc-` markup alone does not load the components.
 
 ## Composition rules
 
@@ -80,7 +80,7 @@ Each container sets the distance between its children:
 | --- | --- |
 | `.vc-main` (the frame) | `--vc-space-4` between top-level children; a heading sets its own margin for the line under it |
 | `.vc-stack` | `--vc-gap` |
-| `.vc-grid`, `.vc-split`, `.vc-row` | their `gap`, which is `--vc-gap` |
+| `.vc-grid`, `.vc-split`, `.vc-row` | their `gap`, which is `--vc-gap`; grid and split wrap by container width, not viewport |
 | `.vc-page-body` | `--vc-space-7`, then `--vc-space-6` above each part after the first |
 | inside a card | whatever the screen sets; nothing is inherited |
 

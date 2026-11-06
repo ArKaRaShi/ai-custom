@@ -2,7 +2,8 @@
 import { appendFile, chmod, lstat, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
-import { composePage, escapeHtml, renderScreen } from "./render";
+import { type Entry, loadCatalogue } from "./catalogue";
+import { composePage, escapeHtml, renderGallery, renderScreen } from "./render";
 import { cookieName, createKey } from "./auth";
 import { detectMode, type Mode } from "./domain";
 import {
@@ -33,11 +34,12 @@ const USAGE = `visual-companion — show mockups and choices in a local browser 
   states <name> <file> [<name> <file> ...]  publish full-page isolated states with an edge rail
   stage <file> <relative-path>              copy one dependency to session/files
   events  [--wait <seconds>] [--clear]      read (or wait for) recorded choices
-  components [--json]                       list the component catalogue
+  components [--json]                       list the component catalogue, grouped
+  gallery [--out <file>]                    write examples/component-gallery.html from the catalogue
 
   Staging does not rewrite CSS URLs: stage dependencies and use paths resolving under /files/.
 
-  session: every command above except components takes --project-dir <dir> or --run-dir <dir>
+  session: every command above except components and gallery takes --project-dir <dir> or --run-dir <dir>
   flags: --json (structured output)
   exit: 0 ok, 1 failure, 2 usage`;
 
@@ -52,6 +54,7 @@ const VALUE_FLAGS = new Set([
   "log",
   "owner-pid",
   "format",
+  "out",
 ]);
 const BOOLEAN_FLAGS = new Set(["open", "json", "plain", "bundle", "clear", "help", "isolate"]);
 
@@ -449,34 +452,36 @@ function describeEvent(event: { choice: string; text?: string; channel: string; 
   return `${when}  ${event.choice}${label}  [${event.channel}]`;
 }
 
+function describeEntry(entry: Entry): string {
+  if (entry.kind === "class") return `  ${entry.names.join(" / ")} — ${entry.what}`;
+  const attrs = Object.keys(entry.attrs);
+  const tags = entry.names.map((name) => `<${name}>`).join(" ");
+  return `  ${tags}${attrs.length > 0 ? ` (${attrs.join(", ")})` : ""} — ${entry.what}`;
+}
+
 async function components(args: Args): Promise<void> {
-  const catalogue = JSON.parse(
-    await readFile(join(import.meta.dir, "..", "assets", "catalogue.json"), "utf8"),
-  ) as {
-    modes: { mode: string; when: string }[];
-    classes: { name: string; what: string }[];
-    elements: { name: string; awhat?: string; attrs?: Record<string, string> }[];
-    recorded: string;
-  };
-
-  if (json(args.flags)) {
-    emit(catalogue, true, []);
-    return;
-  }
-
+  const catalogue = loadCatalogue();
   const lines = [
     "modes:",
     ...catalogue.modes.map((mode) => `  ${mode.mode}: ${mode.when}`),
-    "classes:",
-    ...catalogue.classes.map((item) => `  ${item.name} — ${item.what}`),
-    "elements:",
-    ...catalogue.elements.map((item) => {
-      const attrs = item.attrs ? ` (${Object.keys(item.attrs).join(", ")})` : "";
-      return `  <${item.name}>${attrs}`;
-    }),
+    ...catalogue.groups.flatMap((group) => [
+      `${group.title}:`,
+      ...catalogue.entries.filter((entry) => entry.group === group.id).map(describeEntry),
+    ]),
     `recorded: ${catalogue.recorded}`,
   ];
-  emit(catalogue, false, lines);
+  emit(catalogue, json(args.flags), lines);
+}
+
+/** The gallery is generated, never hand-written: one specimen per catalogue entry. */
+async function gallery(args: Args): Promise<void> {
+  if (args.positional.length > 0) throw new UsageError("gallery takes no arguments");
+  const catalogue = loadCatalogue();
+  const flag = args.flags.get("out");
+  const path = typeof flag === "string" ? resolve(flag) : join(import.meta.dir, "..", "examples", "component-gallery.html");
+  await writeFile(path, `${renderGallery(catalogue)}\n`, "utf8");
+  const summary = { path, groups: catalogue.groups.length, entries: catalogue.entries.length };
+  emit(summary, json(args.flags), [`wrote ${path}`, `${summary.entries} entries in ${summary.groups} groups`]);
 }
 
 async function main(): Promise<void> {
@@ -508,6 +513,8 @@ async function main(): Promise<void> {
       return events(args);
     case "components":
       return components(args);
+    case "gallery":
+      return gallery(args);
     case "help":
       process.stdout.write(`${USAGE}\n`);
       return;
