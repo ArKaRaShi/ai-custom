@@ -207,7 +207,9 @@ export default function markdownQualityExtension(pi: ExtensionAPI): void {
         );
       }
 
-      lines.push("Address these findings in your next edit.");
+      lines.push(
+        "These findings are polish, not blockers. There is no need to rush: finish the current task first, and fix them when it suits the work.",
+      );
 
       return {
         additionalContext: lines.join("\n"),
