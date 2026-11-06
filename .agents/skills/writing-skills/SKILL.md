@@ -32,6 +32,13 @@ Every skill is frontmatter, a title, one sentence on what it produces, then one 
 
 The validator accepts `## Steps`, `## Rules`, and `## The Pattern` (read as `## Rules`) as the main section, and matches `## The tests` in any letter case.
 
+### Exit conditions
+
+Each step ends on a condition that tells the agent when to stop. Make it checkable and exhaustive.
+
+- "Every failing scenario has a named cause" forces more legwork than "list the failures".
+- A vague exit invites the agent to stop early. [Splitting](#splitting) says what to try first.
+
 ### Description
 
 The description is a context pointer. It says what the skill is and which cases should load it.
@@ -47,10 +54,16 @@ The description is a context pointer. It says what the skill is and which cases 
 
 | Choice | Frontmatter | Costs |
 | --- | --- | --- |
-| Agent fires it | description with trigger branches | context load, every turn |
-| You fire it | `disable-model-invocation: true`, one-line description | you must remember it exists |
+| Agent fires it (agent-fired) | description with trigger branches | context load, every turn |
+| You fire it (user-fired) | `disable-model-invocation: true`, one-line description | you must remember it exists |
 
 Pick "you fire it" when the skill only ever runs by hand. Pick "agent fires it" when the agent, or another skill, must reach it alone.
+
+No skill can invoke a user-fired skill, because it has no description to find. Put reference that two or more skills need in an agent-fired reference skill, or in a plain file outside any skill folder that each of them links to.
+
+### Router skills
+
+When you cannot remember all your user-fired skills, add one user-fired router skill that names them and says when to use each. It only hints: you type the name of the skill it points to. A skill that loads its targets itself, like `engineer-principles`, is an index, not a router.
 
 ### Body
 
@@ -63,6 +76,13 @@ Pick "you fire it" when the skill only ever runs by hand. Pick "agent fires it" 
 - Cache only what the agent cannot find by looking: unwritten conventions, reasons, gotchas. Leave anything a config file or `--help` already says.
 - Delete sentences the model follows by default. When in doubt, delete.
 - Show one concrete example for any rule a reader could misread.
+
+### Splitting
+
+Split a skill only when the split pays for its cost: a new agent-fired skill adds context load, and a new user-fired skill adds cognitive load.
+
+- **By sequence.** Later steps in view pull the agent toward finishing the current one early. Sharpen that step's exit first. If the exit remains fuzzy and you see the rush, move the later steps behind a real boundary: a handoff or a subagent call. An inline call to another skill leaves them in view and hides nothing.
+- **By invocation.** Split off an agent-fired skill when a word you really type in prompts should reach it alone, or another skill must reach it. The new description loads every turn, so the separate trigger must justify that cost.
 
 ### Files
 
