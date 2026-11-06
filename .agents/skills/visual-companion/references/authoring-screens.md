@@ -92,7 +92,8 @@ An inline `margin` on a child overrides the frame rule. That is the supported wa
 
 - A screen that asks three questions at once — split it.
 - Inline `style` on every element to fake a design system; the components already are one.
-- A wide table with no `vc-scroll` around it: on a narrow screen it pushes the whole page sideways instead of scrolling inside its own region.
+- A wide table with no `vc-scroll` around it: on a narrow screen the stylesheet makes it scroll inside its own box, but a `vc-scroll` wrapper with `tabindex="0"` keeps the region reachable by keyboard.
+- A code block with long lines and no class: the stylesheet makes it scroll inside its box. Use `vc-pre` (or `vc-code`) for the styled box.
 - Stacking cards as children of a bare `<div>` or `<section>`: the wrapper has no spacing rule and the cards touch. Wrap them in `.vc-stack`, or place them directly in `.vc-main`. `tests/spacing.test.ts` fails on this pattern and reports the file and line.
 - A grid or flex container built with `1fr` instead of `minmax(0, 1fr)`: the track grows to a child's minimum width and overflows the viewport.
 - `--plain` for a fragment: you lose the frame and the styles, and get unstyled markup.

@@ -443,6 +443,16 @@
     max-width: 100%;
   }
 
+  /* A table with no `vc-scroll` around it must not widen the page on a narrow screen: it scrolls
+     inside its own box instead. */
+  @media (max-width: 640px) {
+    .vc-table {
+      display: block;
+      max-width: 100%;
+      overflow-x: auto;
+    }
+  }
+
   .vc-table th,
   .vc-table td {
     padding: var(--vc-space-3) var(--vc-space-4);
@@ -1449,6 +1459,12 @@
     color: var(--vc-fg);
     font: 16px/1.55 var(--vc-font);
     min-height: 100vh;
+  }
+
+  /* A code block written without a class scrolls inside its box instead of running past the card. */
+  .vc-body pre {
+    max-width: 100%;
+    overflow-x: auto;
   }
 
   .vc-bar {
