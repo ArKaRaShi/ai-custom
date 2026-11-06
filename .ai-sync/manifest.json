@@ -627,6 +627,15 @@
       "root": "omp",
       "path": "rules/ts-ban-relative-import.md",
       "sync": false
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "explaining-domains",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
     }
   ]
 }
