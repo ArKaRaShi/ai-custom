@@ -3,6 +3,12 @@ import { afterEach, expect, spyOn, test } from "bun:test";
 import { parseFlow, readGraph, reach } from "../assets/components/diagram.js";
 import { FakeElement, FakeEvent } from "./dom";
 import { cleanup, graphEdge, graphNode, harness, Node, Observer, pathPoints, Tabs } from "./diagram-fixture";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { parseCss, splitSelectors } from "./css";
+
+const stylesheetPath = join(import.meta.dir, "..", "assets", "components.css");
+const stylesheet = readFileSync(stylesheetPath, "utf8");
 
 function graph(source: string) {
   const result = parseFlow(source);
@@ -460,4 +466,129 @@ test("reach controls show depths and status, toggle off, and clear on Escape", (
   const escapedEdge = persist.hasAttribute("data-reach-edge");
   expect(escapedMode).toBe("idle");
   expect(escapedEdge).toBe(false);
+});
+
+/**
+ * Whether the request marker is on screen: the fake DOM runs no stylesheet, so this applies the one
+ * thing the stylesheet decides, a rule `vc-diagram[data-diagram-mode="<mode>"] .vc-diagram-marker`
+ * with `display: none`, to the mode the element carries.
+ */
+function markerShown(source: string, diagram: FakeElement, marker: FakeElement & { hidden: boolean }): boolean {
+  if (marker.hidden) return false;
+  const mode = diagram.getAttribute("data-diagram-mode");
+  const hiddenModes = new Set<string>();
+  for (const rule of parseCss(source).rules) {
+    if (!/display:\s*none\s*;?/.test(rule.body)) continue;
+    for (const part of splitSelectors(rule.selector)) {
+      const hit = /^vc-diagram\[data-diagram-mode="(\w+)"\] \.vc-diagram-marker$/.exec(part);
+      if (hit) hiddenModes.add(hit[1]);
+    }
+  }
+  return mode === null || !hiddenModes.has(mode);
+}
+
+interface ReachScene {
+  readonly diagram: FakeElement;
+  readonly marker: FakeElement & { hidden: boolean; style: { values: Map<string, string> } };
+  readonly tabs: Tabs;
+  readonly database: Node;
+  readonly upstream: FakeElement;
+  readonly clear: FakeElement;
+  readonly doc: { dispatchEvent(event: FakeEvent): void };
+}
+
+function reachScene(): ReachScene {
+  const { diagram, ids, find, doc } = harness();
+  const tabs = new Tabs();
+  tabs.panels = [{ at: "api" }, { at: "queue" }];
+  ids.set("steps", tabs);
+  diagram.setAttribute("for", "steps");
+  const svg = new Node("svg");
+  const api = graphNode("api", "API");
+  const queue = graphNode("queue", "Queue");
+  const database = graphNode("database", "Database");
+  api.rect.left = 10;
+  queue.rect.left = 120;
+  svg.append(api, queue, database, graphEdge("api", "queue"), graphEdge("queue", "database"));
+  diagram.append(svg);
+  diagram.connectedCallback();
+  const tools = find("vc-diagram-tools");
+  const upstream = tools.children.find((child) => child.textContent === "What feeds this");
+  const clear = tools.children.find((child) => child.textContent === "Clear");
+  if (!upstream || !clear) throw new Error("Missing reach controls");
+  const marker = find("vc-diagram-marker") as ReachScene["marker"];
+  return { diagram, marker, tabs, database, upstream, clear, doc };
+}
+
+function pressEscape(scene: ReachScene): void {
+  const escape = new FakeEvent("keydown") as FakeEvent & { key: string };
+  escape.key = "Escape";
+  scene.doc.dispatchEvent(escape);
+}
+
+test("the request marker is hidden while the diagram is in reach mode and is back, at the current tab's node, when reach ends", () => {
+  const scene = reachScene();
+  expect(markerShown(stylesheet, scene.diagram, scene.marker)).toBe(true);
+  expect(scene.marker.style.values.get("--mx")).toBe("10px");
+  scene.database.click();
+  scene.upstream.click();
+  expect(scene.diagram.getAttribute("data-diagram-mode")).toBe("reach");
+  expect(markerShown(stylesheet, scene.diagram, scene.marker)).toBe(false);
+  scene.clear.click();
+  expect(scene.diagram.getAttribute("data-diagram-mode")).toBe("idle");
+  expect(markerShown(stylesheet, scene.diagram, scene.marker)).toBe(true);
+  expect(scene.marker.style.values.get("--mx")).toBe("10px");
+  scene.database.click();
+  scene.upstream.click();
+  expect(markerShown(stylesheet, scene.diagram, scene.marker)).toBe(false);
+  pressEscape(scene);
+  expect(markerShown(stylesheet, scene.diagram, scene.marker)).toBe(true);
+  expect(scene.marker.style.values.get("--mx")).toBe("10px");
+});
+
+test("a tab change during reach leaves the marker hidden and puts it at the new tab's node when reach ends", () => {
+  const scene = reachScene();
+  scene.database.click();
+  scene.upstream.click();
+  scene.tabs.select(1);
+  expect(scene.diagram.getAttribute("data-diagram-mode")).toBe("reach");
+  expect(markerShown(stylesheet, scene.diagram, scene.marker)).toBe(false);
+  pressEscape(scene);
+  expect(markerShown(stylesheet, scene.diagram, scene.marker)).toBe(true);
+  expect(scene.marker.style.values.get("--mx")).toBe("120px");
+});
+
+test("the marker check notices a stylesheet that keeps the marker visible in reach mode", () => {
+  const broken = stylesheet.replace('vc-diagram[data-diagram-mode="reach"] .vc-diagram-marker', 'vc-diagram[data-diagram-mode="reach-x"] .vc-diagram-marker');
+  expect(broken).not.toBe(stylesheet);
+  const scene = reachScene();
+  scene.database.click();
+  scene.upstream.click();
+  expect(markerShown(broken, scene.diagram, scene.marker)).toBe(true);
+});
+
+function statusAfter(selected: string, button: "What feeds this" | "What this feeds"): string {
+  const { diagram, find } = harness();
+  const svg = new Node("svg");
+  const nodes = [graphNode("api", "API"), graphNode("queue", "Queue"), graphNode("database", "Database")];
+  svg.append(...nodes, graphEdge("api", "queue"), graphEdge("queue", "database"));
+  diagram.append(svg);
+  diagram.connectedCallback();
+  const tools = find("vc-diagram-tools");
+  const control = tools.children.find((child) => child.textContent === button);
+  const target = nodes.find((node) => node.getAttribute("data-node") === selected);
+  if (!control || !target) throw new Error("Missing reach control or node");
+  target.click();
+  control.click();
+  return find("vc-diagram-status").textContent;
+}
+
+test("a reach with no other node points the reader at the opposite direction", () => {
+  expect(statusAfter("database", "What this feeds")).toBe("Database feeds these: nothing. Try What feeds this.");
+  expect(statusAfter("api", "What feeds this")).toBe("Nothing feeds API. Try What this feeds.");
+});
+
+test("a reach that finds nodes keeps its plain wording, with no hint", () => {
+  expect(statusAfter("database", "What feeds this")).toBe("These feed Database: Queue, API.");
+  expect(statusAfter("api", "What this feeds")).toBe("API feeds these: Queue, Database.");
 });

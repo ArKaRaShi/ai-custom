@@ -123,7 +123,7 @@
     box-sizing: border-box;
   }
 
-  :where(.vc-btn, .vc-option, .vc-input, .vc-tab, .vc-node, .vc-term-btn, .vc-pin-x, .vc-scrub-range, .vc-scroll, .vc-collapsed > summary, vc-contents a, vc-reveal):focus-visible {
+  :where(.vc-btn, .vc-option, .vc-input, .vc-node, .vc-term-btn, .vc-pin-x, .vc-scrub-range, .vc-scroll, .vc-collapsed > summary, vc-contents a, vc-reveal):focus-visible {
     outline: 2px solid var(--vc-accent);
     outline-offset: 2px;
   }
@@ -227,6 +227,10 @@
        track past the viewport. min-width:0 keeps the card at its track width. */
     min-width: 0;
   }
+
+  /* The card's padding is the only space at its edges: a first or last child keeps no margin of its own. */
+  .vc-card > :first-child { margin-top: 0; }
+  .vc-card > :last-child { margin-bottom: 0; }
 
   .vc-card-head {
     display: flex;
@@ -710,6 +714,8 @@
     overflow-x: auto;
   }
   vc-tabs[hide-tabs] > .vc-tablist { display: none; }
+  /* A hidden driver with no panel content has no box, so whatever follows it first in a card is the first content. */
+  vc-tabs[hide-tabs]:first-child:not(:has(> vc-tab:not(:empty))) + * { margin-top: 0; }
 
   .vc-tab-arrows { display: flex; gap: 6px; align-items: center; margin-left: auto; }
   .vc-tab-arrow {
@@ -718,7 +724,8 @@
     background: var(--vc-surface); color: var(--vc-fg); cursor: pointer; touch-action: manipulation;
   }
   .vc-tab-arrow:disabled { color: var(--vc-muted); cursor: default; }
-  .vc-tab-arrow:focus-visible, .vc-timebar-segment:focus-visible { outline: 2px solid var(--vc-accent); outline-offset: -2px; }
+  /* These sit flush inside a container that clips overflow, so the ring is drawn inside the control. */
+  .vc-tab:focus-visible, .vc-tab-arrow:focus-visible, .vc-timebar-segment:focus-visible { outline: 2px solid var(--vc-accent); outline-offset: -2px; }
   vc-cause, vc-timebar { display: block; }
   .vc-timebar-bar { display: flex; min-height: 44px; overflow-x: auto; border: 1px solid var(--vc-border-strong); border-radius: var(--vc-radius); }
   .vc-timebar-segment {
@@ -1037,7 +1044,10 @@
     border-radius: 50%;
     background: var(--vc-accent);
   }
-  .vc-diagram-marker[hidden] { display: none; }
+  /* Reach mode dims every node but the reached ones; a marker still sitting on a dimmed node would
+     read as part of the answer. The mode attribute is the only owner, so the marker returns the moment it changes. */
+  .vc-diagram-marker[hidden],
+  vc-diagram[data-diagram-mode="reach"] .vc-diagram-marker { display: none; }
   .vc-diagram-caption { margin: var(--vc-space-2) 0 0; font-size: var(--vc-text-xs); color: var(--vc-muted); }
   .vc-diagram-anchors {
     position: absolute;
@@ -1098,7 +1108,11 @@
     border-radius: var(--vc-radius);
     box-shadow: var(--vc-shadow-sm);
   }
-  .vc-predict-status { margin: 0; font-size: var(--vc-text-sm); color: var(--vc-muted); }
+  /* The padding and the grid gap are the only spacing: a child's own margin would add to them. */
+  vc-predict > * { margin: 0; }
+  .vc-predict-status { font-size: var(--vc-text-sm); color: var(--vc-muted); }
+  /* An empty live region stays in the page for screen readers but takes no grid row, so it leaves no gap above the card's bottom padding. */
+  .vc-predict-status:empty { position: absolute; }
   vc-reveal { display: block; padding-top: var(--vc-space-3); border-top: 1px solid var(--vc-border); }
   vc-predict[data-ready]:not([data-phase="committed"]) > vc-reveal { display: none; }
   vc-predict:not([data-ready]) > vc-reveal::before {
@@ -1607,8 +1621,9 @@
     }
   }
 
-  /* The shell owns links and tab stops too, so they get the same ring as our controls. */
-  :where(.vc-body :where(.vc-theme, [tabindex]:not([tabindex="-1"]), a)):focus-visible {
+  /* The shell owns links and tab stops too, so they get the same ring as our controls. The controls
+     that draw an inset ring (vc.components) are left out: this layer would otherwise override it. */
+  :where(.vc-body :where(.vc-theme, [tabindex]:not([tabindex="-1"], .vc-tab, .vc-tab-arrow, .vc-timebar-segment), a)):focus-visible {
     outline: 2px solid var(--vc-accent);
     outline-offset: 2px;
   }

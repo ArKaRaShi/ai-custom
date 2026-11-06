@@ -436,7 +436,10 @@ export class VcDiagram extends HTMLElement {
     for (const edge of result.edges) edge.el.setAttribute("data-reach-edge", "");
     const names = Array.from(result.depth.keys()).filter((id) => id !== this.#selected).map((id) => this.#network.nodes.get(id).label);
     const label = this.#network.nodes.get(this.#selected).label;
-    this.#status.textContent = direction === "up" ? `These feed ${label}: ${names.join(", ") || "nothing"}.` : `${label} feeds these: ${names.join(", ") || "nothing"}.`;
+    const list = names.join(", ");
+    // An empty result is a dead end, so the sentence names the button for the other direction by its own label.
+    if (direction === "up") this.#status.textContent = list ? `These feed ${label}: ${list}.` : `Nothing feeds ${label}. Try ${this.#down.textContent}.`;
+    else this.#status.textContent = list ? `${label} feeds these: ${list}.` : `${label} feeds these: nothing. Try ${this.#up.textContent}.`;
   }
 
   #link(event, active) {
