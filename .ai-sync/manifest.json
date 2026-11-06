@@ -398,7 +398,7 @@
       "kind": "skill",
       "root": "agents",
       "path": "ark-mode",
-      "sync": true,
+      "sync": false,
       "skill": {
         "origin": "authored"
       }
@@ -632,6 +632,87 @@
       "kind": "skill",
       "root": "agents",
       "path": "explaining-domains",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "engineer-principles",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "principle-foundational-thinking",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "principle-explain-the-number",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "principle-redesign-from-first-principles",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "principle-experience-first",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "principle-exhaust-the-design-space",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "principle-outcome-oriented-execution",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "principle-sequence-verifiable-units",
+      "sync": true,
+      "skill": {
+        "origin": "authored"
+      }
+    },
+    {
+      "kind": "skill",
+      "root": "agents",
+      "path": "benchmark-checklist",
       "sync": true,
       "skill": {
         "origin": "authored"
