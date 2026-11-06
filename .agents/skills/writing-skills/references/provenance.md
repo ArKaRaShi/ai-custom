@@ -8,6 +8,7 @@ The rules in `SKILL.md` come from the sources below. The wording is ours, and th
 | [Agent Skills specification](https://agentskills.io/specification) | Name rules: lowercase letters, digits and single hyphens, with no hyphen at either end and a match to the directory name |
 | Matt Pocock, `writing-for-agents` and `SKILL-MECHANICS.md` in [mattpocock/skills](https://github.com/mattpocock/skills) (MIT) | Description as a context pointer with one trigger per branch, the context-load and cognitive-load budgets, the choice of who invokes a skill, a completion criterion per step, positive phrasing, leading words, and deleting no-ops. Also: cache only what a lookup can't supply |
 | Lauren Tan, pstack authoring playbook, read through a [mirror](https://github.com/JoshueOsuna/pstack) (MIT) | When in doubt, delete. Say what to do and skip the reason |
+| Lauren Tan, [cursor/plugins `pstack/skills`](https://github.com/cursor/plugins/tree/main/pstack/skills) (MIT, notice in `engineer-principles/LICENSE-pstack.md`) | The `principle-*` skills in `engineer-principles`. `principle-foundational-thinking` is copied verbatim. The others are adapted or rewritten in our template |
 | Our own `ark-mode` playbooks | The `Exit:` wording on each step |
 | The earlier `skill-framework` | Preview first and act only with `--apply` |
 

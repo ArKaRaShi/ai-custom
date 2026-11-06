@@ -6,6 +6,8 @@ When project-scoped `AGENTS.md` or other Markdown workflow instructions conflict
 
 Use LSP whenever available.
 
+Before non-trivial coding work (bug fix, feature, refactor, review, or measurement), read `skill://engineer-principles` and follow it.
+
 ## Workflow
 
 Follow these execution principles during every session:

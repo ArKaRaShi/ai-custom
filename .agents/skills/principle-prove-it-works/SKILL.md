@@ -20,6 +20,9 @@ disable-model-invocation: true
 - Prefer the smallest reliable verification that demonstrates the required behavior.
 - Distinguish verified results from assumptions and untested behavior.
 - Report verification limitations explicitly.
+- Check the real artifact, not a proxy: read the actual value, run the feature, check process liveness directly. Do not infer from file times, cached output, self-reports, or "it compiles."
+- When a check fails, suspect the observation method before suspecting the system.
+- Script the check when you can: a deterministic script that reruns the same comparison beats a one-time look. Keep its output as an artifact a reviewer can rerun.
 
 ## Paired Example
 
@@ -41,5 +44,6 @@ Rationale: compilation alone cannot establish that the real use case behaves as 
 - Have relevant failure paths and edge cases been considered?
 - Could existing behavior have regressed?
 - Am I claiming anything I did not actually verify?
+- Did I read the real value, or a proxy for it?
 
 **Constraint:** Verification should be proportional to risk. Avoid elaborate test infrastructure for trivial changes, but never claim unperformed verification as successful.

@@ -25,6 +25,8 @@ Keep a test that catches the first edit and survives the second. Rewrite or dele
 - A payload received by a mocked external service is behavior, because that service sees it. A call to an internal helper is not.
 - Assert the error type callers branch on, not the exact message wording.
 - Pair a "never happens" assertion with a case where it does happen, so the test shows it can see the call.
+- A restated constant or prompt string that never runs the code that reads it proves nothing.
+- An invariant is behavior: a key that must exist in two tables, or a compile-time type check.
 
 ## The Tests
 
