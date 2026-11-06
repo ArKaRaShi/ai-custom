@@ -1,3 +1,0 @@
-interface:
-  display_name: "Git PR Convention"
-  short_description: "Draft repo-aware PR titles and descriptions"
