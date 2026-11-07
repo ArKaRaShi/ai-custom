@@ -1,48 +1,71 @@
 modelRoles:
-  smol: openai-codex/gpt-6-luna:auto
-  slow: openai-codex/gpt-6.1-sol:high
-  vision: anthropic/claude-sonnet-5-5:auto
-  plan: anthropic/claude-sonnet-5-5:xhigh
-  designer: anthropic/claude-sonnet-5-5:auto
-  commit: openai-codex/gpt-6-luna:auto
-  advisor: openai-codex/gpt-6-luna:high
-  free: openrouter/qwen/qwen3.8-27b:free
-  payg: openrouter/z-ai/glm-5.3-flash:auto
-  tiny: local/lfm2.5-230m
-  judge: openrouter/~typesafe/jev-latest
-  arena-candidate-1: anthropic/claude-sonnet-5-5:high
-  arena-candidate-2: openai-codex/gpt-6.1-terra:high
-  arena-judge: anthropic/claude-opus-5-5:medium
-  cheap: litellm/gemini-3.8-flash
-  deepseek: vercel-ai-gateway/deepseek/deepseek-v4.1-flash-1017
-  test: anthropic/claude-haiku-5-5:high
-  default: anthropic/claude-sonnet-5-5:auto
-  reviewer: anthropic/claude-sonnet-5-5:high
-  security-reviewer: openai-codex/gpt-6.1-sol:high
+  smol: "@smol-sub-codex"
+  slow: "@slow-sub-codex"
+  vision: "@vision-sub-anthropic"
+  plan: "@plan-sub-anthropic"
+  designer: "@designer-sub-anthropic"
+  commit: "@commit-sub-codex"
+  advisor: "@advisor-sub-codex"
+  free: "@free-free-openrouter"
+  payg: "@payg-payg-openrouter"
+  tiny: "@tiny-free-local"
+  judge: "@judge-payg-openrouter"
+  arena-candidate-1: "@arena-candidate-1-sub-anthropic"
+  arena-candidate-2: "@arena-candidate-2-sub-codex"
+  arena-judge: "@arena-judge-sub-anthropic"
+  deepseek: "@deepseek-payg-vercel"
+  test: "@test-sub-anthropic"
+  default: "@default-sub-anthropic"
+  reviewer: "@reviewer-sub-anthropic"
+  security-reviewer: "@security-reviewer-sub-codex"
+  smol-sub-codex: openai-codex/gpt-6-luna:auto
+  smol-sub-anthropic: anthropic/claude-sonnet-5-5:low
+  smol-free-litellm: litellm/gemini-3.8-flash
+  smol-sub-antigravity: google-antigravity/gemini-3.8-flash:high
+  slow-sub-codex: openai-codex/gpt-6.1-sol:high
+  vision-sub-anthropic: anthropic/claude-sonnet-5-5:auto
+  plan-sub-anthropic: anthropic/claude-sonnet-5-5:xhigh
+  designer-sub-anthropic: anthropic/claude-sonnet-5-5:auto
+  commit-sub-codex: openai-codex/gpt-6-luna:auto
+  advisor-sub-codex: openai-codex/gpt-6-luna:high
+  free-free-openrouter: openrouter/qwen/qwen3.8-27b:free
+  free-free-openrouter-2: openrouter/thinkingmachines/inkling-small:free
+  free-free-openrouter-3: openrouter/thinkingmachines/inkling:free:high
+  free-free-openrouter-4: openrouter/nvidia/nemotron-3-ultra-550b-a55b:free:high
+  free-free-openrouter-5: openrouter/google/gemma-4-31b-it:free
+  free-free-openrouter-6: openrouter/poolside/laguna-s-2.1:free
+  free-free-openrouter-7: openrouter/google/gemma-4-26b-a4b-it:free
+  payg-payg-openrouter: openrouter/z-ai/glm-5.3-flash:auto
+  payg-payg-openrouter-2: openrouter/qwen/qwen3.8-flash:auto
+  tiny-free-local: local/lfm2.5-230m
+  judge-payg-openrouter: openrouter/~typesafe/jev-latest
+  arena-candidate-1-sub-anthropic: anthropic/claude-sonnet-5-5:high
+  arena-candidate-2-sub-codex: openai-codex/gpt-6.1-terra:high
+  arena-judge-sub-anthropic: anthropic/claude-opus-5-5:medium
+  deepseek-payg-vercel: vercel-ai-gateway/deepseek/deepseek-v4.1-flash-1017
+  test-sub-anthropic: anthropic/claude-haiku-5-5:high
+  test-sub-codex: openai-codex/gpt-6-luna:high
+  default-sub-anthropic: anthropic/claude-sonnet-5-5:auto
+  reviewer-sub-anthropic: anthropic/claude-sonnet-5-5:high
+  security-reviewer-sub-codex: openai-codex/gpt-6.1-sol:high
 retry:
   fallbackChains:
-    cheap:
-      - google-antigravity/gemini-3.8-flash:high
     test:
-      - openai-codex/gpt-6-luna:high
+      - "@test-sub-codex"
     smol:
-      - anthropic/claude-sonnet-5-5:low
-    task:
-      - openai-codex/gpt-6-luna:high
-      - anthropic/claude-sonnet-5-5:auto
-      - openai-codex/gpt-6.1-sol:auto
+      - "@smol-sub-anthropic"
     commit:
-      - openai-codex/gpt-6-luna:auto
+      - "@commit-sub-codex"
     payg:
-      - openrouter/qwen/qwen3.8-flash:auto
-      - openrouter/z-ai/glm-5.3-flash:auto
+      - "@payg-payg-openrouter-2"
+      - "@payg-payg-openrouter"
     free:
-      - openrouter/thinkingmachines/inkling-small:free
-      - openrouter/thinkingmachines/inkling:free:high
-      - openrouter/nvidia/nemotron-3-ultra-550b-a55b:free:high
-      - openrouter/google/gemma-4-31b-it:free
-      - openrouter/poolside/laguna-s-2.1:free
-      - openrouter/google/gemma-4-26b-a4b-it:free
+      - "@free-free-openrouter-2"
+      - "@free-free-openrouter-3"
+      - "@free-free-openrouter-4"
+      - "@free-free-openrouter-5"
+      - "@free-free-openrouter-6"
+      - "@free-free-openrouter-7"
 symbolPreset: nerd
 theme:
   dark: dark-catppuccin
