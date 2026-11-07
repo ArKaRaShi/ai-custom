@@ -13,6 +13,9 @@ modelPresets:
       payg: openrouter/z-ai/glm-5.3-flash:auto
       tiny: local/lfm2.5-230m
       judge: openrouter/~typesafe/jev-latest
+      arena-candidate-1: anthropic/claude-sonnet-5-5:high
+      arena-candidate-2: openai-codex/gpt-6.1-terra:high
+      arena-judge: anthropic/claude-opus-5-5:medium
       cheap: litellm/gemini-3.8-flash
       test: anthropic/claude-haiku-5-5:high
       reviewer: anthropic/claude-sonnet-5-5:high
@@ -32,6 +35,9 @@ modelPresets:
       payg: openrouter/z-ai/glm-5.3-flash:auto
       tiny: local/lfm2.5-230m
       judge: openrouter/~typesafe/jev-latest
+      arena-candidate-1: anthropic/claude-sonnet-5-5:high
+      arena-candidate-2: openai-codex/gpt-6.1-terra:high
+      arena-judge: anthropic/claude-opus-5-5:medium
       cheap: litellm/gemini-3.8-flash
       test: anthropic/claude-haiku-5-5:high
       reviewer: anthropic/claude-sonnet-5-5:high
