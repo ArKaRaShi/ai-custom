@@ -1,4 +1,8 @@
-@import "tailwindcss";
+/* Scan only the renderer source: the skill folder holds unrelated HTML and the bundled CLI module. */
+@import "tailwindcss" source(none);
+@source "./app.tsx";
+@source "./blocks";
+@source "./components";
 @import "tw-animate-css";
 
 /* Explain theme in shadcn's token names: indigo/violet accent, light by default, dark when the system asks. */
