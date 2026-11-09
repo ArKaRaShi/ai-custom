@@ -4,7 +4,7 @@ import type { HookAPI } from "@oh-my-pi/pi-coding-agent/extensibility/hooks";
 // discard uncommitted work, or overwrite remote git history.
 export interface DestructivePattern {
   re: RegExp;
-  category: "git" | "filesystem" | "database" | "disk";
+  category: "git" | "github" | "filesystem" | "database" | "disk";
   label: string;
 }
 
@@ -16,6 +16,13 @@ export const DESTRUCTIVE_PATTERNS: DestructivePattern[] = [
   { re: /\bgit\s+(?:restore|checkout)\s+\.\s*(?:&&|;|$)/i, category: "git", label: "git restore/checkout . (wipes all working changes)" },
   { re: /\bgit\s+clean\s+-[a-z]*[dfx][a-z]*\b/i, category: "git", label: "git clean (permanently deletes untracked files)" },
   { re: /\bgit\s+branch\s+-D\b/i, category: "git", label: "git branch -D (force delete unmerged branch)" },
+
+  // --- GITHUB WRITES (issues, pull requests, labels, comments, merges) ---
+  // Read-only gh commands (view, list, status, checks, diff) are not matched.
+  { re: /\bgh\s+issue\s+(?:create|edit|close|reopen|comment|delete|label|lock|unlock|transfer|pin|unpin)\b/i, category: "github", label: "gh issue write (creates or changes a GitHub issue)" },
+  { re: /\bgh\s+pr\s+(?:create|edit|close|reopen|comment|merge|ready|review|lock|unlock|update-branch)\b/i, category: "github", label: "gh pr write (creates or changes a pull request)" },
+  { re: /\bgh\s+label\s+(?:create|edit|delete|clone)\b/i, category: "github", label: "gh label write (changes repository labels)" },
+  { re: /\bgh\s+api\b.*(?:-X|--method)[\s=]+(?:POST|PATCH|PUT|DELETE)\b/i, category: "github", label: "gh api write request (POST, PATCH, PUT, or DELETE)" },
 
   // --- FILESYSTEM & SYSTEM ---
   { re: /\brm\s+(?:-[a-z]*r[a-z]*\s+)+/i, category: "filesystem", label: "recursive directory deletion (rm -r)" },

@@ -73,3 +73,59 @@ describe("given guard-destructive pre-hook, when evaluating bash commands, then 
     expect(findDestructiveCommand("dd if=/dev/zero of=/dev/rdisk2 bs=4M")?.category).toBe("disk");
   });
 });
+
+describe("given guard-destructive pre-hook, when evaluating gh commands, then confirm GitHub writes and allow read-only use", () => {
+  it("flags gh issue and gh pr write subcommands", () => {
+    const commands: string[] = [
+      'gh issue create --title "x" --body "y"',
+      "gh issue edit 12 --add-label ready-for-agent",
+      "gh issue close 12",
+      "gh pr create --fill",
+      "gh pr merge 7 --squash",
+    ];
+    for (const command of commands) {
+      const hit = findDestructiveCommand(command);
+      expect(hit?.category).toBe("github");
+    }
+  });
+
+  it("flags gh label writes and gh api write methods", () => {
+    const commands: string[] = [
+      "gh label create needs-triage",
+      "gh api -X POST repos/o/r/issues -f title=x",
+      "gh api --method=PATCH repos/o/r/issues/1",
+    ];
+    for (const command of commands) {
+      const hit = findDestructiveCommand(command);
+      expect(hit?.category).toBe("github");
+    }
+  });
+
+  it("allows read-only gh commands used by git-pr-mr and status checks", () => {
+    const commands: string[] = [
+      "gh pr view --json baseRefName -q .baseRefName",
+      "gh pr diff 7",
+      "gh pr checks 7",
+      "gh issue list -L 3",
+      "gh issue view 12",
+      "gh auth status",
+      "gh api repos/o/r/issues",
+    ];
+    for (const command of commands) {
+      const hit = findDestructiveCommand(command);
+      expect(hit).toBeUndefined();
+    }
+  });
+
+  it("does not flag gh write text inside echo, grep, or a commit message", () => {
+    const commands: string[] = [
+      'echo "gh issue create"',
+      'rg "gh pr create" docs/',
+      'git commit -m "docs: never run gh issue create"',
+    ];
+    for (const command of commands) {
+      const hit = findDestructiveCommand(command);
+      expect(hit).toBeUndefined();
+    }
+  });
+});
