@@ -73,6 +73,19 @@
 }
 
 @layer base {
+  /* Native controls (scrollbars, autofill) follow the page's light or dark theme. */
+  :root {
+    color-scheme: light dark;
+  }
+  /* Number fields sit beside a slider, so the browser's own spinner is redundant and ignores the theme. */
+  input[type="number"] {
+    appearance: textfield;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+  }
   * {
     @apply border-border outline-ring/50;
   }

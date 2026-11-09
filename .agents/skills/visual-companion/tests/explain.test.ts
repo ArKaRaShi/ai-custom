@@ -334,4 +334,31 @@ test.skipIf(!playwright || !existsSync(chrome))("a lesson whose expected values 
     await browser.close();
   }
 }, 60_000);
+test.skipIf(!playwright || !existsSync(chrome))("a typed number outside the input's range is pulled back to the range when the field loses focus", async () => {
+  const url = await start();
+  expect((await explain(pumpLesson)).code).toBe(0);
+  const browser = await playwright!.chromium.launch({ executablePath: chrome, headless: true });
+  try {
+    const page = await browser.newPage();
+    await page.goto(url);
+    await page.waitForSelector("[data-block=Derivation]");
+    const field = page.locator("[data-input=P]");
+    const pascal = async (): Promise<number> => Number(await page.locator("[data-step=Pa]").getAttribute("data-value"));
+
+    // P runs 0..10 bar. "12" passes through "1" (in range, applied live) on the way.
+    await field.fill("");
+    await field.pressSequentially("12");
+    expect(await field.inputValue()).toBe("12");
+    await field.blur();
+    expect(await field.inputValue()).toBe("10");
+    expect(await pascal()).toBeCloseTo(1_000_000, 6);
+
+    await field.fill("-3");
+    await field.blur();
+    expect(await field.inputValue()).toBe("0");
+    expect(await pascal()).toBe(0);
+  } finally {
+    await browser.close();
+  }
+}, 60_000);
 });

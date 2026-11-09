@@ -2,6 +2,7 @@
 import { useStateStore, useStateValue } from "@json-render/react";
 import { cn } from "cn";
 import { Activity, Gauge, type LucideIcon, RotateCcw, Ruler, TrendingDown, TrendingUp, Wrench, Zap } from "lucide-react";
+import { useState } from "react";
 import type { z } from "zod";
 import type { IconName, InputSpec, Preset } from "@/catalog";
 import { Button } from "@/components/ui/button";
@@ -21,8 +22,18 @@ const ICONS: Record<z.infer<typeof IconName>, LucideIcon> = {
 };
 
 function Field({ input, value, start, onChange }: { input: InputSpec; value: number; start: number; onChange: (value: number) => void }) {
+  // While the reader types, the field shows their text; in-range numbers apply live,
+  // and anything else (empty, out of range) waits until the field loses focus.
+  const [draft, setDraft] = useState<string | null>(null);
   const changed = value !== start;
   const id = `input-${input.key}`;
+  const commit = () => {
+    if (draft === null) return;
+    const typed = Number(draft);
+    const clamped = Math.min(input.max, Math.max(input.min, typed));
+    if (draft.trim() !== "" && Number.isFinite(typed)) onChange(clamped);
+    setDraft(null);
+  };
   return (
     <div className="flex flex-col gap-2.5 text-sm text-muted-foreground">
       <div className="flex items-center justify-between gap-2">
@@ -33,14 +44,18 @@ function Field({ input, value, start, onChange }: { input: InputSpec; value: num
             data-input={input.key}
             type="number"
             inputMode="decimal"
-            value={value}
+            value={draft ?? value}
             min={input.min}
             max={input.max}
             step={input.step}
             onChange={(event) => {
-              const next = event.target.valueAsNumber;
-              if (Number.isFinite(next)) onChange(next);
+              const text = event.target.value;
+              const typed = event.target.valueAsNumber;
+              setDraft(text);
+              if (Number.isFinite(typed) && typed >= input.min && typed <= input.max) onChange(typed);
             }}
+            onBlur={commit}
+            onKeyDown={(event) => event.key === "Enter" && commit()}
             className={cn("h-7 w-24 px-2 text-right", changed && "border-primary text-primary")}
           />
           {input.unit && <span className="font-normal text-muted-foreground">{input.unit}</span>}
