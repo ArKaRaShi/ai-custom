@@ -6,14 +6,14 @@ import { z } from "zod";
 
 export const SectionId = z.string().regex(/^[a-z][a-z0-9-]*$/, "use lowercase letters, digits and hyphens");
 /** A name mathjs can use as a symbol: input keys and step ids. */
-export const Symbol = z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/, "use letters, digits and underscores, starting with a letter");
+export const Identifier = z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/, "use letters, digits and underscores, starting with a letter");
 
 /** Icons a spec may name; the renderer maps each to one Lucide icon. */
 export const ICON_NAMES = ["wear", "ruler", "gauge", "zap", "wrench", "activity", "trending-up", "trending-down"] as const;
 export const IconName = z.enum(ICON_NAMES);
 
 export const Input = z.object({
-  key: Symbol,
+  key: Identifier,
   label: z.string().min(1),
   value: z.number().describe("Starting value"),
   min: z.number(),
@@ -23,7 +23,7 @@ export const Input = z.object({
 });
 
 export const Step = z.object({
-  id: Symbol.describe("Name later steps use to reference this result"),
+  id: Identifier.describe("Name later steps use to reference this result"),
   title: z.string().min(1),
   plain: z.string().min(1).describe("One plain-language line saying what the step means"),
   ref: z.string().min(1).describe("Code reference this step implements, such as retry.py:42"),

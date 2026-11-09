@@ -2,17 +2,17 @@
 import { defineCatalog, type Spec } from "@json-render/core";
 import { defineRegistry, JSONUIProvider, Renderer } from "@json-render/react";
 import { schema } from "@json-render/react/schema";
+import { cn } from "cn";
 import katex from "katex";
 import { BookOpen, Code2, Lightbulb, Sparkles } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { Derivation } from "@/blocks/derivation";
+import { Playground } from "@/blocks/playground";
 import { AnswerProps, BLOCK_PROPS, LessonProps, SectionProps } from "@/catalog";
-import { cn } from "cn";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Derivation } from "@/blocks/derivation";
-import { Playground } from "@/blocks/playground";
 import "./styles.css";
 
 const catalog = defineCatalog(schema, {
@@ -29,6 +29,7 @@ const catalog = defineCatalog(schema, {
 
 function Tex({ src }: { src: string }) {
   const html = katex.renderToString(src, { throwOnError: false, displayMode: true });
+  // biome-ignore lint/security/noDangerouslySetInnerHtml: KaTeX output with trust off; it renders math, never author HTML.
   return <div className="mt-1 overflow-x-auto rounded-lg bg-background p-3" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
@@ -111,7 +112,8 @@ function Lesson({ title, subtitle, children }: { title: string; subtitle: string
       <main ref={ref} className="mx-auto max-w-[820px] pt-12 pr-4 pb-30 pl-7 md:px-6">
         <header>
           <p className="m-0 inline-flex items-center gap-1.5 text-xs font-semibold tracking-[.14em] text-primary uppercase">
-            <BookOpen size={14} aria-hidden />Explain
+            <BookOpen size={14} aria-hidden />
+            Explain
           </p>
           <h1 className="mt-2 mb-3 text-3xl leading-tight font-bold tracking-tight md:text-[40px]">{title}</h1>
           {subtitle && <p className="mt-0 mb-7 text-lg text-muted-foreground">{subtitle}</p>}
@@ -124,11 +126,16 @@ function Lesson({ title, subtitle, children }: { title: string; subtitle: string
 
 const { registry } = defineRegistry(catalog, {
   components: {
-    Lesson: ({ props, children }) => <Lesson title={props.title} subtitle={props.subtitle}>{children}</Lesson>,
+    Lesson: ({ props, children }) => (
+      <Lesson title={props.title} subtitle={props.subtitle}>
+        {children}
+      </Lesson>
+    ),
     Answer: ({ props }) => (
       <Card data-block="Answer" className="gap-1.5 bg-gradient-to-br from-accent to-card px-6">
         <span className="inline-flex items-center gap-1.5 text-xs font-bold tracking-[.08em] text-primary uppercase">
-          <Sparkles size={14} aria-hidden />Answer
+          <Sparkles size={14} aria-hidden />
+          Answer
         </span>
         <p className="m-0 text-[19px] leading-normal">{props.text}</p>
       </Card>
@@ -142,11 +149,17 @@ const { registry } = defineRegistry(catalog, {
     Concept: ({ props }) => (
       <div data-block="Concept" className="grid gap-4 md:grid-cols-2">
         <Card className="gap-3 px-5 py-5">
-          <Badge variant="secondary"><Lightbulb aria-hidden />Simple</Badge>
+          <Badge variant="secondary">
+            <Lightbulb aria-hidden />
+            Simple
+          </Badge>
           <p className="m-0">{props.simple}</p>
         </Card>
         <Card className="min-w-0 gap-3 px-5 py-5">
-          <Badge><Code2 aria-hidden />Expert</Badge>
+          <Badge>
+            <Code2 aria-hidden />
+            Expert
+          </Badge>
           <p className="m-0">{props.expert}</p>
           {props.tex && <Tex src={props.tex} />}
         </Card>

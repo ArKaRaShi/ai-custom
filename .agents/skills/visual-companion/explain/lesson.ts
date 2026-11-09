@@ -39,8 +39,8 @@ export const Lesson = LessonProps.extend({
   const stepIds = new Set<string>();
   // The Playground sticks only within its own section, so derivations it drives must follow it there.
   let playground: { section: number; block: number } | undefined;
-  lesson.sections.forEach((section, s) =>
-    section.blocks.forEach((block, b) => {
+  for (const [s, section] of lesson.sections.entries()) {
+    for (const [b, block] of section.blocks.entries()) {
       if (block.type === "Playground") {
         if (playground) issue(["sections", s, "blocks", b], "a lesson has at most one Playground");
         playground ??= { section: s, block: b };
@@ -57,16 +57,17 @@ export const Lesson = LessonProps.extend({
           stepIds.add(step.id);
         });
       }
-    }),
-  );
+    }
+  }
   const anchor = playground;
   if (anchor) {
-    lesson.sections.forEach((section, s) =>
-      section.blocks.forEach((block, b) => {
+    for (const [s, section] of lesson.sections.entries()) {
+      for (const [b, block] of section.blocks.entries()) {
         const after = s === anchor.section && b > anchor.block;
-        if (block.type === "Derivation" && !after) issue(["sections", s, "blocks", b], "put this Derivation after the Playground, in the same section, so the inputs stay in view");
-      }),
-    );
+        if (block.type === "Derivation" && !after)
+          issue(["sections", s, "blocks", b], "put this Derivation after the Playground, in the same section, so the inputs stay in view");
+      }
+    }
   }
 });
 
@@ -127,8 +128,7 @@ function stepPath(lesson: LessonSpec, stepId: string): PropertyKey[] {
 function locate(raw: unknown, path: PropertyKey[]): string {
   const parts: string[] = [];
   let node: unknown = raw;
-  for (let i = 0; i < path.length; i++) {
-    const key = path[i]!;
+  for (const [i, key] of path.entries()) {
     node = typeof node === "object" && node !== null ? (node as Record<PropertyKey, unknown>)[key] : undefined;
     const label = (field: string): string => {
       const value = typeof node === "object" && node !== null ? (node as Record<string, unknown>)[field] : undefined;
@@ -152,20 +152,22 @@ function locate(raw: unknown, path: PropertyKey[]): string {
 
 /** Element keys use ":" so they cannot collide: section ids allow only lowercase letters, digits and hyphens. */
 export function toRenderSpec(lesson: LessonSpec): RenderSpec {
+  const root = { type: "Lesson", props: { title: lesson.title, subtitle: lesson.subtitle }, children: ["answer"] };
   const elements: RenderSpec["elements"] = {
-    lesson: { type: "Lesson", props: { title: lesson.title, subtitle: lesson.subtitle }, children: ["answer"] },
+    lesson: root,
     answer: { type: "Answer", props: { text: lesson.answer }, children: [] },
   };
   for (const section of lesson.sections) {
     const key = `section:${section.id}`;
-    elements.lesson!.children.push(key);
-    elements[key] = { type: "Section", props: { id: section.id, title: section.title }, children: [] };
-    section.blocks.forEach((block, i) => {
+    const element = { type: "Section", props: { id: section.id, title: section.title }, children: [] as string[] };
+    root.children.push(key);
+    elements[key] = element;
+    for (const [i, block] of section.blocks.entries()) {
       const blockKey = `block:${section.id}:${i}`;
       const { type, ...props } = block;
-      elements[key]!.children.push(blockKey);
+      element.children.push(blockKey);
       elements[blockKey] = { type, props, children: [] };
-    });
+    }
   }
   const model = lessonModel(lesson);
   const start = startValues(model.inputs);

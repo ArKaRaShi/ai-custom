@@ -6,7 +6,8 @@ import { all, ConstantNode, create, type MathNode, type Unit } from "mathjs";
 import type { InputSpec, StepSpec } from "./catalog";
 
 // mathjs types `all` as optional, but the package always exports it.
-const math = create(all!);
+if (!all) throw new Error("mathjs did not export its function set");
+const math = create(all);
 
 /** Everything a lesson's derivations depend on, in evaluation order. */
 export interface Model {

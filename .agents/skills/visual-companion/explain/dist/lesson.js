@@ -20317,11 +20317,11 @@ function date4(params) {
 }
 // catalog.ts
 var SectionId = exports_external.string().regex(/^[a-z][a-z0-9-]*$/, "use lowercase letters, digits and hyphens");
-var Symbol2 = exports_external.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/, "use letters, digits and underscores, starting with a letter");
+var Identifier = exports_external.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/, "use letters, digits and underscores, starting with a letter");
 var ICON_NAMES = ["wear", "ruler", "gauge", "zap", "wrench", "activity", "trending-up", "trending-down"];
 var IconName = exports_external.enum(ICON_NAMES);
 var Input = exports_external.object({
-  key: Symbol2,
+  key: Identifier,
   label: exports_external.string().min(1),
   value: exports_external.number().describe("Starting value"),
   min: exports_external.number(),
@@ -20330,7 +20330,7 @@ var Input = exports_external.object({
   unit: exports_external.string().min(1).optional().describe("mathjs unit, such as km or MB/s; the input enters formulas with this unit")
 });
 var Step = exports_external.object({
-  id: Symbol2.describe("Name later steps use to reference this result"),
+  id: Identifier.describe("Name later steps use to reference this result"),
   title: exports_external.string().min(1),
   plain: exports_external.string().min(1).describe("One plain-language line saying what the step means"),
   ref: exports_external.string().min(1).describe("Code reference this step implements, such as retry.py:42"),
@@ -62087,6 +62087,8 @@ function create2(factories, config3) {
   return math;
 }
 // evaluate.ts
+if (!all)
+  throw new Error("mathjs did not export its function set");
 var math = create2(all);
 
 class StepError extends Error {
@@ -62183,35 +62185,39 @@ var Lesson = LessonProps.extend({
   });
   const stepIds = new Set;
   let playground;
-  lesson.sections.forEach((section, s) => section.blocks.forEach((block, b) => {
-    if (block.type === "Playground") {
-      if (playground)
-        issue2(["sections", s, "blocks", b], "a lesson has at most one Playground");
-      playground ??= { section: s, block: b };
-      if (inputKeys.size === 0)
-        issue2(["sections", s, "blocks", b], "a Playground needs lesson inputs");
-      block.presets.forEach((preset, p) => {
-        for (const key of Object.keys(preset.set)) {
-          if (!inputKeys.has(key))
-            issue2(["sections", s, "blocks", b, "presets", p, "set", key], `no input named "${key}"`);
-        }
-      });
+  for (const [s, section] of lesson.sections.entries()) {
+    for (const [b, block] of section.blocks.entries()) {
+      if (block.type === "Playground") {
+        if (playground)
+          issue2(["sections", s, "blocks", b], "a lesson has at most one Playground");
+        playground ??= { section: s, block: b };
+        if (inputKeys.size === 0)
+          issue2(["sections", s, "blocks", b], "a Playground needs lesson inputs");
+        block.presets.forEach((preset, p) => {
+          for (const key of Object.keys(preset.set)) {
+            if (!inputKeys.has(key))
+              issue2(["sections", s, "blocks", b, "presets", p, "set", key], `no input named "${key}"`);
+          }
+        });
+      }
+      if (block.type === "Derivation") {
+        block.steps.forEach((step, t) => {
+          if (stepIds.has(step.id) || inputKeys.has(step.id))
+            issue2(["sections", s, "blocks", b, "steps", t, "id"], `"${step.id}" is already an input or step`);
+          stepIds.add(step.id);
+        });
+      }
     }
-    if (block.type === "Derivation") {
-      block.steps.forEach((step, t) => {
-        if (stepIds.has(step.id) || inputKeys.has(step.id))
-          issue2(["sections", s, "blocks", b, "steps", t, "id"], `"${step.id}" is already an input or step`);
-        stepIds.add(step.id);
-      });
-    }
-  }));
+  }
   const anchor2 = playground;
   if (anchor2) {
-    lesson.sections.forEach((section, s) => section.blocks.forEach((block, b) => {
-      const after = s === anchor2.section && b > anchor2.block;
-      if (block.type === "Derivation" && !after)
-        issue2(["sections", s, "blocks", b], "put this Derivation after the Playground, in the same section, so the inputs stay in view");
-    }));
+    for (const [s, section] of lesson.sections.entries()) {
+      for (const [b, block] of section.blocks.entries()) {
+        const after = s === anchor2.section && b > anchor2.block;
+        if (block.type === "Derivation" && !after)
+          issue2(["sections", s, "blocks", b], "put this Derivation after the Playground, in the same section, so the inputs stay in view");
+      }
+    }
   }
 });
 function parseLesson(raw) {
@@ -62256,8 +62262,7 @@ function stepPath(lesson, stepId) {
 function locate(raw, path) {
   const parts = [];
   let node2 = raw;
-  for (let i = 0;i < path.length; i++) {
-    const key = path[i];
+  for (const [i, key] of path.entries()) {
     node2 = typeof node2 === "object" && node2 !== null ? node2[key] : undefined;
     const label = (field) => {
       const value = typeof node2 === "object" && node2 !== null ? node2[field] : undefined;
@@ -62279,20 +62284,22 @@ function locate(raw, path) {
   return parts.length ? parts.join(" > ") : "lesson";
 }
 function toRenderSpec(lesson) {
+  const root = { type: "Lesson", props: { title: lesson.title, subtitle: lesson.subtitle }, children: ["answer"] };
   const elements = {
-    lesson: { type: "Lesson", props: { title: lesson.title, subtitle: lesson.subtitle }, children: ["answer"] },
+    lesson: root,
     answer: { type: "Answer", props: { text: lesson.answer }, children: [] }
   };
   for (const section of lesson.sections) {
     const key = `section:${section.id}`;
-    elements.lesson.children.push(key);
-    elements[key] = { type: "Section", props: { id: section.id, title: section.title }, children: [] };
-    section.blocks.forEach((block, i) => {
+    const element = { type: "Section", props: { id: section.id, title: section.title }, children: [] };
+    root.children.push(key);
+    elements[key] = element;
+    for (const [i, block] of section.blocks.entries()) {
       const blockKey = `block:${section.id}:${i}`;
       const { type, ...props } = block;
-      elements[key].children.push(blockKey);
+      element.children.push(blockKey);
       elements[blockKey] = { type, props, children: [] };
-    });
+    }
   }
   const model = lessonModel(lesson);
   const start = startValues(model.inputs);

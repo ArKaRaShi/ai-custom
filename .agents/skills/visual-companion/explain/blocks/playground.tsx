@@ -1,5 +1,6 @@
 /** Playground: sliders and number fields for the lesson's inputs, what-if presets, and Reset. Sticky while its section scrolls. */
 import { useStateStore, useStateValue } from "@json-render/react";
+import { cn } from "cn";
 import { Activity, Gauge, type LucideIcon, RotateCcw, Ruler, TrendingDown, TrendingUp, Wrench, Zap } from "lucide-react";
 import type { z } from "zod";
 import type { IconName, InputSpec, Preset } from "@/catalog";
@@ -7,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import type { InputValues, Model } from "@/evaluate";
-import { cn } from "cn";
 
 const ICONS: Record<z.infer<typeof IconName>, LucideIcon> = {
   wear: TrendingDown,
@@ -65,10 +65,7 @@ export function Playground({ presets }: { presets: z.infer<typeof Preset>[] }) {
   const values = useStateValue<InputValues>("/inputs") ?? start;
   if (!model) return null;
   return (
-    <div
-      data-block="Playground"
-      className="sticky top-3 z-30 my-6 rounded-xl border bg-card/85 px-5 py-4.5 shadow-md backdrop-blur-md"
-    >
+    <div data-block="Playground" className="sticky top-3 z-30 my-6 rounded-xl border bg-card/85 px-5 py-4.5 shadow-md backdrop-blur-md">
       <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-x-6 gap-y-4">
         {model.inputs.map((input) => (
           <Field
