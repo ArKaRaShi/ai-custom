@@ -117,6 +117,34 @@ async function explain(spec: unknown): Promise<{ code: number; out: string; err:
   return run(["explain", file, "--project-dir", project, "--json"]);
 }
 
+test("a safe SVG illustration publishes", async () => {
+  await start();
+  const example = structuredClone(lesson);
+  example.sections[0]!.blocks = [{ type: "Svg", markup: '<svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="var(--primary)"/></svg>' }];
+  const result = await explain(example);
+  expect(result.code).toBe(0);
+}, 30_000);
+test("unsafe SVG is rejected at its section, block, and markup field", async () => {
+  await start();
+  const attacks = [
+    '<svg><script>alert(1)</script></svg>',
+    '<svg><circle onload="alert(1)"/></svg>',
+    '<svg><image href="https://example.com/a.svg"/></svg>',
+    '<svg><a href="javascript:alert(1)"><text>x</text></a></svg>',
+    '<svg><circle fill="url(https://example.com/a.svg)"/></svg>',
+    '<svg><foreignObject><div>unsafe</div></foreignObject></svg>',
+    '<svg aria-label="A --&gt; B"><circle r="4"/></svg>',
+  ];
+  for (const markup of attacks) {
+    const example = structuredClone(lesson);
+    example.sections[0]!.blocks = [{ type: "Svg", markup }];
+    const result = await explain(example);
+    expect(result.code).toBe(1);
+    expect(result.err).toContain('sections[0] "idea" > blocks[0] (Svg) > markup');
+  }
+}, 30_000);
+
+
 describe("given a running session, when a lesson spec is published with explain, then it is validated and served", () => {
   test("publishes a valid lesson with the same result shape as push", async () => {
     const url = await start();
@@ -326,6 +354,28 @@ try {
 } catch {}
 
 describe("given a published lesson, when it opens in a headless browser, then the Explain page renders", () => {
+test.skipIf(!playwright || !existsSync(chrome))("an SVG illustration renders inside its section using theme colors", async () => {
+  const url = await start();
+  const example = structuredClone(lesson);
+  example.sections[0]!.blocks = [{ type: "Svg", markup: '<svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="var(--primary)"/></svg>' }];
+  expect((await explain(example)).code).toBe(0);
+  const browser = await playwright!.chromium.launch({ executablePath: chrome, headless: true });
+  try {
+    const page = await browser.newPage();
+    await page.goto(url);
+    const circle = page.locator("#idea [data-block=Svg] svg circle");
+    await circle.waitFor();
+    const colors = await circle.evaluate((element) => {
+      const reference = document.createElement("span");
+      reference.style.color = "var(--primary)";
+      element.parentElement!.appendChild(reference);
+      return { fill: getComputedStyle(element).fill, primary: getComputedStyle(reference).color };
+    });
+    expect(colors.fill).toBe(colors.primary);
+  } finally {
+    await browser.close();
+  }
+}, 60_000);
 test.skipIf(!playwright || !existsSync(chrome))("the rendered lesson shows the answer first, every section in the rail, and the formula", async () => {
   const url = await start();
   expect((await explain(lesson)).code).toBe(0);

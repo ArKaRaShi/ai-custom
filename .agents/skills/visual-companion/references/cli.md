@@ -54,6 +54,8 @@ bun "$HOME/.agents/skills/visual-companion/scripts/cli.ts" explain <lesson.json>
 Validates a lesson spec and publishes it as an Explain page. The spec is nested JSON: `title`, optional `subtitle`, `answer`, optional `inputs` and `functions`, and `sections`, each with an `id`, a `title` and a list of `blocks`. The full shape is in `explain/lesson.schema.json`. An invalid spec exits 1, names the section, block and field that failed, and publishes nothing. The title defaults to the lesson's title.
 
 Derivations: `inputs` carry a starting value, a slider range and an optional mathjs unit (`km`, `MB/s`). `functions` are mathjs definitions such as `backoff(n) = min(30 s, 0.5 s * 2^n)`. Each Derivation step has an `expr` over inputs, functions and earlier step ids, and a `unit` whenever its result carries one. Before publishing, every step is evaluated at the starting inputs; an unknown name or a unit that does not convert fails the publish and names the step. A Playground sticks to the top while its own section scrolls, so put the Derivation it drives in the same section.
+SVG illustrations use `{ "type": "Svg", "markup": "<svg ...>...</svg>" }`. Use inert drawing elements and theme colors such as `var(--primary)`; scripts, event handlers, external resources, styles and unsupported markup are rejected rather than silently removed.
+
 
 JSON: same as `push`, with `mode: "plain"`.
 

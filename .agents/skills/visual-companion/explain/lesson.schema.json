@@ -461,6 +461,25 @@
                     "bars",
                     "type"
                   ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "markup": {
+                      "type": "string",
+                      "minLength": 1,
+                      "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$",
+                      "description": "Static SVG illustration using theme colors"
+                    },
+                    "type": {
+                      "type": "string",
+                      "const": "Svg"
+                    }
+                  },
+                  "required": [
+                    "markup",
+                    "type"
+                  ]
                 }
               ]
             }

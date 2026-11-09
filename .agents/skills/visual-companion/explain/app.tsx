@@ -3,6 +3,7 @@ import { defineCatalog, type Spec } from "@json-render/core";
 import { defineRegistry, JSONUIProvider, Renderer } from "@json-render/react";
 import { schema } from "@json-render/react/schema";
 import { cn } from "cn";
+import DOMPurify from "dompurify";
 import katex from "katex";
 import { BookOpen, Code2, Lightbulb, Sparkles } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
@@ -28,6 +29,7 @@ const catalog = defineCatalog(schema, {
     Evidence: { props: BLOCK_PROPS.Evidence, description: "Claim, value and source rows; inferred claims marked" },
     Compare: { props: BLOCK_PROPS.Compare, description: "Old next to new, changed rows highlighted" },
     Chart: { props: BLOCK_PROPS.Chart, description: "Horizontal bars for a few numbers" },
+    Svg: { props: BLOCK_PROPS.Svg, description: "Static SVG illustration in theme colors" },
   },
   actions: {},
 });
@@ -176,6 +178,10 @@ const { registry } = defineRegistry(catalog, {
     Evidence: ({ props }) => <Evidence rows={props.rows} />,
     Compare: ({ props }) => <Compare {...props} />,
     Chart: ({ props }) => <Chart {...props} />,
+    Svg: ({ props }) => (
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: DOMPurify sanitizes the validated illustration.
+      <div data-block="Svg" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(props.markup, { USE_PROFILES: { svg: true }, ADD_ATTR: ["role"] }) }} />
+    ),
   },
 });
 

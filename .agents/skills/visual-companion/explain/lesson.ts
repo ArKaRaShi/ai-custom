@@ -6,6 +6,7 @@
 import { z } from "zod";
 import { AnswerProps, BLOCK_PROPS, Input, LessonProps, SectionProps, type StepSpec, Text } from "./catalog";
 import { checkFunctions, checkStepFormula, evaluate, type Model, missesExpect, StepError, startValues } from "./evaluate";
+import { svgError } from "./svg";
 
 const Block = z.discriminatedUnion("type", [
   BLOCK_PROPS.Concept.extend({ type: z.literal("Concept") }),
@@ -15,6 +16,7 @@ const Block = z.discriminatedUnion("type", [
   BLOCK_PROPS.Evidence.extend({ type: z.literal("Evidence") }),
   BLOCK_PROPS.Compare.extend({ type: z.literal("Compare") }),
   BLOCK_PROPS.Chart.extend({ type: z.literal("Chart") }),
+  BLOCK_PROPS.Svg.extend({ type: z.literal("Svg") }),
 ]);
 
 const Section = SectionProps.extend({ blocks: z.array(Block).min(1) });
@@ -60,6 +62,10 @@ export const Lesson = LessonProps.extend({
       }
       if (block.type === "Quiz" && block.answer >= block.options.length) {
         issue(["sections", s, "blocks", b, "answer"], `answer ${block.answer} is not one of the ${block.options.length} options (count from 0)`);
+      }
+      if (block.type === "Svg") {
+        const error = svgError(block.markup);
+        if (error) issue(["sections", s, "blocks", b, "markup"], error);
       }
       if (block.type === "Derivation") {
         block.steps.forEach((step, t) => {

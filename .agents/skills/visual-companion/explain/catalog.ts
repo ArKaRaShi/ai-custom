@@ -86,6 +86,7 @@ export const BLOCK_PROPS = {
     rows: z.array(CompareRow).min(1),
   }),
   Chart: z.object({ unit: Text().min(1).optional(), bars: z.array(ChartBar).min(1).max(12) }),
+  Svg: z.object({ markup: Text().min(1).describe("Static SVG illustration using theme colors") }),
 } as const;
 
 export type InputSpec = z.infer<typeof Input>;
