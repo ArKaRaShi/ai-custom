@@ -4,21 +4,70 @@
  * toRenderSpec turns a valid lesson into the flat element map json-render draws.
  */
 import { z } from "zod";
-import { AnswerProps, BLOCK_PROPS, LessonProps, SectionProps } from "./catalog";
+import { AnswerProps, BLOCK_PROPS, Input, LessonProps, SectionProps, type StepSpec } from "./catalog";
+import { evaluate, type Model, StepError, startValues } from "./evaluate";
 
-const Block = z.discriminatedUnion("type", [BLOCK_PROPS.Concept.extend({ type: z.literal("Concept") })]);
+const Block = z.discriminatedUnion("type", [
+  BLOCK_PROPS.Concept.extend({ type: z.literal("Concept") }),
+  BLOCK_PROPS.Playground.extend({ type: z.literal("Playground") }),
+  BLOCK_PROPS.Derivation.extend({ type: z.literal("Derivation") }),
+]);
 
 const Section = SectionProps.extend({ blocks: z.array(Block).min(1) });
 
 export const Lesson = LessonProps.extend({
   answer: AnswerProps.shape.text,
+  inputs: z.array(Input).default([]).describe("Values the reader can change; formulas see them by key"),
+  functions: z
+    .array(z.string().regex(/^\s*[A-Za-z_]\w*\s*\([^)]*\)\s*=/, "write a function as name(args) = expression"))
+    .default([])
+    .describe("mathjs function definitions shared by every step, such as backoff(n) = min(30 s, 0.5 s * 2^n)"),
   sections: z.array(Section).min(1),
 }).superRefine((lesson, ctx) => {
-  const seen = new Set<string>();
+  const issue = (path: PropertyKey[], message: string) => ctx.addIssue({ code: "custom", path, message });
+  const sectionIds = new Set<string>();
   lesson.sections.forEach((section, i) => {
-    if (seen.has(section.id)) ctx.addIssue({ code: "custom", path: ["sections", i, "id"], message: `duplicate section id "${section.id}"` });
-    seen.add(section.id);
+    if (sectionIds.has(section.id)) issue(["sections", i, "id"], `duplicate section id "${section.id}"`);
+    sectionIds.add(section.id);
   });
+  const inputKeys = new Set<string>();
+  lesson.inputs.forEach((input, i) => {
+    if (inputKeys.has(input.key)) issue(["inputs", i, "key"], `duplicate input key "${input.key}"`);
+    if (input.min > input.max || input.value < input.min || input.value > input.max) issue(["inputs", i, "value"], "value must lie between min and max");
+    inputKeys.add(input.key);
+  });
+  const stepIds = new Set<string>();
+  // The Playground sticks only within its own section, so derivations it drives must follow it there.
+  let playground: { section: number; block: number } | undefined;
+  lesson.sections.forEach((section, s) =>
+    section.blocks.forEach((block, b) => {
+      if (block.type === "Playground") {
+        if (playground) issue(["sections", s, "blocks", b], "a lesson has at most one Playground");
+        playground ??= { section: s, block: b };
+        if (inputKeys.size === 0) issue(["sections", s, "blocks", b], "a Playground needs lesson inputs");
+        block.presets.forEach((preset, p) => {
+          for (const key of Object.keys(preset.set)) {
+            if (!inputKeys.has(key)) issue(["sections", s, "blocks", b, "presets", p, "set", key], `no input named "${key}"`);
+          }
+        });
+      }
+      if (block.type === "Derivation") {
+        block.steps.forEach((step, t) => {
+          if (stepIds.has(step.id) || inputKeys.has(step.id)) issue(["sections", s, "blocks", b, "steps", t, "id"], `"${step.id}" is already an input or step`);
+          stepIds.add(step.id);
+        });
+      }
+    }),
+  );
+  const anchor = playground;
+  if (anchor) {
+    lesson.sections.forEach((section, s) =>
+      section.blocks.forEach((block, b) => {
+        const after = s === anchor.section && b > anchor.block;
+        if (block.type === "Derivation" && !after) issue(["sections", s, "blocks", b], "put this Derivation after the Playground, in the same section, so the inputs stay in view");
+      }),
+    );
+  }
 });
 
 export type LessonSpec = z.infer<typeof Lesson>;
@@ -27,15 +76,48 @@ export type LessonSpec = z.infer<typeof Lesson>;
 export interface RenderSpec {
   root: string;
   elements: Record<string, { type: string; props: Record<string, unknown>; children: string[] }>;
-  state: Record<string, unknown>;
+  state: { model: Model; start: Record<string, number>; inputs: Record<string, number> };
 }
 
 export type ParseResult = { ok: true; lesson: LessonSpec } | { ok: false; errors: string[] };
 
+/** Validates the shape, then evaluates every derivation at the starting inputs so a broken formula never publishes. */
 export function parseLesson(raw: unknown): ParseResult {
   const result = Lesson.safeParse(raw);
-  if (result.success) return { ok: true, lesson: result.data };
-  return { ok: false, errors: result.error.issues.map((issue) => `${locate(raw, issue.path)}: ${issue.message}`) };
+  if (!result.success) {
+    const errors = result.error.issues.map((issue) => `${locate(raw, issue.path)}: ${issue.message}`);
+    return { ok: false, errors };
+  }
+  const lesson = result.data;
+  const model = lessonModel(lesson);
+  try {
+    evaluate(model, startValues(model.inputs));
+  } catch (error) {
+    if (!(error instanceof StepError)) throw error;
+    const path = stepPath(lesson, error.stepId);
+    return { ok: false, errors: [`${locate(raw, path)}: ${error.message}`] };
+  }
+  return { ok: true, lesson };
+}
+
+/** Every Derivation step in page order, with the lesson's inputs and functions. */
+export function lessonModel(lesson: LessonSpec): Model {
+  const steps: StepSpec[] = [];
+  for (const section of lesson.sections) {
+    for (const block of section.blocks) if (block.type === "Derivation") steps.push(...block.steps);
+  }
+  return { inputs: lesson.inputs, functions: lesson.functions, steps };
+}
+
+function stepPath(lesson: LessonSpec, stepId: string): PropertyKey[] {
+  for (const [s, section] of lesson.sections.entries()) {
+    for (const [b, block] of section.blocks.entries()) {
+      if (block.type !== "Derivation") continue;
+      const t = block.steps.findIndex((step) => step.id === stepId);
+      if (t >= 0) return ["sections", s, "blocks", b, "steps", t];
+    }
+  }
+  return [];
 }
 
 /**
@@ -61,7 +143,8 @@ function locate(raw: unknown, path: PropertyKey[]): string {
       const type = label("type");
       parts[parts.length - 1] = `blocks[${key}]${type ? ` (${type})` : ""}`;
     } else {
-      parts[parts.length - 1] += `[${key}]`;
+      const name = label("id") || label("key");
+      parts[parts.length - 1] += `[${key}]${name ? ` "${name}"` : ""}`;
     }
   }
   return parts.length ? parts.join(" > ") : "lesson";
@@ -84,7 +167,9 @@ export function toRenderSpec(lesson: LessonSpec): RenderSpec {
       elements[blockKey] = { type, props, children: [] };
     });
   }
-  return { root: "lesson", elements, state: {} };
+  const model = lessonModel(lesson);
+  const start = startValues(model.inputs);
+  return { root: "lesson", elements, state: { model, start, inputs: start } };
 }
 
 export function lessonJsonSchema(): unknown {

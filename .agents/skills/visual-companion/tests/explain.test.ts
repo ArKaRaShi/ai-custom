@@ -24,6 +24,36 @@ const lesson: { title: string; subtitle: string; answer: string; sections: { id:
   ],
 };
 
+
+/** A lesson with units and a spec function. Expected values come from hand arithmetic, not the evaluator. */
+const pumpLesson = {
+  title: "Where pump head comes from",
+  answer: "Head is the pressure rise expressed as a height of water.",
+  inputs: [
+    { key: "P", label: "Pressure rise", value: 3.27, min: 0, max: 10, step: 0.01, unit: "bar" },
+    { key: "Q", label: "Flow", value: 0.05, min: 0, max: 0.2, step: 0.001, unit: "m^3/s" },
+  ],
+  functions: ["head(p) = p / (1000 kg/m^3 * 9.80665 m/s^2)"],
+  sections: [
+    {
+      id: "work",
+      title: "The work",
+      blocks: [
+        { type: "Playground", presets: [{ label: "Higher pressure", icon: "gauge", set: { P: 4 } }] },
+        {
+          type: "Derivation",
+          steps: [
+            { id: "Pa", title: "Pressure in pascal", plain: "Same pressure, SI units.", ref: "pump.py:10", expr: "P", unit: "Pa" },
+            { id: "H", title: "Head", plain: "Pressure as stairs.", ref: "pump.py:12", expr: "head(P)", unit: "m" },
+            { id: "Ph", title: "Hydraulic power", plain: "Buckets times stairs.", ref: "pump.py:14", expr: "1000 kg/m^3 * 9.80665 m/s^2 * Q * H", unit: "kW" },
+            { id: "fill", title: "Time per cubic metre", plain: "How long one cubic metre takes.", ref: "pump.py:16", expr: "1 m^3 / Q", unit: "s" },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
 let project = "";
 beforeEach(async () => {
   project = await mkdtemp(join(tmpdir(), "vc-explain-"));
@@ -108,6 +138,59 @@ describe("given a running session, when a lesson spec is published with explain,
   }, 30_000);
 });
 
+
+describe("given a lesson with a derivation, when it is published with explain, then every step is evaluated before publishing", () => {
+  test("a valid derivation with units and a spec function publishes", async () => {
+    await start();
+    expect((await explain(pumpLesson)).code).toBe(0);
+  }, 30_000);
+
+  test("a step that uses an unknown name is reported by section, block and step, and nothing publishes", async () => {
+    const url = await start();
+    const broken = structuredClone(pumpLesson);
+    broken.sections[0]!.blocks[1]!.steps![1]!.expr = "head(Pressure)";
+    const result = await explain(broken);
+    expect(result.code).toBe(1);
+    expect(result.err).toContain('sections[0] "work" > blocks[1] (Derivation) > steps[1] "H": Undefined symbol Pressure');
+    const page = await (await fetch(url)).text();
+    expect(page).not.toContain("Where pump head comes from");
+  }, 30_000);
+
+  test("a result with a unit but no step unit, or a unit that does not convert, is rejected", async () => {
+    await start();
+    const noUnit = structuredClone(pumpLesson);
+    delete noUnit.sections[0]!.blocks[1]!.steps![0]!.unit;
+    const first = await explain(noUnit);
+    expect(first.code).toBe(1);
+    expect(first.err).toContain('steps[0] "Pa": result has a unit');
+
+    const wrongUnit = structuredClone(pumpLesson);
+    wrongUnit.sections[0]!.blocks[1]!.steps![1]!.unit = "kW";
+    const second = await explain(wrongUnit);
+    expect(second.code).toBe(1);
+    expect(second.err).toContain('steps[1] "H"');
+  }, 30_000);
+
+  test("a Derivation outside the Playground's section is rejected", async () => {
+    await start();
+    const split = structuredClone(pumpLesson);
+    const derivation = split.sections[0]!.blocks.pop()!;
+    split.sections.push({ id: "later", title: "Later", blocks: [derivation] });
+    const result = await explain(split);
+    expect(result.code).toBe(1);
+    expect(result.err).toContain('sections[1] "later" > blocks[0] (Derivation): put this Derivation after the Playground');
+  }, 30_000);
+
+  test("a preset that sets an unknown input is rejected", async () => {
+    await start();
+    const badPreset = structuredClone(pumpLesson);
+    badPreset.sections[0]!.blocks[0]!.presets![0]!.set = { Pressure: 4 };
+    const result = await explain(badPreset);
+    expect(result.code).toBe(1);
+    expect(result.err).toContain('no input named "Pressure"');
+  }, 30_000);
+});
+
 // Optional browser seam, like theme-browser.test.ts: needs Google Chrome and the explain/ dev dependencies.
 const chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 let playwright: typeof import("playwright") | undefined;
@@ -142,6 +225,62 @@ test.skipIf(!playwright || !existsSync(chrome))("the rendered lesson shows the a
     await page.keyboard.press("Tab");
     await page.keyboard.press("Tab");
     await page.waitForSelector("[data-slot=tooltip-content]");
+  } finally {
+    await browser.close();
+  }
+}, 60_000);
+test.skipIf(!playwright || !existsSync(chrome))("changing an input recomputes the derivation; presets and Reset set the inputs; the Playground stays in view", async () => {
+  const url = await start();
+  expect((await explain(pumpLesson)).code).toBe(0);
+  const browser = await playwright!.chromium.launch({ executablePath: chrome, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 600 } });
+    const errors: string[] = [];
+    page.on("pageerror", (error: Error) => errors.push(error.message));
+    await page.goto(url);
+    await page.waitForSelector("[data-block=Derivation]");
+    const value = async (id: string): Promise<number> => {
+      const text = await page.locator(`[data-step=${id}]`).getAttribute("data-value");
+      return Number(text);
+    };
+
+    // 3.27 bar = 327,000 Pa; 327,000 / (1000 * 9.80665) = 33.3447 m; 1000 * 9.80665 * 0.05 * 33.3447 / 1000 = 16.35 kW.
+    expect(await value("Pa")).toBeCloseTo(327_000, 6);
+    expect(await value("H")).toBeCloseTo(33.3447, 3);
+    expect(await value("Ph")).toBeCloseTo(16.35, 6);
+    expect(await page.locator("[data-step=H] [data-old]").count()).toBe(0);
+
+    await page.locator("[data-input=P]").fill("4");
+    await page.waitForSelector("[data-step=H] [data-old]");
+    // 400,000 / 9,806.65 = 40.7886 m.
+    expect(await value("H")).toBeCloseTo(40.7886, 3);
+    const oldText = await page.locator("[data-step=H] [data-old]").textContent();
+    const newText = await page.locator("[data-step=H] [data-new]").textContent();
+    expect(oldText).toBe("33.345");
+    expect(newText).toBe("40.789");
+
+    await page.getByRole("button", { name: "Reset" }).click();
+    await page.waitForSelector("[data-step=H] [data-old]", { state: "detached" });
+    expect(await value("H")).toBeCloseTo(33.3447, 3);
+
+    await page.getByRole("button", { name: "Higher pressure" }).click();
+    await page.waitForSelector("[data-step=H] [data-old]");
+    expect(await page.locator("[data-input=P]").inputValue()).toBe("4");
+    expect(await page.locator("[data-input=Q]").inputValue()).toBe("0.05");
+
+    // Q = 0 makes "fill" infinite: earlier steps keep their results, only "fill" reports the problem.
+    await page.locator("[data-input=Q]").fill("0");
+    await page.waitForSelector("[data-step=fill] [data-step-error=fill]");
+    expect(await value("H")).toBeCloseTo(40.7886, 3);
+    expect(await value("Ph")).toBe(0);
+    expect(await page.locator("[data-step=fill]").getAttribute("data-value")).toBeNull();
+    await page.locator("[data-input=Q]").fill("0.05");
+
+    await page.locator("[data-step=Ph]").scrollIntoViewIfNeeded();
+    const top = await page.locator("[data-block=Playground]").evaluate((el: HTMLElement) => el.getBoundingClientRect().top);
+    expect(top).toBeGreaterThanOrEqual(0);
+    expect(top).toBeLessThan(40);
+    expect(errors).toEqual([]);
   } finally {
     await browser.close();
   }

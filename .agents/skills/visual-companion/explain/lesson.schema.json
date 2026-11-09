@@ -15,6 +15,60 @@
       "minLength": 1,
       "description": "The conclusion, shown first"
     },
+    "inputs": {
+      "default": [],
+      "description": "Values the reader can change; formulas see them by key",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "value": {
+            "type": "number",
+            "description": "Starting value"
+          },
+          "min": {
+            "type": "number"
+          },
+          "max": {
+            "type": "number"
+          },
+          "step": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "unit": {
+            "description": "mathjs unit, such as km or MB/s; the input enters formulas with this unit",
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "value",
+          "min",
+          "max",
+          "step"
+        ]
+      }
+    },
+    "functions": {
+      "default": [],
+      "description": "mathjs function definitions shared by every step, such as backoff(n) = min(30 s, 0.5 s * 2^n)",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^\\s*[A-Za-z_]\\w*\\s*\\([^)]*\\)\\s*="
+      }
+    },
     "sections": {
       "minItems": 1,
       "type": "array",
@@ -60,6 +114,127 @@
                   "required": [
                     "simple",
                     "expert",
+                    "type"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "presets": {
+                      "default": [],
+                      "description": "What-if buttons; each sets some inputs, the rest keep their starting values",
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "label": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "icon": {
+                            "type": "string",
+                            "enum": [
+                              "wear",
+                              "ruler",
+                              "gauge",
+                              "zap",
+                              "wrench",
+                              "activity",
+                              "trending-up",
+                              "trending-down"
+                            ]
+                          },
+                          "set": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "number"
+                            }
+                          }
+                        },
+                        "required": [
+                          "label",
+                          "icon",
+                          "set"
+                        ]
+                      }
+                    },
+                    "type": {
+                      "type": "string",
+                      "const": "Playground"
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "steps": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+                            "description": "Name later steps use to reference this result"
+                          },
+                          "title": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "plain": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "One plain-language line saying what the step means"
+                          },
+                          "ref": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Code reference this step implements, such as retry.py:42"
+                          },
+                          "expr": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "mathjs expression over inputs, functions and earlier step ids"
+                          },
+                          "tex": {
+                            "description": "Display formula in TeX; defaults to the expression",
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "substitute": {
+                            "description": "Readable Substitute line with {name} placeholders; replaces the generated one",
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "unit": {
+                            "description": "Unit to show the result in; required when the result carries a unit",
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "title",
+                          "plain",
+                          "ref",
+                          "expr"
+                        ]
+                      }
+                    },
+                    "type": {
+                      "type": "string",
+                      "const": "Derivation"
+                    }
+                  },
+                  "required": [
+                    "steps",
                     "type"
                   ]
                 }

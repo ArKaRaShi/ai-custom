@@ -11,6 +11,8 @@ import { cn } from "cn";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Derivation } from "@/blocks/derivation";
+import { Playground } from "@/blocks/playground";
 import "./styles.css";
 
 const catalog = defineCatalog(schema, {
@@ -19,6 +21,8 @@ const catalog = defineCatalog(schema, {
     Answer: { props: AnswerProps, description: "The conclusion, shown first" },
     Section: { props: SectionProps, description: "A page section listed in the rail" },
     Concept: { props: BLOCK_PROPS.Concept, description: "Simple and expert explanation side by side" },
+    Playground: { props: BLOCK_PROPS.Playground, description: "Inputs, what-if presets and Reset bound to /inputs" },
+    Derivation: { props: BLOCK_PROPS.Derivation, description: "Formula, Substitute and Result steps evaluated live" },
   },
   actions: {},
 });
@@ -148,6 +152,8 @@ const { registry } = defineRegistry(catalog, {
         </Card>
       </div>
     ),
+    Playground: ({ props }) => <Playground presets={props.presets} />,
+    Derivation: ({ props }) => <Derivation steps={props.steps} />,
   },
 });
 
