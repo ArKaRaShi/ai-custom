@@ -19,10 +19,15 @@ const SOUNDS = {
 
 async function isTerminalActive(pi: HookAPI): Promise<boolean> {
   try {
-    const res = await pi.exec("osascript", [
-      "-e",
-      'tell application "System Events" to get name of first application process whose frontmost is true',
-    ]);
+    const res = await pi.exec(
+      "osascript",
+      [
+        "-e",
+        'tell application "System Events" to get name of first application process whose frontmost is true',
+      ],
+      { timeout: 2_000 },
+    );
+    if (res.killed || res.code !== 0) return false;
     const front = (res.stdout ?? "").trim().toLowerCase();
     return front.includes("iterm") || front.includes("terminal") || front.includes("ghostty") || front.includes("alacritty") || front.includes("kitty");
   } catch {
