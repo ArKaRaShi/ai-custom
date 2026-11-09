@@ -7,6 +7,7 @@ import katex from "katex";
 import { BookOpen, Code2, Lightbulb, Sparkles } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { Chart, Compare, Evidence, Quiz } from "@/blocks/content";
 import { Derivation } from "@/blocks/derivation";
 import { Playground } from "@/blocks/playground";
 import { AnswerProps, BLOCK_PROPS, LessonProps, SectionProps } from "@/catalog";
@@ -23,6 +24,10 @@ const catalog = defineCatalog(schema, {
     Concept: { props: BLOCK_PROPS.Concept, description: "Simple and expert explanation side by side" },
     Playground: { props: BLOCK_PROPS.Playground, description: "Inputs, what-if presets and Reset bound to /inputs" },
     Derivation: { props: BLOCK_PROPS.Derivation, description: "Formula, Substitute and Result steps evaluated live" },
+    Quiz: { props: BLOCK_PROPS.Quiz, description: "Pick an answer, then see whether it was right and why" },
+    Evidence: { props: BLOCK_PROPS.Evidence, description: "Claim, value and source rows; inferred claims marked" },
+    Compare: { props: BLOCK_PROPS.Compare, description: "Old next to new, changed rows highlighted" },
+    Chart: { props: BLOCK_PROPS.Chart, description: "Horizontal bars for a few numbers" },
   },
   actions: {},
 });
@@ -141,8 +146,8 @@ const { registry } = defineRegistry(catalog, {
       </Card>
     ),
     Section: ({ props, children }) => (
-      <section id={props.id} data-rail={props.title} className="mt-18 scroll-mt-8">
-        <h2 className="mt-0 mb-5 text-[28px] font-bold tracking-tight">{props.title}</h2>
+      <section id={props.id} data-rail={props.title} className="mt-18 flex scroll-mt-8 flex-col gap-5">
+        <h2 className="m-0 text-[28px] font-bold tracking-tight">{props.title}</h2>
         {children}
       </section>
     ),
@@ -167,6 +172,10 @@ const { registry } = defineRegistry(catalog, {
     ),
     Playground: ({ props }) => <Playground presets={props.presets} />,
     Derivation: ({ props }) => <Derivation steps={props.steps} />,
+    Quiz: ({ props }) => <Quiz {...props} />,
+    Evidence: ({ props }) => <Evidence rows={props.rows} />,
+    Compare: ({ props }) => <Compare {...props} />,
+    Chart: ({ props }) => <Chart {...props} />,
   },
 });
 

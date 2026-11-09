@@ -145,7 +145,7 @@ export function Derivation({ steps }: { steps: StepSpec[] }) {
   const atStart = model.inputs.every((input) => (values[input.key] ?? input.value) === (start[input.key] ?? input.value));
   const error = now.error ? { stepId: now.error.stepId, message: now.error.message } : undefined;
   return (
-    <ol data-block="Derivation" className="m-0 mt-7 list-none p-0">
+    <ol data-block="Derivation" className="m-0 list-none p-0">
       {steps.map((step, i) => (
         <StepItem key={step.id} step={step} index={i} model={model} values={values} now={now.results} base={base} error={error} atStart={atStart} />
       ))}

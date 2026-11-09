@@ -54,6 +54,41 @@ const pumpLesson = {
   ],
 };
 
+
+/** One section per content block, with values the tests read back from the page. */
+const contentLesson = {
+  title: "What changed in the retry policy",
+  answer: "Retries now back off exponentially instead of waiting a fixed second.",
+  sections: [
+    {
+      id: "check",
+      title: "Check yourself",
+      blocks: [{ type: "Quiz", question: "What does the fourth retry wait?", options: ["1 s", "4 s", "8 s"], answer: 1, why: "0.5 s doubled three times is 4 s." }],
+    },
+    {
+      id: "sources",
+      title: "Where the numbers come from",
+      blocks: [
+        {
+          type: "Evidence",
+          rows: [
+            { claim: "Base delay", value: "0.5 s", source: "retry.py:12" },
+            { claim: "Ceiling is never reached in practice", value: "30 s", source: "logs 2026-11-01", inferred: true },
+          ],
+        },
+      ],
+    },
+    {
+      id: "diff",
+      title: "Old next to new",
+      blocks: [
+        { type: "Compare", before: "v1", after: "v2", rows: [{ label: "Delay", before: "1 s fixed", after: "0.5 s doubling" }, { label: "Attempts", before: "5", after: "5" }] },
+        { type: "Chart", unit: "s", bars: [{ label: "v1 total wait", value: 5, tone: "bad" }, { label: "v2 total wait", value: 1234.5678, tone: "good" }] },
+      ],
+    },
+  ],
+};
+
 let project = "";
 beforeEach(async () => {
   project = await mkdtemp(join(tmpdir(), "vc-explain-"));
@@ -220,6 +255,31 @@ describe("given derivation steps with expected values from the real code, when t
   }, 30_000);
 });
 
+
+describe("given content blocks, when they are published, then each validates against the catalog", () => {
+  test("a lesson with Quiz, Evidence, Compare and Chart publishes", async () => {
+    await start();
+    expect((await explain(contentLesson)).code).toBe(0);
+  }, 30_000);
+
+  test("invalid props in each content block fail with a located message", async () => {
+    await start();
+    const cases: [(lesson: typeof contentLesson) => void, string][] = [
+      [(l) => Object.assign(l.sections[0]!.blocks[0]!, { answer: 3 }), 'sections[0] "check" > blocks[0] (Quiz) > answer: answer 3 is not one of the 3 options'],
+      [(l) => Object.assign(l.sections[1]!.blocks[0]!.rows![0]!, { source: "" }), 'sections[1] "sources" > blocks[0] (Evidence) > rows[0] > source'],
+      [(l) => Object.assign(l.sections[2]!.blocks[0]!, { after: undefined }), 'sections[2] "diff" > blocks[0] (Compare) > after'],
+      [(l) => Object.assign(l.sections[2]!.blocks[1]!.bars![0]!, { tone: "red" }), 'sections[2] "diff" > blocks[1] (Chart) > bars[0] > tone'],
+    ];
+    for (const [breakIt, location] of cases) {
+      const lesson = structuredClone(contentLesson);
+      breakIt(lesson);
+      const result = await explain(lesson);
+      expect(result.code).toBe(1);
+      expect(result.err).toContain(location);
+    }
+  }, 30_000);
+});
+
 // Optional browser seam, like theme-browser.test.ts: needs Google Chrome and the explain/ dev dependencies.
 const chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 let playwright: typeof import("playwright") | undefined;
@@ -357,6 +417,49 @@ test.skipIf(!playwright || !existsSync(chrome))("a typed number outside the inpu
     await field.blur();
     expect(await field.inputValue()).toBe("0");
     expect(await pascal()).toBe(0);
+  } finally {
+    await browser.close();
+  }
+}, 60_000);
+test.skipIf(!playwright || !existsSync(chrome))("the quiz reveals its answer only after a pick; evidence, compare and chart show the spec's values", async () => {
+  const url = await start();
+  expect((await explain(contentLesson)).code).toBe(0);
+  const browser = await playwright!.chromium.launch({ executablePath: chrome, headless: true });
+  try {
+    const page = await browser.newPage();
+    const errors: string[] = [];
+    page.on("pageerror", (error: Error) => errors.push(error.message));
+    await page.goto(url);
+    await page.waitForSelector("[data-block=Chart]");
+
+    const quiz = page.locator("[data-block=Quiz]");
+    expect(await quiz.locator("[data-quiz-why]").count()).toBe(0);
+    expect(await quiz.locator("[data-result]").count()).toBe(0);
+    await quiz.getByRole("button", { name: /8 s/ }).click();
+    await quiz.locator("[data-quiz-why]").waitFor();
+    expect(await quiz.locator("[data-result=wrong]").textContent()).toContain("8 s");
+    expect(await quiz.locator("[data-result=right]").textContent()).toContain("4 s");
+    expect(await quiz.getByLabel("Correct").count()).toBe(1);
+    expect(await quiz.getByLabel("Your pick").count()).toBe(1);
+    expect(await quiz.locator("button:enabled").count()).toBe(0);
+
+    const evidence = page.locator("[data-block=Evidence] tbody tr");
+    expect(await evidence.nth(0).textContent()).toContain("retry.py:12");
+    expect(await evidence.nth(0).getAttribute("data-inferred")).toBeNull();
+    expect(await evidence.nth(1).getAttribute("data-inferred")).toBe("true");
+    expect(await evidence.nth(1).textContent()).toContain("Inference");
+
+    const compare = page.locator("[data-block=Compare] tbody tr");
+    expect(await compare.nth(0).textContent()).toBe("Delay1 s fixed0.5 s doubling");
+    expect(await compare.nth(0).getAttribute("data-changed")).toBe("true");
+    expect(await compare.nth(1).getAttribute("data-changed")).toBeNull();
+
+    const chart = page.locator("[data-block=Chart]");
+    // Recharts draws bars after measuring its container, a frame after the block mounts.
+    await chart.locator(".recharts-bar-rectangle").nth(1).waitFor();
+    expect(await chart.locator("[data-chart-values] li").allTextContents()).toEqual(["v1 total wait: 5 s", "v2 total wait: 1,234.5678 s"]);
+    expect(await chart.locator(".recharts-bar-rectangle").count()).toBe(2);
+    expect(errors).toEqual([]);
   } finally {
     await browser.close();
   }

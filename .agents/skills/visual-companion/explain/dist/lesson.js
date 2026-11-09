@@ -20341,6 +20341,15 @@ var Step = exports_external.object({
   expect: exports_external.number().optional().describe("The value the real code produced at the starting inputs, in the step's unit; publishing fails if the formula disagrees")
 });
 var Preset = exports_external.object({ label: exports_external.string().min(1), icon: IconName, set: exports_external.record(exports_external.string(), exports_external.number()) });
+var EvidenceRow = exports_external.object({
+  claim: exports_external.string().min(1),
+  value: exports_external.string().min(1),
+  source: exports_external.string().min(1).describe("Where the value comes from: path:line, a commit, a command and its output"),
+  inferred: exports_external.boolean().default(false).describe("True when the claim was concluded rather than read from the source")
+});
+var CompareRow = exports_external.object({ label: exports_external.string().min(1), before: exports_external.string(), after: exports_external.string() });
+var ChartTone = exports_external.enum(["neutral", "good", "bad"]).default("neutral").describe("good and bad color the bar; meaning stays in the label");
+var ChartBar = exports_external.object({ label: exports_external.string().min(1), value: exports_external.number(), tone: ChartTone });
 var LessonProps = exports_external.object({ title: exports_external.string().min(1), subtitle: exports_external.string().min(1).optional() });
 var AnswerProps = exports_external.object({ text: exports_external.string().min(1).describe("The conclusion, shown first") });
 var SectionProps = exports_external.object({ id: SectionId, title: exports_external.string().min(1) });
@@ -20353,7 +20362,20 @@ var BLOCK_PROPS = {
   Playground: exports_external.object({
     presets: exports_external.array(Preset).default([]).describe("What-if buttons; each sets some inputs, the rest keep their starting values")
   }),
-  Derivation: exports_external.object({ steps: exports_external.array(Step).min(1) })
+  Derivation: exports_external.object({ steps: exports_external.array(Step).min(1) }),
+  Quiz: exports_external.object({
+    question: exports_external.string().min(1),
+    options: exports_external.array(exports_external.string().min(1)).min(2).max(6),
+    answer: exports_external.number().int().nonnegative().describe("Index of the correct option, counting from 0"),
+    why: exports_external.string().min(1).describe("Reason shown after the reader picks")
+  }),
+  Evidence: exports_external.object({ rows: exports_external.array(EvidenceRow).min(1) }),
+  Compare: exports_external.object({
+    before: exports_external.string().min(1).describe("Column heading for the old side, such as v11"),
+    after: exports_external.string().min(1).describe("Column heading for the new side"),
+    rows: exports_external.array(CompareRow).min(1)
+  }),
+  Chart: exports_external.object({ unit: exports_external.string().min(1).optional(), bars: exports_external.array(ChartBar).min(1).max(12) })
 };
 
 // node_modules/mathjs/lib/esm/core/config.js
@@ -62166,7 +62188,11 @@ function missesExpect(step, value) {
 var Block = exports_external.discriminatedUnion("type", [
   BLOCK_PROPS.Concept.extend({ type: exports_external.literal("Concept") }),
   BLOCK_PROPS.Playground.extend({ type: exports_external.literal("Playground") }),
-  BLOCK_PROPS.Derivation.extend({ type: exports_external.literal("Derivation") })
+  BLOCK_PROPS.Derivation.extend({ type: exports_external.literal("Derivation") }),
+  BLOCK_PROPS.Quiz.extend({ type: exports_external.literal("Quiz") }),
+  BLOCK_PROPS.Evidence.extend({ type: exports_external.literal("Evidence") }),
+  BLOCK_PROPS.Compare.extend({ type: exports_external.literal("Compare") }),
+  BLOCK_PROPS.Chart.extend({ type: exports_external.literal("Chart") })
 ]);
 var Section = SectionProps.extend({ blocks: exports_external.array(Block).min(1) });
 var Lesson = LessonProps.extend({
@@ -62206,6 +62232,9 @@ var Lesson = LessonProps.extend({
               issue2(["sections", s, "blocks", b, "presets", p, "set", key], `no input named "${key}"`);
           }
         });
+      }
+      if (block.type === "Quiz" && block.answer >= block.options.length) {
+        issue2(["sections", s, "blocks", b, "answer"], `answer ${block.answer} is not one of the ${block.options.length} options (count from 0)`);
       }
       if (block.type === "Derivation") {
         block.steps.forEach((step, t) => {

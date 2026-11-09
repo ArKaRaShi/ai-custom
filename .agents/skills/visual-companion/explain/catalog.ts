@@ -39,6 +39,18 @@ export const Step = z.object({
 
 export const Preset = z.object({ label: z.string().min(1), icon: IconName, set: z.record(z.string(), z.number()) });
 
+const EvidenceRow = z.object({
+  claim: z.string().min(1),
+  value: z.string().min(1),
+  source: z.string().min(1).describe("Where the value comes from: path:line, a commit, a command and its output"),
+  inferred: z.boolean().default(false).describe("True when the claim was concluded rather than read from the source"),
+});
+
+const CompareRow = z.object({ label: z.string().min(1), before: z.string(), after: z.string() });
+
+const ChartTone = z.enum(["neutral", "good", "bad"]).default("neutral").describe("good and bad color the bar; meaning stays in the label");
+const ChartBar = z.object({ label: z.string().min(1), value: z.number(), tone: ChartTone });
+
 export const LessonProps = z.object({ title: z.string().min(1), subtitle: z.string().min(1).optional() });
 export const AnswerProps = z.object({ text: z.string().min(1).describe("The conclusion, shown first") });
 export const SectionProps = z.object({ id: SectionId, title: z.string().min(1) });
@@ -54,6 +66,19 @@ export const BLOCK_PROPS = {
     presets: z.array(Preset).default([]).describe("What-if buttons; each sets some inputs, the rest keep their starting values"),
   }),
   Derivation: z.object({ steps: z.array(Step).min(1) }),
+  Quiz: z.object({
+    question: z.string().min(1),
+    options: z.array(z.string().min(1)).min(2).max(6),
+    answer: z.number().int().nonnegative().describe("Index of the correct option, counting from 0"),
+    why: z.string().min(1).describe("Reason shown after the reader picks"),
+  }),
+  Evidence: z.object({ rows: z.array(EvidenceRow).min(1) }),
+  Compare: z.object({
+    before: z.string().min(1).describe("Column heading for the old side, such as v11"),
+    after: z.string().min(1).describe("Column heading for the new side"),
+    rows: z.array(CompareRow).min(1),
+  }),
+  Chart: z.object({ unit: z.string().min(1).optional(), bars: z.array(ChartBar).min(1).max(12) }),
 } as const;
 
 export type InputSpec = z.infer<typeof Input>;

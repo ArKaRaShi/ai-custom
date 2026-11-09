@@ -80,7 +80,7 @@ export function Playground({ presets }: { presets: z.infer<typeof Preset>[] }) {
   const values = useStateValue<InputValues>("/inputs") ?? start;
   if (!model) return null;
   return (
-    <div data-block="Playground" className="sticky top-3 z-30 my-6 rounded-xl border bg-card/85 px-5 py-4.5 shadow-md backdrop-blur-md">
+    <div data-block="Playground" className="sticky top-3 z-30 rounded-xl border bg-card/85 px-5 py-4.5 shadow-md backdrop-blur-md">
       <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-x-6 gap-y-4">
         {model.inputs.map((input) => (
           <Field
