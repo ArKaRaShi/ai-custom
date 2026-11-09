@@ -1,0 +1,69 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* Explain theme in shadcn's token names: indigo/violet accent, light by default, dark when the system asks. */
+:root {
+  --radius: 0.875rem;
+  --background: #f6f7f9;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --primary: #4f46e5;
+  --primary-foreground: #ffffff;
+  --primary-2: #7c3aed;
+  --secondary: #ecfdf5;
+  --secondary-foreground: #047857;
+  --muted-foreground: #475569;
+  --accent: #eef2ff;
+  --accent-foreground: #4338ca;
+  --destructive: #dc2626;
+  --border: #e2e8f0;
+  --ring: #6366f1;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0b0d12;
+    --foreground: #e5e7eb;
+    --card: #12151c;
+    --card-foreground: #e5e7eb;
+    --primary: #818cf8;
+    --primary-foreground: #0b0d12;
+    --primary-2: #a78bfa;
+    --secondary: #0f2a22;
+    --secondary-foreground: #34d399;
+    --muted-foreground: #a1a8b5;
+    --accent: #1b1f33;
+    --accent-foreground: #c7d2fe;
+    --destructive: #f87171;
+    --border: #232834;
+    --ring: #818cf8;
+  }
+}
+
+@theme inline {
+  --radius-md: calc(var(--radius) - 6px);
+  --radius-lg: calc(var(--radius) - 2px);
+  --radius-xl: var(--radius);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-2: var(--primary-2);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  body { @apply m-0 bg-background text-foreground antialiased; font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+  .katex { font-size: 1.08em; }
+}

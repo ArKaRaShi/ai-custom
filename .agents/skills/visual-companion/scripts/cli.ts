@@ -18,6 +18,7 @@ import {
 } from "./runner";
 import { startServer, type RunningServer } from "./server";
 import { resolveRunDir, SessionStore } from "./store";
+import { lessonPage, parseLesson } from "../explain/dist/lesson.js";
 
 const CLI = import.meta.filename;
 const USAGE = `visual-companion — show mockups and choices in a local browser tab
@@ -28,6 +29,7 @@ const USAGE = `visual-companion — show mockups and choices in a local browser 
   stop                                      stop it
   push <file> [--title <text>] [--plain|--bundle] [--isolate]
                                             publish a screen and reload the tab
+  explain <lesson.json> [--title <text>]    validate a lesson spec and publish it as an Explain page
   page <name> <file> [<name> <file> ...] [--title <text>]
                                             stack fragments into one long page with a section index
   compare <name> <file> <name> <file> [...] publish static isolated previews side-by-side
@@ -274,6 +276,28 @@ async function push(args: Args): Promise<void> {
   await publish(args, html);
 }
 
+async function explain(args: Args): Promise<void> {
+  const file = args.positional[0];
+  if (!file) throw new UsageError("explain needs a lesson spec file");
+  let raw: unknown;
+  try {
+    const text = await readFile(file, "utf8");
+    raw = JSON.parse(text);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(`cannot read ${file} as JSON: ${reason}`);
+  }
+  const parsed = parseLesson(raw);
+  if (!parsed.ok) {
+    const lines = parsed.errors.map((e) => `  ${e}`);
+    throw new Error(`${file} is not a valid lesson spec:\n${lines.join("\n")}`);
+  }
+  if (!args.flags.has("title")) args.flags.set("title", parsed.lesson.title);
+  args.flags.set("plain", true);
+  const html = lessonPage(parsed.lesson);
+  await publish(args, html);
+}
+
 async function publish(args: Args, html: string): Promise<void> {
   const { runDir, store } = runContext(args.flags);
   const forced: Mode | undefined = args.flags.has("plain")
@@ -501,6 +525,8 @@ async function main(): Promise<void> {
       return stop(args.flags);
     case "push":
       return push(args);
+    case "explain":
+      return explain(args);
     case "stage":
       return stage(args);
     case "compare":

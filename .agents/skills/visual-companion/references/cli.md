@@ -45,6 +45,18 @@ JSON: `{screenId, file, title, mode, pushedAt, reloaded}`
 
 `--isolate` renders a static screen in a sandboxed iframe with its own CSS. Scripts, interactive choices, and external resources are disabled. Each independently styled preview requires its own iframe; this option publishes one isolated screen.
 
+## explain
+
+```bash
+bun "$HOME/.agents/skills/visual-companion/scripts/cli.ts" explain <lesson.json> [--title <text>] <session>
+```
+
+Validates a lesson spec and publishes it as an Explain page. The spec is nested JSON: `title`, optional `subtitle`, `answer`, and `sections`, each with an `id`, a `title` and a list of `blocks`. The full shape is in `explain/lesson.schema.json`. An invalid spec exits 1, names the section, block and field that failed, and publishes nothing. The title defaults to the lesson's title.
+
+JSON: same as `push`, with `mode: "plain"`.
+
+The renderer under `assets/explain/` is prebuilt and committed. After changing anything in `explain/`, rebuild it with `bun explain/build.ts`.
+
 ## page
 
 ```bash

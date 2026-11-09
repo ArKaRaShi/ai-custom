@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "subtitle": {
+      "type": "string",
+      "minLength": 1
+    },
+    "answer": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The conclusion, shown first"
+    },
+    "sections": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "blocks": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "simple": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Everyday explanation for a newcomer"
+                    },
+                    "expert": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Precise explanation in the domain's terms"
+                    },
+                    "tex": {
+                      "description": "Optional formula in TeX, shown under the expert text",
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "type": {
+                      "type": "string",
+                      "const": "Concept"
+                    }
+                  },
+                  "required": [
+                    "simple",
+                    "expert",
+                    "type"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "blocks"
+        ]
+      }
+    }
+  },
+  "required": [
+    "title",
+    "answer",
+    "sections"
+  ]
+}

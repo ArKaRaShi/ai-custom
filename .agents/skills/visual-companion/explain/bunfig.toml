@@ -1,0 +1,3 @@
+[install]
+# Bun is already the runtime; do not download the `bun` npm package that bun-plugin-tailwind lists as a peer.
+peer = false
