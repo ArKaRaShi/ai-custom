@@ -5,6 +5,7 @@ import katex from "katex";
 import { ArrowRight, CircleAlert, Code2 } from "lucide-react";
 import { useMemo } from "react";
 import type { StepSpec } from "@/catalog";
+import { KATEX_OPTIONS } from "@/catalog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -23,7 +24,7 @@ import {
 } from "@/evaluate";
 
 function Tex({ src }: { src: string }) {
-  const html = katex.renderToString(src, { throwOnError: false, displayMode: false });
+  const html = katex.renderToString(src, { ...KATEX_OPTIONS, displayMode: false });
   // biome-ignore lint/security/noDangerouslySetInnerHtml: KaTeX output with trust off; it renders math, never author HTML.
   return <span className="overflow-x-auto" dangerouslySetInnerHTML={{ __html: html }} />;
 }

@@ -4,15 +4,18 @@
   "properties": {
     "title": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
     },
     "subtitle": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
     },
     "answer": {
       "type": "string",
       "minLength": 1,
+      "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$",
       "description": "The conclusion, shown first"
     },
     "inputs": {
@@ -28,7 +31,8 @@
           },
           "label": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
           },
           "value": {
             "type": "number",
@@ -47,7 +51,8 @@
           "unit": {
             "description": "mathjs unit, such as km or MB/s; the input enters formulas with this unit",
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
           }
         },
         "required": [
@@ -66,7 +71,14 @@
       "type": "array",
       "items": {
         "type": "string",
-        "pattern": "^\\s*[A-Za-z_]\\w*\\s*\\([^)]*\\)\\s*="
+        "allOf": [
+          {
+            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
+          },
+          {
+            "pattern": "^\\s*[A-Za-z_]\\w*\\s*\\([^)]*\\)\\s*="
+          }
+        ]
       }
     },
     "sections": {
@@ -81,7 +93,8 @@
           },
           "title": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
           },
           "blocks": {
             "minItems": 1,
@@ -94,17 +107,20 @@
                     "simple": {
                       "type": "string",
                       "minLength": 1,
+                      "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$",
                       "description": "Everyday explanation for a newcomer"
                     },
                     "expert": {
                       "type": "string",
                       "minLength": 1,
+                      "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$",
                       "description": "Precise explanation in the domain's terms"
                     },
                     "tex": {
                       "description": "Optional formula in TeX, shown under the expert text",
                       "type": "string",
-                      "minLength": 1
+                      "minLength": 1,
+                      "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
                     },
                     "type": {
                       "type": "string",
@@ -129,7 +145,8 @@
                         "properties": {
                           "label": {
                             "type": "string",
-                            "minLength": 1
+                            "minLength": 1,
+                            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
                           },
                           "icon": {
                             "type": "string",
@@ -147,7 +164,8 @@
                           "set": {
                             "type": "object",
                             "propertyNames": {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
                             },
                             "additionalProperties": {
                               "type": "number"
@@ -186,37 +204,44 @@
                           },
                           "title": {
                             "type": "string",
-                            "minLength": 1
+                            "minLength": 1,
+                            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
                           },
                           "plain": {
                             "type": "string",
                             "minLength": 1,
+                            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$",
                             "description": "One plain-language line saying what the step means"
                           },
                           "ref": {
                             "type": "string",
                             "minLength": 1,
+                            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$",
                             "description": "Code reference this step implements, such as retry.py:42"
                           },
                           "expr": {
                             "type": "string",
                             "minLength": 1,
+                            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$",
                             "description": "mathjs expression over inputs, functions and earlier step ids"
                           },
                           "tex": {
                             "description": "Display formula in TeX; defaults to the expression",
                             "type": "string",
-                            "minLength": 1
+                            "minLength": 1,
+                            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
                           },
                           "substitute": {
                             "description": "Readable Substitute line with {name} placeholders; replaces the generated one",
                             "type": "string",
-                            "minLength": 1
+                            "minLength": 1,
+                            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
                           },
                           "unit": {
                             "description": "Unit to show the result in; required when the result carries a unit",
                             "type": "string",
-                            "minLength": 1
+                            "minLength": 1,
+                            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
                           },
                           "expect": {
                             "description": "The value the real code produced at the starting inputs, in the step's unit; publishing fails if the formula disagrees",
@@ -247,7 +272,8 @@
                   "properties": {
                     "question": {
                       "type": "string",
-                      "minLength": 1
+                      "minLength": 1,
+                      "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
                     },
                     "options": {
                       "minItems": 2,
@@ -255,7 +281,8 @@
                       "type": "array",
                       "items": {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
                       }
                     },
                     "answer": {
@@ -267,6 +294,7 @@
                     "why": {
                       "type": "string",
                       "minLength": 1,
+                      "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$",
                       "description": "Reason shown after the reader picks"
                     },
                     "type": {
@@ -293,15 +321,18 @@
                         "properties": {
                           "claim": {
                             "type": "string",
-                            "minLength": 1
+                            "minLength": 1,
+                            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
                           },
                           "value": {
                             "type": "string",
-                            "minLength": 1
+                            "minLength": 1,
+                            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
                           },
                           "source": {
                             "type": "string",
                             "minLength": 1,
+                            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$",
                             "description": "Where the value comes from: path:line, a commit, a command and its output"
                           },
                           "inferred": {
@@ -333,11 +364,13 @@
                     "before": {
                       "type": "string",
                       "minLength": 1,
+                      "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$",
                       "description": "Column heading for the old side, such as v11"
                     },
                     "after": {
                       "type": "string",
                       "minLength": 1,
+                      "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$",
                       "description": "Column heading for the new side"
                     },
                     "rows": {
@@ -348,13 +381,16 @@
                         "properties": {
                           "label": {
                             "type": "string",
-                            "minLength": 1
+                            "minLength": 1,
+                            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
                           },
                           "before": {
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
                           },
                           "after": {
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
                           }
                         },
                         "required": [
@@ -381,7 +417,8 @@
                   "properties": {
                     "unit": {
                       "type": "string",
-                      "minLength": 1
+                      "minLength": 1,
+                      "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
                     },
                     "bars": {
                       "minItems": 1,
@@ -392,7 +429,8 @@
                         "properties": {
                           "label": {
                             "type": "string",
-                            "minLength": 1
+                            "minLength": 1,
+                            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
                           },
                           "value": {
                             "type": "number"

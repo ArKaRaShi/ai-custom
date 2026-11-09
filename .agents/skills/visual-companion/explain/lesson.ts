@@ -4,8 +4,8 @@
  * toRenderSpec turns a valid lesson into the flat element map json-render draws.
  */
 import { z } from "zod";
-import { AnswerProps, BLOCK_PROPS, Input, LessonProps, SectionProps, type StepSpec } from "./catalog";
-import { evaluate, type Model, missesExpect, StepError, startValues } from "./evaluate";
+import { AnswerProps, BLOCK_PROPS, Input, LessonProps, SectionProps, type StepSpec, Text } from "./catalog";
+import { checkFunctions, checkStepFormula, evaluate, type Model, missesExpect, StepError, startValues } from "./evaluate";
 
 const Block = z.discriminatedUnion("type", [
   BLOCK_PROPS.Concept.extend({ type: z.literal("Concept") }),
@@ -23,7 +23,7 @@ export const Lesson = LessonProps.extend({
   answer: AnswerProps.shape.text,
   inputs: z.array(Input).default([]).describe("Values the reader can change; formulas see them by key"),
   functions: z
-    .array(z.string().regex(/^\s*[A-Za-z_]\w*\s*\([^)]*\)\s*=/, "write a function as name(args) = expression"))
+    .array(Text().regex(/^\s*[A-Za-z_]\w*\s*\([^)]*\)\s*=/, "write a function as name(args) = expression"))
     .default([])
     .describe("mathjs function definitions shared by every step, such as backoff(n) = min(30 s, 0.5 s * 2^n)"),
   sections: z.array(Section).min(1),
@@ -40,6 +40,9 @@ export const Lesson = LessonProps.extend({
     if (input.min > input.max || input.value < input.min || input.value > input.max) issue(["inputs", i, "value"], "value must lie between min and max");
     inputKeys.add(input.key);
   });
+  // Formulas run in the reader's tab: only plain arithmetic and earlier-defined functions are allowed.
+  const functions = checkFunctions(lesson.functions);
+  for (const { index, message } of functions.errors) issue(["functions", index], message);
   const stepIds = new Set<string>();
   // The Playground sticks only within its own section, so derivations it drives must follow it there.
   let playground: { section: number; block: number } | undefined;
@@ -62,6 +65,8 @@ export const Lesson = LessonProps.extend({
         block.steps.forEach((step, t) => {
           if (stepIds.has(step.id) || inputKeys.has(step.id)) issue(["sections", s, "blocks", b, "steps", t, "id"], `"${step.id}" is already an input or step`);
           stepIds.add(step.id);
+          const unsafe = checkStepFormula(step.expr, functions.names);
+          if (unsafe) issue(["sections", s, "blocks", b, "steps", t, "expr"], unsafe);
         });
       }
     }
@@ -149,7 +154,9 @@ function locate(raw: unknown, path: PropertyKey[]): string {
     node = typeof node === "object" && node !== null ? (node as Record<PropertyKey, unknown>)[key] : undefined;
     const label = (field: string): string => {
       const value = typeof node === "object" && node !== null ? (node as Record<string, unknown>)[field] : undefined;
-      return typeof value === "string" ? value : "";
+      // Labels come from text that failed validation; drop control characters before they reach a terminal.
+      // biome-ignore lint/suspicious/noControlCharactersInRegex: stripping control characters is the point.
+      return typeof value === "string" ? value.replace(/[\u0000-\u001f\u007f-\u009f]/g, "") : "";
     };
     if (typeof key !== "number") {
       parts.push(String(key));
@@ -196,13 +203,19 @@ export function lessonJsonSchema(): unknown {
 }
 
 /** The published page: a full document embedding the render spec and loading the prebuilt renderer. */
+/** Same-origin scripts, styles and fonts only; KaTeX and the theme need inline style attributes. */
+const EXPLAIN_CSP =
+  "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'";
+
 export function lessonPage(lesson: LessonSpec): string {
   const renderSpec = toRenderSpec(lesson);
-  const spec = JSON.stringify(renderSpec).replace(/</g, "\\u003c");
+  // Escaping "<" keeps the JSON inside its script tag; escaping "/" keeps spec text from looking like the client.js tag the server injects.
+  const spec = JSON.stringify(renderSpec).replace(/</g, "\\u003c").replace(/\//g, "\\/");
   const title = lesson.title.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
   return [
     "<!doctype html>",
     '<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">',
+    `<meta http-equiv="Content-Security-Policy" content="${EXPLAIN_CSP}">`,
     `<title>${title}</title>`,
     '<link rel="stylesheet" href="/assets/explain/katex.min.css"><link rel="stylesheet" href="/assets/explain/renderer.css">',
     "</head><body>",

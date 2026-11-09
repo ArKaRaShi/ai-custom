@@ -7,6 +7,7 @@
  */
 import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import type { BunPlugin } from "bun";
 import tailwind from "bun-plugin-tailwind";
 import { lessonJsonSchema } from "./lesson";
 
@@ -22,13 +23,25 @@ const assets = join(root, "assets", "explain");
 await rm(assets, { recursive: true, force: true });
 await mkdir(assets, { recursive: true });
 
+/**
+ * mathjs's seedrandom requires Node's crypto; for the browser Bun would bundle the whole crypto-browserify
+ * polyfill. Explain formulas cannot call random functions, so an empty module is enough.
+ */
+const noCrypto: BunPlugin = {
+  name: "no-crypto",
+  setup(build) {
+    build.onResolve({ filter: /^crypto$/ }, () => ({ path: "crypto", namespace: "no-crypto" }));
+    build.onLoad({ filter: /.*/, namespace: "no-crypto" }, () => ({ contents: "export default {};", loader: "js" }));
+  },
+};
+
 const browser = await Bun.build({
   entrypoints: [join(src, "app.tsx")],
   outdir: assets,
   naming: { entry: "renderer.[ext]", asset: "[name].[ext]" },
   target: "browser",
   minify: true,
-  plugins: [tailwind],
+  plugins: [tailwind, noCrypto],
   define: { "process.env.NODE_ENV": '"production"' },
 });
 const cli = await Bun.build({ entrypoints: [join(src, "lesson.ts")], outdir: join(root, "explain", "dist"), target: "bun" });

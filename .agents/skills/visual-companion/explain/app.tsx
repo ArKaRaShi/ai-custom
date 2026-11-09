@@ -10,7 +10,7 @@ import { createRoot } from "react-dom/client";
 import { Chart, Compare, Evidence, Quiz } from "@/blocks/content";
 import { Derivation } from "@/blocks/derivation";
 import { Playground } from "@/blocks/playground";
-import { AnswerProps, BLOCK_PROPS, LessonProps, SectionProps } from "@/catalog";
+import { AnswerProps, BLOCK_PROPS, KATEX_OPTIONS, LessonProps, SectionProps } from "@/catalog";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -33,7 +33,7 @@ const catalog = defineCatalog(schema, {
 });
 
 function Tex({ src }: { src: string }) {
-  const html = katex.renderToString(src, { throwOnError: false, displayMode: true });
+  const html = katex.renderToString(src, { ...KATEX_OPTIONS, displayMode: true });
   // biome-ignore lint/security/noDangerouslySetInnerHtml: KaTeX output with trust off; it renders math, never author HTML.
   return <div className="mt-1 overflow-x-auto rounded-lg bg-background p-3" dangerouslySetInnerHTML={{ __html: html }} />;
 }

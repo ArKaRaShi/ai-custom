@@ -89,7 +89,7 @@ export function startServer(options: ServerOptions): RunningServer {
         if (url.pathname.startsWith("/assets/")) {
           const path = await inside(ASSETS_DIR, url.pathname.slice(8));
           if (!path) return notFound();
-          return new Response(Bun.file(path), { headers: { "content-type": mimeFor(path) } });
+          return new Response(Bun.file(path), { headers: { "content-type": mimeFor(path), "x-content-type-options": "nosniff", "cache-control": "no-store" } });
         }
 
         if (url.pathname.startsWith("/files/")) {

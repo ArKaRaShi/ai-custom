@@ -280,6 +280,43 @@ describe("given content blocks, when they are published, then each validates aga
   }, 30_000);
 });
 
+
+describe("given spec text that could misuse the evaluator or the terminal, when it is published, then explain refuses it", () => {
+  test("formulas may only do arithmetic: no mathjs configuration, no parser re-entry, no matrices, no recursion", async () => {
+    await start();
+    const cases: [(lesson: typeof pumpLesson) => void, string][] = [
+      [(l) => Object.assign(l.sections[0]!.blocks[1]!.steps![0]!, { expr: 'config({number: "BigNumber"})' }), "function config is not allowed"],
+      [(l) => Object.assign(l.sections[0]!.blocks[1]!.steps![0]!, { expr: 'evaluate("1+1")' }), "function evaluate is not allowed"],
+      [(l) => Object.assign(l.sections[0]!.blocks[1]!.steps![0]!, { expr: "zeros(P, P)" }), "function zeros is not allowed"],
+      [(l) => Object.assign(l.sections[0]!.blocks[1]!.steps![0]!, { expr: "1:1000000" }), "RangeNode is not allowed"],
+      [(l) => l.functions.push("f(n) = f(n - 1) + f(n - 1)"), "functions[1]: function f is not allowed"],
+    ];
+    for (const [breakIt, message] of cases) {
+      const lesson = structuredClone(pumpLesson);
+      breakIt(lesson);
+      const result = await explain(lesson);
+      expect(result.code).toBe(1);
+      expect(result.err).toContain(message);
+    }
+  }, 30_000);
+
+  test("control characters in spec text and reserved input names are rejected", async () => {
+    await start();
+    const escape = structuredClone(pumpLesson);
+    escape.title = "Head \u001b]52;c;aGk=\u0007";
+    const first = await explain(escape);
+    expect(first.code).toBe(1);
+    expect(first.err).toContain("title: remove control characters");
+    expect(first.err).not.toContain("\u001b");
+
+    const reserved = structuredClone(pumpLesson);
+    reserved.inputs[0]!.key = "__proto__";
+    const second = await explain(reserved);
+    expect(second.code).toBe(1);
+    expect(second.err).toContain("this name is reserved");
+  }, 30_000);
+});
+
 // Optional browser seam, like theme-browser.test.ts: needs Google Chrome and the explain/ dev dependencies.
 const chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 let playwright: typeof import("playwright") | undefined;

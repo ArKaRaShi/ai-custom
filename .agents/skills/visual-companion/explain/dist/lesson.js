@@ -20317,65 +20317,67 @@ function date4(params) {
 }
 // catalog.ts
 var SectionId = exports_external.string().regex(/^[a-z][a-z0-9-]*$/, "use lowercase letters, digits and hyphens");
-var Identifier = exports_external.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/, "use letters, digits and underscores, starting with a letter");
+var Text = () => exports_external.string().regex(/^[^\u0000-\u0008\u000b-\u001f\u007f-\u009f]*$/, "remove control characters");
+var RESERVED = new Set(["__proto__", "constructor", "prototype"]);
+var Identifier = exports_external.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/, "use letters, digits and underscores, starting with a letter").refine((name) => !RESERVED.has(name), "this name is reserved");
 var ICON_NAMES = ["wear", "ruler", "gauge", "zap", "wrench", "activity", "trending-up", "trending-down"];
 var IconName = exports_external.enum(ICON_NAMES);
 var Input = exports_external.object({
   key: Identifier,
-  label: exports_external.string().min(1),
+  label: Text().min(1),
   value: exports_external.number().describe("Starting value"),
   min: exports_external.number(),
   max: exports_external.number(),
   step: exports_external.number().positive(),
-  unit: exports_external.string().min(1).optional().describe("mathjs unit, such as km or MB/s; the input enters formulas with this unit")
+  unit: Text().min(1).optional().describe("mathjs unit, such as km or MB/s; the input enters formulas with this unit")
 });
 var Step = exports_external.object({
   id: Identifier.describe("Name later steps use to reference this result"),
-  title: exports_external.string().min(1),
-  plain: exports_external.string().min(1).describe("One plain-language line saying what the step means"),
-  ref: exports_external.string().min(1).describe("Code reference this step implements, such as retry.py:42"),
-  expr: exports_external.string().min(1).describe("mathjs expression over inputs, functions and earlier step ids"),
-  tex: exports_external.string().min(1).optional().describe("Display formula in TeX; defaults to the expression"),
-  substitute: exports_external.string().min(1).optional().describe("Readable Substitute line with {name} placeholders; replaces the generated one"),
-  unit: exports_external.string().min(1).optional().describe("Unit to show the result in; required when the result carries a unit"),
+  title: Text().min(1),
+  plain: Text().min(1).describe("One plain-language line saying what the step means"),
+  ref: Text().min(1).describe("Code reference this step implements, such as retry.py:42"),
+  expr: Text().min(1).describe("mathjs expression over inputs, functions and earlier step ids"),
+  tex: Text().min(1).optional().describe("Display formula in TeX; defaults to the expression"),
+  substitute: Text().min(1).optional().describe("Readable Substitute line with {name} placeholders; replaces the generated one"),
+  unit: Text().min(1).optional().describe("Unit to show the result in; required when the result carries a unit"),
   expect: exports_external.number().optional().describe("The value the real code produced at the starting inputs, in the step's unit; publishing fails if the formula disagrees")
 });
-var Preset = exports_external.object({ label: exports_external.string().min(1), icon: IconName, set: exports_external.record(exports_external.string(), exports_external.number()) });
+var Preset = exports_external.object({ label: Text().min(1), icon: IconName, set: exports_external.record(Text(), exports_external.number()) });
 var EvidenceRow = exports_external.object({
-  claim: exports_external.string().min(1),
-  value: exports_external.string().min(1),
-  source: exports_external.string().min(1).describe("Where the value comes from: path:line, a commit, a command and its output"),
+  claim: Text().min(1),
+  value: Text().min(1),
+  source: Text().min(1).describe("Where the value comes from: path:line, a commit, a command and its output"),
   inferred: exports_external.boolean().default(false).describe("True when the claim was concluded rather than read from the source")
 });
-var CompareRow = exports_external.object({ label: exports_external.string().min(1), before: exports_external.string(), after: exports_external.string() });
+var CompareRow = exports_external.object({ label: Text().min(1), before: Text(), after: Text() });
 var ChartTone = exports_external.enum(["neutral", "good", "bad"]).default("neutral").describe("good and bad color the bar; meaning stays in the label");
-var ChartBar = exports_external.object({ label: exports_external.string().min(1), value: exports_external.number(), tone: ChartTone });
-var LessonProps = exports_external.object({ title: exports_external.string().min(1), subtitle: exports_external.string().min(1).optional() });
-var AnswerProps = exports_external.object({ text: exports_external.string().min(1).describe("The conclusion, shown first") });
-var SectionProps = exports_external.object({ id: SectionId, title: exports_external.string().min(1) });
+var ChartBar = exports_external.object({ label: Text().min(1), value: exports_external.number(), tone: ChartTone });
+var LessonProps = exports_external.object({ title: Text().min(1), subtitle: Text().min(1).optional() });
+var AnswerProps = exports_external.object({ text: Text().min(1).describe("The conclusion, shown first") });
+var SectionProps = exports_external.object({ id: SectionId, title: Text().min(1) });
 var BLOCK_PROPS = {
   Concept: exports_external.object({
-    simple: exports_external.string().min(1).describe("Everyday explanation for a newcomer"),
-    expert: exports_external.string().min(1).describe("Precise explanation in the domain's terms"),
-    tex: exports_external.string().min(1).optional().describe("Optional formula in TeX, shown under the expert text")
+    simple: Text().min(1).describe("Everyday explanation for a newcomer"),
+    expert: Text().min(1).describe("Precise explanation in the domain's terms"),
+    tex: Text().min(1).optional().describe("Optional formula in TeX, shown under the expert text")
   }),
   Playground: exports_external.object({
     presets: exports_external.array(Preset).default([]).describe("What-if buttons; each sets some inputs, the rest keep their starting values")
   }),
   Derivation: exports_external.object({ steps: exports_external.array(Step).min(1) }),
   Quiz: exports_external.object({
-    question: exports_external.string().min(1),
-    options: exports_external.array(exports_external.string().min(1)).min(2).max(6),
+    question: Text().min(1),
+    options: exports_external.array(Text().min(1)).min(2).max(6),
     answer: exports_external.number().int().nonnegative().describe("Index of the correct option, counting from 0"),
-    why: exports_external.string().min(1).describe("Reason shown after the reader picks")
+    why: Text().min(1).describe("Reason shown after the reader picks")
   }),
   Evidence: exports_external.object({ rows: exports_external.array(EvidenceRow).min(1) }),
   Compare: exports_external.object({
-    before: exports_external.string().min(1).describe("Column heading for the old side, such as v11"),
-    after: exports_external.string().min(1).describe("Column heading for the new side"),
+    before: Text().min(1).describe("Column heading for the old side, such as v11"),
+    after: Text().min(1).describe("Column heading for the new side"),
     rows: exports_external.array(CompareRow).min(1)
   }),
-  Chart: exports_external.object({ unit: exports_external.string().min(1).optional(), bars: exports_external.array(ChartBar).min(1).max(12) })
+  Chart: exports_external.object({ unit: Text().min(1).optional(), bars: exports_external.array(ChartBar).min(1).max(12) })
 };
 
 // node_modules/mathjs/lib/esm/core/config.js
@@ -62113,6 +62115,49 @@ function create2(factories, config3) {
 if (!all)
   throw new Error("mathjs did not export its function set");
 var math = create2(all);
+var SAFE_FUNCTIONS = new Set([
+  ...["abs", "sign", "sqrt", "cbrt", "nthRoot", "exp", "expm1", "log", "log10", "log2", "log1p", "pow", "hypot"],
+  ...["min", "max", "round", "floor", "ceil", "fix", "mod"],
+  ...["sin", "cos", "tan", "asin", "acos", "atan", "atan2", "sinh", "cosh", "tanh"]
+]);
+var SAFE_NODES = new Set(["ConstantNode", "SymbolNode", "OperatorNode", "ParenthesisNode", "ConditionalNode", "FunctionNode"]);
+function checkFormula(tree, callable) {
+  tree.traverse((node2) => {
+    if (!SAFE_NODES.has(node2.type))
+      throw new Error(`${node2.type} is not allowed in a formula: ${node2.toString()}`);
+    if (math.isFunctionNode(node2)) {
+      const name323 = math.isSymbolNode(node2.fn) ? node2.fn.name : "";
+      if (!SAFE_FUNCTIONS.has(name323) && !callable.has(name323))
+        throw new Error(`function ${name323 || node2.fn.toString()} is not allowed in a formula`);
+    }
+  });
+}
+function checkFunctions(definitions) {
+  const names = new Set;
+  const errors3 = [];
+  for (const [index, definition] of definitions.entries()) {
+    try {
+      const tree = math.parse(definition);
+      if (!math.isFunctionAssignmentNode(tree))
+        throw new Error("write a function as name(args) = expression");
+      if (SAFE_FUNCTIONS.has(tree.name) || names.has(tree.name))
+        throw new Error(`function ${tree.name} is already defined`);
+      checkFormula(tree.expr, names);
+      names.add(tree.name);
+    } catch (error62) {
+      errors3.push({ index, message: error62 instanceof Error ? error62.message : String(error62) });
+    }
+  }
+  return { names, errors: errors3 };
+}
+function checkStepFormula(expr, functionNames) {
+  try {
+    checkFormula(math.parse(expr), functionNames);
+    return;
+  } catch (error62) {
+    return error62 instanceof Error ? error62.message : String(error62);
+  }
+}
 
 class StepError extends Error {
   stepId;
@@ -62134,11 +62179,19 @@ function inputScope(inputs, values) {
 }
 function evaluatePartial(model, values) {
   const scope = inputScope(model.inputs, values);
+  const functions = checkFunctions(model.functions);
+  const firstStep = model.steps[0]?.id ?? "";
+  const badFunction = functions.errors[0];
+  if (badFunction)
+    return { results: new Map, error: new StepError(firstStep, `functions[${badFunction.index}]: ${badFunction.message}`) };
   for (const definition of model.functions)
     math.evaluate(definition, scope);
   const results = new Map;
   for (const step of model.steps) {
     try {
+      const unsafe = checkStepFormula(step.expr, functions.names);
+      if (unsafe)
+        throw new StepError(step.id, unsafe);
       const raw = math.evaluate(step.expr, scope);
       const value = toNumber(step, raw);
       scope.set(step.id, raw);
@@ -62198,7 +62251,7 @@ var Section = SectionProps.extend({ blocks: exports_external.array(Block).min(1)
 var Lesson = LessonProps.extend({
   answer: AnswerProps.shape.text,
   inputs: exports_external.array(Input).default([]).describe("Values the reader can change; formulas see them by key"),
-  functions: exports_external.array(exports_external.string().regex(/^\s*[A-Za-z_]\w*\s*\([^)]*\)\s*=/, "write a function as name(args) = expression")).default([]).describe("mathjs function definitions shared by every step, such as backoff(n) = min(30 s, 0.5 s * 2^n)"),
+  functions: exports_external.array(Text().regex(/^\s*[A-Za-z_]\w*\s*\([^)]*\)\s*=/, "write a function as name(args) = expression")).default([]).describe("mathjs function definitions shared by every step, such as backoff(n) = min(30 s, 0.5 s * 2^n)"),
   sections: exports_external.array(Section).min(1)
 }).superRefine((lesson, ctx) => {
   const issue2 = (path, message) => ctx.addIssue({ code: "custom", path, message });
@@ -62216,6 +62269,9 @@ var Lesson = LessonProps.extend({
       issue2(["inputs", i, "value"], "value must lie between min and max");
     inputKeys.add(input2.key);
   });
+  const functions = checkFunctions(lesson.functions);
+  for (const { index, message } of functions.errors)
+    issue2(["functions", index], message);
   const stepIds = new Set;
   let playground;
   for (const [s, section] of lesson.sections.entries()) {
@@ -62241,6 +62297,9 @@ var Lesson = LessonProps.extend({
           if (stepIds.has(step.id) || inputKeys.has(step.id))
             issue2(["sections", s, "blocks", b, "steps", t, "id"], `"${step.id}" is already an input or step`);
           stepIds.add(step.id);
+          const unsafe = checkStepFormula(step.expr, functions.names);
+          if (unsafe)
+            issue2(["sections", s, "blocks", b, "steps", t, "expr"], unsafe);
         });
       }
     }
@@ -62313,7 +62372,7 @@ function locate(raw, path) {
     node2 = typeof node2 === "object" && node2 !== null ? node2[key] : undefined;
     const label = (field) => {
       const value = typeof node2 === "object" && node2 !== null ? node2[field] : undefined;
-      return typeof value === "string" ? value : "";
+      return typeof value === "string" ? value.replace(/[\u0000-\u001f\u007f-\u009f]/g, "") : "";
     };
     if (typeof key !== "number") {
       parts.push(String(key));
@@ -62355,13 +62414,15 @@ function toRenderSpec(lesson) {
 function lessonJsonSchema() {
   return exports_external.toJSONSchema(Lesson, { io: "input" });
 }
+var EXPLAIN_CSP = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'";
 function lessonPage(lesson) {
   const renderSpec = toRenderSpec(lesson);
-  const spec = JSON.stringify(renderSpec).replace(/</g, "\\u003c");
+  const spec = JSON.stringify(renderSpec).replace(/</g, "\\u003c").replace(/\//g, "\\/");
   const title = lesson.title.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
   return [
     "<!doctype html>",
     '<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">',
+    `<meta http-equiv="Content-Security-Policy" content="${EXPLAIN_CSP}">`,
     `<title>${title}</title>`,
     '<link rel="stylesheet" href="/assets/explain/katex.min.css"><link rel="stylesheet" href="/assets/explain/renderer.css">',
     "</head><body>",

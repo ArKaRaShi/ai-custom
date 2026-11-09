@@ -9,6 +9,57 @@ import type { InputSpec, StepSpec } from "./catalog";
 if (!all) throw new Error("mathjs did not export its function set");
 const math = create(all);
 
+/**
+ * Functions a formula may call. Spec text is evaluated in the CLI and the reader's tab, so anything that
+ * changes mathjs itself (config, createUnit, import), re-enters the parser (evaluate, parse, simplify),
+ * or builds large structures (matrices, ranges, random) is out of reach.
+ */
+const SAFE_FUNCTIONS = new Set([
+  ...["abs", "sign", "sqrt", "cbrt", "nthRoot", "exp", "expm1", "log", "log10", "log2", "log1p", "pow", "hypot"],
+  ...["min", "max", "round", "floor", "ceil", "fix", "mod"],
+  ...["sin", "cos", "tan", "asin", "acos", "atan", "atan2", "sinh", "cosh", "tanh"],
+]);
+const SAFE_NODES = new Set(["ConstantNode", "SymbolNode", "OperatorNode", "ParenthesisNode", "ConditionalNode", "FunctionNode"]);
+
+/** Rejects anything outside plain arithmetic over symbols, units and the allowed (plus already-defined) functions. */
+function checkFormula(tree: MathNode, callable: ReadonlySet<string>): void {
+  tree.traverse((node: MathNode) => {
+    if (!SAFE_NODES.has(node.type)) throw new Error(`${node.type} is not allowed in a formula: ${node.toString()}`);
+    if (math.isFunctionNode(node)) {
+      const name = math.isSymbolNode(node.fn) ? node.fn.name : "";
+      if (!SAFE_FUNCTIONS.has(name) && !callable.has(name)) throw new Error(`function ${name || node.fn.toString()} is not allowed in a formula`);
+    }
+  });
+}
+
+/** Parses `name(args) = body` definitions in order; a body may call only safe functions and earlier definitions, so no recursion. */
+export function checkFunctions(definitions: string[]): { names: Set<string>; errors: { index: number; message: string }[] } {
+  const names = new Set<string>();
+  const errors: { index: number; message: string }[] = [];
+  for (const [index, definition] of definitions.entries()) {
+    try {
+      const tree = math.parse(definition);
+      if (!math.isFunctionAssignmentNode(tree)) throw new Error("write a function as name(args) = expression");
+      if (SAFE_FUNCTIONS.has(tree.name) || names.has(tree.name)) throw new Error(`function ${tree.name} is already defined`);
+      checkFormula(tree.expr, names);
+      names.add(tree.name);
+    } catch (error) {
+      errors.push({ index, message: error instanceof Error ? error.message : String(error) });
+    }
+  }
+  return { names, errors };
+}
+
+/** Error message for a step formula that is not plain arithmetic, or undefined when it is. */
+export function checkStepFormula(expr: string, functionNames: ReadonlySet<string>): string | undefined {
+  try {
+    checkFormula(math.parse(expr), functionNames);
+    return undefined;
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+}
+
 /** Everything a lesson's derivations depend on, in evaluation order. */
 export interface Model {
   inputs: InputSpec[];
@@ -57,10 +108,16 @@ export interface Run {
 /** Evaluates steps in order; each step's id joins the scope for the steps after it. Stops at the first failing step. */
 export function evaluatePartial(model: Model, values: InputValues): Run {
   const scope = inputScope(model.inputs, values);
+  const functions = checkFunctions(model.functions);
+  const firstStep = model.steps[0]?.id ?? "";
+  const badFunction = functions.errors[0];
+  if (badFunction) return { results: new Map(), error: new StepError(firstStep, `functions[${badFunction.index}]: ${badFunction.message}`) };
   for (const definition of model.functions) math.evaluate(definition, scope);
   const results = new Map<string, StepResult>();
   for (const step of model.steps) {
     try {
+      const unsafe = checkStepFormula(step.expr, functions.names);
+      if (unsafe) throw new StepError(step.id, unsafe);
       const raw: unknown = math.evaluate(step.expr, scope);
       const value = toNumber(step, raw);
       scope.set(step.id, raw);
