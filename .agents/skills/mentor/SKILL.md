@@ -1,96 +1,35 @@
 ---
 name: mentor
-description: Use when the user explicitly asks for a lesson, explanation, or guided walkthrough of an unfamiliar codebase, system, technical domain, or technology.
+description: Lessons that teach a mechanism or calculation from real code values, in two tracks with worked derivations.
 disable-model-invocation: true
 ---
 
-# `mentor`
+# Mentor
 
-Use when onboarding to an unfamiliar codebase, domain, or technology (e.g. OSIsoft PI, InfluxDB, Kafka, Kubernetes, Airflow).
+Produces a plain-Markdown lesson that a newcomer and an expert can both follow, with every number taken from running the real code.
 
-## Core Philosophy: Assume No Prior Knowledge
+## Steps
 
-The user is smart and capable, but new to this specific domain or tool.
+1. Find the real mechanism: read the code path and, for a library or vendor system, its official docs. Exit: every step of the lesson maps to a `file:line` or a cited doc.
+2. Run the real code on one sample input and record every intermediate value; when the user supplies a sample, use it. Exit: each number the lesson will show came from a run, or is labeled `[Illustrative]`.
+3. Write the lesson in this order: **Answer** (the conclusion in one or two sentences) → **Mental model** (one everyday analogy) → **Key concept** → **one section per case or path** → **What-if** → **Recall**. Exit: all six parts are present.
+4. Write every step as two tracks plus a derivation. Exit: no step lacks one of the three lines.
 
-- Never assume the user knows domain-specific acronyms, concepts, or background conventions.
-- Never explain a concept using another unexplained jargon term.
-- Always translate domain terms into concrete everyday analogies and standard software engineering fundamentals.
+   ```
+   ### 3. Retry delay  (retry.py:42)
+   🧒 Each failed try waits twice as long as the last one, but never longer than the ceiling.
+   🔧 Formula:    delay = min(cap, base × 2^attempt)
+      Substitute: delay = min(30, 0.5 × 2^4)
+      Result:     delay = 8 s
+   ```
 
----
+5. Add 2–3 what-if lines from re-running the code with one input changed: `attempt 4 → 7: delay 8 s → 30 s (cap reached)`. Exit: each line shows old → new values from a run.
+6. End with 2–3 recall questions; put each answer after its question, under `Answer:`. Exit: the reader can guess before reading the answer.
+7. When the user asks for a visual, browser, or interactive version, hand this same lesson to the `visual-companion` skill and let it own HTML, CSS, and JS. Exit: the lesson file itself stays plain Markdown.
 
-## Invariant 1: Strict Zero-Edit Review
+## Reference
 
-When `mentor` is active:
-
-- **Zero code edits:** do not edit files or run mutation scripts.
-- **Read-only tools only:** use `read`, `grep`, `glob`, and `lsp` to inspect code and trace actual paths for the lesson.
-- If the user asks for code changes while in `mentor` mode, confirm whether to exit mentorship mode before touching code.
-
----
-
-## Invariant 2: Grounded Research
-
-**REQUIRE SUBSKILL:** `deep-research` (`skill://deep-research`).
-
-Use `deep-research` to investigate unfamiliar libraries or vendor specifications before explaining architecture. If `deep-research` is unavailable, query `Context7` or `web_search` directly with manual provenance tags without stalling.
-
-Industrial, legacy, and specialized technologies evolve across versions and have vendor-specific quirks:
-1. **Active Documentation Lookup:**
-   - Always query authoritative documentation before explaining non-obvious architecture:
-     - Use **Context7** (`xd://mcp__context_query_docs`) for modern libraries, frameworks, SDKs, and developer tools.
-     - Use **`web_search`** for vendor industrial documentation (e.g., AVEVA/OSIsoft official documentation, RFCs, manuals).
-2. **Mandatory References:**
-   - Technical explanations must include links or official source references to documentation so the user can independently verify.
-3. **Intellectual Honesty:**
-   - Never rely on assumptions or unverified memories.
-   - If an architectural detail or vendor behavior is ambiguous between versions, state uncertainty directly.
-
----
-
-## Invariant 3: The 4-Tier Concept Delivery Structure
-
-Every lesson turn must cover only one core concept formatted in 4 sections:
-
-### 1. The Why & Mental Model
-
-What real-world problem does this technology or component solve? Why not a regular SQL database or a Python script?
-
-### 2. Everyday Analogy
-
-Anchor the concept to a physical or familiar everyday thing.
-
-- *Example (Time-Series DB):* "Like a hospital sensor that writes beats per second to a continuous paper spool."
-- *Example (OSIsoft PI Asset Framework / AF):* "Like organizing factory machines into a folder tree with clear labels."
-
-### 3. Jargon Translation & Essential Vocabulary Table
-
-Translate domain words into plain terms:
-
-| Domain Term | Meaning | Software Concept |
-| --- | --- | --- |
-| *PI Point / Tag* | A sensor stream recording values over time | Key in a time-indexed append-only log |
-| *AF Element* | A digital twin representing a machine or asset | An object instance with attributes |
-| *Interpolated Value* | Calculating estimated sensor value between 2 reads | Linear mathematical interpolation between points |
-
-### 4. Code Trace, Gotchas & Disambiguation
-
-Trace how this exact concept manifests in the user's actual codebase:
-
-- Reference specific file paths and line numbers (e.g. `main.py:45` -> `pi_service.py:120`).
-- Show the flow with an ASCII or Mermaid diagram.
-- **Platform vs. Repo Quirks:** distinguish upstream platform features from custom repository code.
-- **Gotchas and Failure Modes:** highlight common developer pitfalls or silent bugs (e.g., connection leaks, timeout traps, memory spikes when querying wide time ranges).
-
----
-
-## Invariant 4: Roadmap & Verification
-
-Limit each turn to one core topic.
-
-At the end of every turn, provide:
-
-1. **Curriculum Roadmap:** a 3-4 stage learning roadmap showing progress (e.g., `[x] Stage 1: Mental Model`, `[ ] Stage 2: Connection Lifecycle`).
-2. **Verify It Yourself:** a concrete, safe read-only command or file inspection tip to see the concept firsthand.
-3. **Summary:** 1-sentence TL;DR summary.
-4. **References:** links or exact names of official manuals used.
-5. **Interactive Question:** offering 2-3 logical next directions.
+- **Read-only.** A mentor turn changes no source file. When the user also asks for a fix, teach first, then ask whether to leave mentor mode before editing.
+- **Plain words first.** Define each term where it first appears; never explain jargon with more jargon.
+- **Honesty.** State version-dependent or unverified behavior as uncertain, and link the docs you used.
+- **Why this shape.** Worked examples (Sweller), activation and application (Merrill), segmenting and signaling (Mayer), retrieval practice (Dunlosky).
