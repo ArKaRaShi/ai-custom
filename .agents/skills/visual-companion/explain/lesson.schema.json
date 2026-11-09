@@ -217,6 +217,10 @@
                             "description": "Unit to show the result in; required when the result carries a unit",
                             "type": "string",
                             "minLength": 1
+                          },
+                          "expect": {
+                            "description": "The value the real code produced at the starting inputs, in the step's unit; publishing fails if the formula disagrees",
+                            "type": "number"
                           }
                         },
                         "required": [

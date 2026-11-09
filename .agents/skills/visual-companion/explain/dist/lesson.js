@@ -20337,7 +20337,8 @@ var Step = exports_external.object({
   expr: exports_external.string().min(1).describe("mathjs expression over inputs, functions and earlier step ids"),
   tex: exports_external.string().min(1).optional().describe("Display formula in TeX; defaults to the expression"),
   substitute: exports_external.string().min(1).optional().describe("Readable Substitute line with {name} placeholders; replaces the generated one"),
-  unit: exports_external.string().min(1).optional().describe("Unit to show the result in; required when the result carries a unit")
+  unit: exports_external.string().min(1).optional().describe("Unit to show the result in; required when the result carries a unit"),
+  expect: exports_external.number().optional().describe("The value the real code produced at the starting inputs, in the step's unit; publishing fails if the formula disagrees")
 });
 var Preset = exports_external.object({ label: exports_external.string().min(1), icon: IconName, set: exports_external.record(exports_external.string(), exports_external.number()) });
 var LessonProps = exports_external.object({ title: exports_external.string().min(1), subtitle: exports_external.string().min(1).optional() });
@@ -62154,6 +62155,12 @@ function toNumber(step, raw) {
   }
   throw new StepError(step.id, `result is not a finite number: ${math.format(raw)}`);
 }
+var EXPECT_TOLERANCE = 0.000001;
+function missesExpect(step, value) {
+  if (step.expect === undefined)
+    return false;
+  return Math.abs(value - step.expect) > EXPECT_TOLERANCE * Math.max(Math.abs(step.expect), Number.MIN_VALUE);
+}
 
 // lesson.ts
 var Block = exports_external.discriminatedUnion("type", [
@@ -62228,14 +62235,25 @@ function parseLesson(raw) {
   }
   const lesson = result.data;
   const model = lessonModel(lesson);
+  let results;
   try {
-    evaluate(model, startValues(model.inputs));
+    results = evaluate(model, startValues(model.inputs));
   } catch (error62) {
     if (!(error62 instanceof StepError))
       throw error62;
     const path = stepPath(lesson, error62.stepId);
     return { ok: false, errors: [`${locate(raw, path)}: ${error62.message}`] };
   }
+  const mismatches = [];
+  for (const step of model.steps) {
+    const computed = results.get(step.id)?.value;
+    if (computed === undefined || step.expect === undefined || !missesExpect(step, computed))
+      continue;
+    const where = locate(raw, stepPath(lesson, step.id));
+    mismatches.push(`${where}: expected ${step.expect}, computed ${computed}; the formula does not match the real code`);
+  }
+  if (mismatches.length)
+    return { ok: false, errors: mismatches };
   return { ok: true, lesson };
 }
 function lessonModel(lesson) {

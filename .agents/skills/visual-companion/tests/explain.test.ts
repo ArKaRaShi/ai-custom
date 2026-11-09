@@ -191,6 +191,35 @@ describe("given a lesson with a derivation, when it is published with explain, t
   }, 30_000);
 });
 
+
+describe("given derivation steps with expected values from the real code, when the lesson is published, then results must match them", () => {
+  // Expected values computed outside the evaluator: 327000 / 9806.65 and 1000 * 9.80665 * 0.05 * H / 1000.
+  const withExpect = (h: number) => {
+    const lesson = structuredClone(pumpLesson);
+    const steps = lesson.sections[0]!.blocks[1]!.steps!;
+    Object.assign(steps[0]!, { expect: 327_000 });
+    Object.assign(steps[1]!, { expect: h });
+    Object.assign(steps[2]!, { expect: 16.35 });
+    return lesson;
+  };
+
+  test("matching expected values publish normally", async () => {
+    await start();
+    expect((await explain(withExpect(33.34472016437825))).code).toBe(0);
+  }, 30_000);
+
+  test("a mismatched expected value names the step, both values, and publishes nothing", async () => {
+    const url = await start();
+    const result = await explain(withExpect(33.9));
+    expect(result.code).toBe(1);
+    expect(result.err).toContain('steps[1] "H"');
+    expect(result.err).toContain("expected 33.9");
+    expect(result.err).toContain("computed 33.3447");
+    const page = await (await fetch(url)).text();
+    expect(page).not.toContain("Where pump head comes from");
+  }, 30_000);
+});
+
 // Optional browser seam, like theme-browser.test.ts: needs Google Chrome and the explain/ dev dependencies.
 const chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 let playwright: typeof import("playwright") | undefined;
@@ -281,6 +310,26 @@ test.skipIf(!playwright || !existsSync(chrome))("changing an input recomputes th
     expect(top).toBeGreaterThanOrEqual(0);
     expect(top).toBeLessThan(40);
     expect(errors).toEqual([]);
+  } finally {
+    await browser.close();
+  }
+}, 60_000);
+test.skipIf(!playwright || !existsSync(chrome))("a lesson whose expected values match shows no mismatch warning, before or after inputs change", async () => {
+  const url = await start();
+  const lesson = structuredClone(pumpLesson);
+  const steps = lesson.sections[0]!.blocks[1]!.steps!;
+  Object.assign(steps[0]!, { expect: 327_000 });
+  Object.assign(steps[1]!, { expect: 33.34472016437825 });
+  expect((await explain(lesson)).code).toBe(0);
+  const browser = await playwright!.chromium.launch({ executablePath: chrome, headless: true });
+  try {
+    const page = await browser.newPage();
+    await page.goto(url);
+    await page.waitForSelector("[data-block=Derivation]");
+    expect(await page.locator("[data-expect-mismatch]").count()).toBe(0);
+    await page.locator("[data-input=P]").fill("4");
+    await page.waitForSelector("[data-step=H] [data-old]");
+    expect(await page.locator("[data-expect-mismatch]").count()).toBe(0);
   } finally {
     await browser.close();
   }

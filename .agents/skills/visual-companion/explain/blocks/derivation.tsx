@@ -9,7 +9,18 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { evaluatePartial, fillTemplate, formatNumber, formulaTex, type InputValues, knownBefore, type Model, type StepResult, substituteTex } from "@/evaluate";
+import {
+  evaluatePartial,
+  fillTemplate,
+  formatNumber,
+  formulaTex,
+  type InputValues,
+  knownBefore,
+  type Model,
+  missesExpect,
+  type StepResult,
+  substituteTex,
+} from "@/evaluate";
 
 function Tex({ src }: { src: string }) {
   const html = katex.renderToString(src, { throwOnError: false, displayMode: false });
@@ -54,6 +65,7 @@ function StepItem({
   now,
   base,
   error,
+  atStart,
 }: {
   step: StepSpec;
   index: number;
@@ -63,6 +75,8 @@ function StepItem({
   base: Map<string, StepResult> | undefined;
   /** Set on the step that failed for these inputs, or on a later step that depends on it. */
   error: { stepId: string; message: string } | undefined;
+  /** The expect check only applies at the starting inputs, where the real code's value was recorded. */
+  atStart: boolean;
 }) {
   const known = knownBefore(model, values, now, step.id);
   const result = now.get(step.id);
@@ -105,6 +119,16 @@ function StepItem({
             )}
           </Row>
         </Card>
+        {atStart && result && step.expect !== undefined && missesExpect(step, result.value) && (
+          <Alert variant="destructive" data-expect-mismatch={step.id} className="mt-3">
+            <CircleAlert aria-hidden />
+            <AlertTitle>Does not match the real code</AlertTitle>
+            <AlertDescription>
+              The real code gives {formatNumber(step.expect)}
+              {step.unit ? ` ${step.unit}` : ""} at these inputs.
+            </AlertDescription>
+          </Alert>
+        )}
       </div>
     </li>
   );
@@ -118,11 +142,12 @@ export function Derivation({ steps }: { steps: StepSpec[] }) {
   if (!model) return null;
   // Steps before a failing one keep their results; the failing step and the ones after it show why.
   const now = evaluatePartial(model, values);
+  const atStart = model.inputs.every((input) => (values[input.key] ?? input.value) === (start[input.key] ?? input.value));
   const error = now.error ? { stepId: now.error.stepId, message: now.error.message } : undefined;
   return (
     <ol data-block="Derivation" className="m-0 mt-7 list-none p-0">
       {steps.map((step, i) => (
-        <StepItem key={step.id} step={step} index={i} model={model} values={values} now={now.results} base={base} error={error} />
+        <StepItem key={step.id} step={step} index={i} model={model} values={values} now={now.results} base={base} error={error} atStart={atStart} />
       ))}
     </ol>
   );

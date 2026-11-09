@@ -99,6 +99,15 @@ function toNumber(step: StepSpec, raw: unknown): number {
   throw new StepError(step.id, `result is not a finite number: ${math.format(raw)}`);
 }
 
+/** Relative tolerance for the expect check: loose enough for float noise, tight enough to catch a wrong formula. */
+export const EXPECT_TOLERANCE = 1e-6;
+
+/** True when the step declares an expected value and the computed one disagrees beyond EXPECT_TOLERANCE. */
+export function missesExpect(step: StepSpec, value: number): boolean {
+  if (step.expect === undefined) return false;
+  return Math.abs(value - step.expect) > EXPECT_TOLERANCE * Math.max(Math.abs(step.expect), Number.MIN_VALUE);
+}
+
 /** Values a step's Substitute line can show: inputs with their units, then each earlier step's raw result. */
 export function knownBefore(model: Model, values: InputValues, results: Map<string, StepResult>, stepId: string): Map<string, unknown> {
   const known = inputScope(model.inputs, values);

@@ -31,6 +31,10 @@ export const Step = z.object({
   tex: z.string().min(1).optional().describe("Display formula in TeX; defaults to the expression"),
   substitute: z.string().min(1).optional().describe("Readable Substitute line with {name} placeholders; replaces the generated one"),
   unit: z.string().min(1).optional().describe("Unit to show the result in; required when the result carries a unit"),
+  expect: z
+    .number()
+    .optional()
+    .describe("The value the real code produced at the starting inputs, in the step's unit; publishing fails if the formula disagrees"),
 });
 
 export const Preset = z.object({ label: z.string().min(1), icon: IconName, set: z.record(z.string(), z.number()) });

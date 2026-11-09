@@ -5,7 +5,7 @@
  */
 import { z } from "zod";
 import { AnswerProps, BLOCK_PROPS, Input, LessonProps, SectionProps, type StepSpec } from "./catalog";
-import { evaluate, type Model, StepError, startValues } from "./evaluate";
+import { evaluate, type Model, missesExpect, StepError, startValues } from "./evaluate";
 
 const Block = z.discriminatedUnion("type", [
   BLOCK_PROPS.Concept.extend({ type: z.literal("Concept") }),
@@ -91,13 +91,23 @@ export function parseLesson(raw: unknown): ParseResult {
   }
   const lesson = result.data;
   const model = lessonModel(lesson);
+  let results: ReturnType<typeof evaluate>;
   try {
-    evaluate(model, startValues(model.inputs));
+    results = evaluate(model, startValues(model.inputs));
   } catch (error) {
     if (!(error instanceof StepError)) throw error;
     const path = stepPath(lesson, error.stepId);
     return { ok: false, errors: [`${locate(raw, path)}: ${error.message}`] };
   }
+  // Expect check: every declared value must match what the formula computes at the starting inputs.
+  const mismatches: string[] = [];
+  for (const step of model.steps) {
+    const computed = results.get(step.id)?.value;
+    if (computed === undefined || step.expect === undefined || !missesExpect(step, computed)) continue;
+    const where = locate(raw, stepPath(lesson, step.id));
+    mismatches.push(`${where}: expected ${step.expect}, computed ${computed}; the formula does not match the real code`);
+  }
+  if (mismatches.length) return { ok: false, errors: mismatches };
   return { ok: true, lesson };
 }
 
