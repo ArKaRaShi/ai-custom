@@ -22,27 +22,6 @@ disable-model-invocation: true
 
 Input validation and domain invariants are distinct: an integer can be valid input while still exceeding a business limit.
 
-## Paired Example
-
-```text
-// Avoid: repeat the boundary's integer check inside trusted processing
-function process(value):
-    if value is not an integer:
-        return invalid input
-    return value * 2
-
-// Prefer: establish the contract at entry; process relies on it
-function parseInput(raw):
-    if raw is not an integer:
-        raise invalid input
-    return raw
-
-function process(value: integer):
-    return value * 2
-```
-
-Rationale: repeated checks can obscure which component establishes the contract and produce inconsistent error handling. Domain rules and runtime failures still need checks at their appropriate boundaries.
-
 ## The Tests
 
 - Where does untrusted data enter the system?

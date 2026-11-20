@@ -18,18 +18,6 @@ disable-model-invocation: true
 - Write to a temporary path and rename it into place. Compare artifacts by content, not by creation order.
 - When a repeat is not safe by construction, add a reconciliation step that repairs leftover state before the work starts.
 
-## Paired Example
-
-```text
-// Avoid: append and assume a clean start
-insert row -> send message -> mark done   (crash after insert: retry inserts twice)
-
-// Prefer: converge on the goal state
-upsert row by natural key -> send message if not already sent -> mark done
-```
-
-Rationale: the second form gives the same end state on every retry.
-
 ## The Tests
 
 - What happens if this runs twice in a row?

@@ -21,23 +21,6 @@ disable-model-invocation: true
 
 Locality is a trade-off. A security boundary, shared policy, or complex algorithm may justify an extra hop.
 
-## Paired Example
-
-```text
-// Avoid: a pass-through wrapper adds a hop with no policy or boundary
-function calculateTotal(cart):
-    return calculateTotalHelper(cart)
-
-function calculateTotalHelper(cart):
-    return sum(cart.itemPrices)
-
-// Prefer: put the calculation at its entry point
-function calculateTotal(cart):
-    return sum(cart.itemPrices)
-```
-
-Rationale: a wrapper with no independent purpose forces readers to navigate another function to find the calculation.
-
 ## The Tests
 
 - How many files or layers must a reader traverse to understand this behavior?

@@ -20,6 +20,8 @@ disable-model-invocation: true
 
 Treat these as conceptual boundaries rather than mandatory architectural layers or directory structures.
 
+**One reason to change:** code that changes for the same reason, such as the same owner or decision, stays together. Code that changes for different reasons splits. This is single responsibility read as "reason to change", not "one function, one job". Name the owner of each reason before you split.
+
 ## Cross-Cutting Concerns
 
 Authentication, authorization, validation, error handling, observability, caching, configuration, and consistency often cross boundaries. Separate policy from mechanism and assign clear boundaries rather than forcing the entire concern into one layer.
@@ -27,44 +29,6 @@ Authentication, authorization, validation, error handling, observability, cachin
 ## State and Execution
 
 Keep state with the component responsible for its lifecycle and invariants. An HTTP endpoint, UI event, or background worker may trigger a use case without containing its business rules.
-
-## Paired Example
-
-```text
-// Avoid: mixing transport, business rules, and persistence in one routine
-function handleCancelOrder(request):
-    order = db.query("SELECT status FROM orders WHERE id = ?", request.orderId)
-    if order == null:
-        return response(404, "Not found")
-    if order.status == "SHIPPED":
-        return response(400, "Cannot cancel shipped order")
-
-    db.execute("UPDATE orders SET status = 'CANCELLED' WHERE id = ?", request.orderId)
-    return response(200, "OK")
-
-// Prefer: transport delegates orchestration; domain rules stay independent
-function handleCancelOrder(request):
-    try:
-        orderService.cancelOrder(request.orderId)
-        return response(200, "OK")
-    catch OrderNotFound:
-        return response(404, "Not found")
-    catch OrderAlreadyShipped:
-        return response(400, "Cannot cancel shipped order")
-
-function cancelOrder(orderId):
-    order = db.findOrder(orderId)
-    if order == null:
-        raise OrderNotFound
-    ensureCancellable(order)
-    db.saveCancelled(order)
-
-function ensureCancellable(order):
-    if order.status == "SHIPPED":
-        raise OrderAlreadyShipped
-```
-
-Rationale: mixing persistence queries and business invariants inside transport handlers couples domain rules to transport protocols, preventing reuse across workers or CLI scripts and requiring full integration suites to test simple policy changes.
 
 ## Decision Rules
 

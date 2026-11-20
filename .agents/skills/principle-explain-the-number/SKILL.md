@@ -20,22 +20,6 @@ disable-model-invocation: true
 - For evaluation results, ask the same of the trials: did every run do the task, and is the gap consistent across trials and models.
 - Keep run count, spread, and limiter with the number, in the notes or a linked artifact.
 
-## Paired Example
-
-```text
-// Avoid: single run, taken at face value
-before 1,200 req/s -> after 2,400 req/s -> "2x faster, ship"
-
-// Prefer: decision, spread, limiter, ruled-out suspects
-decision: ship if gain >= 20% on real traffic
-5 runs: median +9%, spread +/-15% -> not distinguishable from noise
-limiter: load generator at 100% CPU, server idle
-suspects: 8% HTTP 500s, one repeated user ID (always cache hit), default pool on baseline
--> re-run with 10,000 distinct users, errors excluded, second load machine
-```
-
-Rationale: the first report measured the load generator and a hot cache. The second states what is known and what is not.
-
 ## The Tests
 
 - Did I state the deciding result and the noise floor before running?

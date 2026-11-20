@@ -19,20 +19,6 @@ disable-model-invocation: true
 - Commit to one, and record why the others lost.
 - Discard the prototypes. Build the chosen design properly.
 
-## Paired Example
-
-```text
-// Avoid: commit to the first idea
-bulk-edit as a modal -> build it -> users dislike it -> rebuild
-
-// Prefer: compare before committing
-A: modal, B: inline table editing, C: side panel
--> three throwaway HTML sketches, same 20-row scenario
--> inline editing wins on speed; modal fails on context -> build B
-```
-
-Rationale: the comparison costs an hour and prevents a rebuild.
-
 ## The Tests
 
 - Is there truly no precedent in the codebase?

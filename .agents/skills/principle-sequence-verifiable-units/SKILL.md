@@ -25,20 +25,6 @@ disable-model-invocation: true
 - Other orders: a subtraction before the reshape, a baseline capture before the change, the scaffold before the feature.
 - Each commit lands on its own, and the sequence reads as an argument.
 
-## Paired Example
-
-```text
-// Avoid: one batch, one check at the end
-rename 40 call sites -> run tests -> 12 failures, cause unknown
-
-// Prefer: bracketed units
-rename call site 1 -> run check -> green
-rename call site 2 -> run check -> green
-... call site 17 -> red -> the cause is the one edit just made
-```
-
-Rationale: the red check points at one edit. The batch gives 12 failures and no starting point.
-
 ## The Tests
 
 - Does each unit end in a check I ran, not one I plan to run?

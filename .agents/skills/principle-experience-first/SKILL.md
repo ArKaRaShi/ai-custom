@@ -19,18 +19,6 @@ disable-model-invocation: true
 - Tighten the core loop: each feature serves the central workflow or stays out of its way.
 - Define the user as whoever consumes the work: the end user of a UI, the colleague who imports a library or calls an internal API, and the engineer who maintains the code next.
 
-## Paired Example
-
-```text
-// Avoid: expose the internal shape because it is easy
-POST /reports { raw_filters: "<internal query string>" }   // caller learns internals
-
-// Prefer: shape the interface around the caller's task
-POST /reports { plant_id, date_range }   // internals stay behind the endpoint
-```
-
-Rationale: the second interface costs more to build and saves every caller from learning the internals.
-
 ## The Tests
 
 - Who consumes this, and what do they notice first?

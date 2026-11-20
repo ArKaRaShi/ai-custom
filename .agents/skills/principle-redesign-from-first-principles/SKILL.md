@@ -17,19 +17,6 @@ disable-model-invocation: true
 - Propagate the change through every reference: types, docs, examples, rationale sections.
 - Design the whole change first, then deliver it in increments.
 
-## Paired Example
-
-```text
-// Avoid: add a tenant_id flag next to existing single-tenant code
-if tenant_id: scoped_query(...) else: query(...)   // two paths in every caller
-
-// Prefer: tenancy as a base assumption
-every query takes a tenant scope; single-tenant callers pass the default scope
--> types, docs, and examples updated in the same change; delivered in steps
-```
-
-Rationale: the first version keeps two code paths alive forever. The second has one path, and the requirement is visible in the types.
-
 ## The Tests
 
 - Did I read every affected file before choosing a shape?

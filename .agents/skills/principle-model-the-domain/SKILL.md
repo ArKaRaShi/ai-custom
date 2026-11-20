@@ -19,26 +19,6 @@ disable-model-invocation: true
 - Choose collections and data structures based on relationships and access patterns.
 - Keep invariants close to the data or operations that own them.
 
-## Paired Example
-
-```typescript
-// Avoid: independent booleans that permit invalid combinations (such as uploading and completed)
-type Upload = {
-  isUploading: boolean
-  isCompleted: boolean
-  hasError: boolean
-}
-
-// Prefer: discriminated union representing only valid, mutually exclusive states
-type Upload =
-  | { status: 'idle' }
-  | { status: 'uploading'; progress: number }
-  | { status: 'completed'; url: string }
-  | { status: 'failed'; error: Error }
-```
-
-Rationale: dependent boolean flags permit impossible state combinations, forcing defensive conditional checks across every consumer and causing silent runtime bugs.
-
 ## Scope Boundaries
 
 **Avoid forcing an abstraction:** when straightforward conditionals and simple data structures already represent the problem well, keep them. A new abstraction should remove real complexity rather than move code around.

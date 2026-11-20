@@ -24,19 +24,6 @@ disable-model-invocation: true
 - When a check fails, suspect the observation method before suspecting the system.
 - Script the check when you can: a deterministic script that reruns the same comparison beats a one-time look. Keep its output as an artifact a reviewer can rerun.
 
-## Paired Example
-
-```text
-// Avoid: infer the feature works from compilation alone
-implementation finished -> code compiles -> claim feature works
-
-// Prefer: match evidence to the claim
-identify requirement -> exercise relevant behavior -> observe expected result
--> run applicable regression checks -> disclose remaining limitations
-```
-
-Rationale: compilation alone cannot establish that the real use case behaves as required. Report only checks actually performed and results actually observed.
-
 ## The Tests
 
 - What observable evidence demonstrates the requirement is satisfied?

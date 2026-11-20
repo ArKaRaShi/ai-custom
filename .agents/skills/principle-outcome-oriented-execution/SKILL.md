@@ -18,21 +18,6 @@ disable-model-invocation: true
 - Keep high-signal checks on the areas you are actively touching.
 - Require full static and runtime verification when the plan completes.
 
-## Paired Example
-
-```text
-// Avoid: keep old and new paths working at every step
-phase 1: add adapter so old and new APIs both work
-phase 2: ... adapter stays "temporarily" for months
-
-// Prefer: planned breakage inside explicit phases
-phase 1: migrate all callers to the new API; the build is red until done (declared)
-phase 2: delete the old API
-phase 3: full type check, tests, and a runtime smoke test
-```
-
-Rationale: the first plan ships a compatibility layer nobody removes. The second ends with one API and a full verification.
-
 ## The Tests
 
 - Is the target state written down and verifiable?

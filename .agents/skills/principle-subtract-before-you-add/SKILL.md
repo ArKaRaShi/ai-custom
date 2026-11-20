@@ -19,18 +19,6 @@ disable-model-invocation: true
 - Prefer replacing outdated mechanisms over maintaining competing paths indefinitely.
 - Preserve intentional distinctions, public contracts, and existing behavior unless a change is explicitly approved.
 
-## Paired Example
-
-```text
-// Avoid: stack a new workaround without understanding the existing one
-existing workaround -> additional workaround -> new feature
-
-// Prefer: understand the existing path and simplify only when safe and relevant
-understand existing behavior -> simplify when appropriate -> extend
-```
-
-Rationale: stacking workarounds creates competing paths whose interactions must be maintained. Simplification is optional when removing a path would change required behavior.
-
 ## The Tests
 
 - Can an existing implementation be reused or simplified?
