@@ -9,6 +9,7 @@ export interface QuotaLimitScope {
   user?: boolean;
   model?: string;
   family?: string;
+  tier?: string;
 }
 
 export interface QuotaLimitWindow {
@@ -403,7 +404,10 @@ abstract class BaseQuotaResolver implements ProviderQuotaResolver {
     const name = (l.id || l.window?.label || l.label || "").trim();
     if (/5\s*h|5-hour/i.test(name)) return "5h";
     if (/30\s*d|month/i.test(name)) return "30d";
-    if (/7\s*d|7-day|weekly|total\s*quota/i.test(name)) return "7d";
+    if (/7\s*d|7-day|weekly|total\s*quota/i.test(name)) {
+      const tier = l.scope?.tier;
+      return tier ? `7d·${tier}` : "7d";
+    }
     if (/1\s*d|daily/i.test(name)) return "1d";
     return name;
   }
