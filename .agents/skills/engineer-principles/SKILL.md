@@ -22,6 +22,7 @@ Index of the `principle-*` skills. They are hidden from automatic invocation, so
 |`principle-responsibility-boundaries`|assigning ownership, separating concerns, or choosing dependencies|
 |`principle-model-the-domain`|designing data structures, modeling state, or simplifying repeated conditionals|
 |`principle-boundary-discipline`|handling untrusted input, validation, errors, persistence, or external integrations|
+|`principle-type-system-discipline`|designing types, ids, or states, or reviewing a function signature in a typed language|
 |`principle-minimize-reader-load`|code where data flow, state, or indirection hurts comprehension|
 |`principle-subtract-before-you-add`|extending, fixing, or refactoring existing behavior|
 |`principle-prove-it-works`|choosing verification, or before declaring a code change done|
