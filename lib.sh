@@ -3,6 +3,7 @@
 
 REPO=$(cd "$(dirname "$0")" && pwd -P)
 SKILLS_DIR=${AI_CUSTOM_SKILLS_DIR:-$HOME/.agents/skills}
+CLAUDE_SKILLS_DIR=${AI_CUSTOM_CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}
 OMP_DIR=${AI_CUSTOM_OMP_DIR:-$HOME/.omp/agent}
 CONFIG_DIR=${AI_CUSTOM_CONFIG_DIR:-$HOME/.config/ai-custom}
 SKIP_FILE=$CONFIG_DIR/skip.txt

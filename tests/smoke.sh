@@ -29,10 +29,11 @@ fresh() {
   echo rule2 >"$T/repo/.omp/rules/two.md"
   : >"$T/repo/externals.txt"
   REPO=$(cd "$T/repo" && pwd -P)
-  export AI_CUSTOM_SKILLS_DIR=$T/home/skills AI_CUSTOM_OMP_DIR=$T/home/omp AI_CUSTOM_CONFIG_DIR=$T/home/config
+  export AI_CUSTOM_SKILLS_DIR=$T/home/skills AI_CUSTOM_OMP_DIR=$T/home/omp AI_CUSTOM_CONFIG_DIR=$T/home/config AI_CUSTOM_CLAUDE_SKILLS_DIR=$T/home/claude
   S=$T/home/skills
   O=$T/home/omp
   C=$T/home/config
+  CL=$T/home/claude
 }
 
 echo "1. preview changes nothing; apply links; second run is a no-op"
@@ -115,6 +116,32 @@ check "demote restores a real folder with the same content" [ ! -L "$S/mine" ] &
 check "demote removes it from the repo" absent "$REPO/.agents/skills/mine"
 sh "$REPO/install.sh" --status >"$T/out" 2>&1
 check "status lists the demoted folder as unclassified" grep -q '^  mine ' "$T/out"
+
+echo "6. skills are mirrored into the Claude skills folder"
+fresh t6
+mkdir "$S/external" "$S/nomanifest"
+echo x >"$S/external/SKILL.md"
+mkdir -p "$CL"
+ln -s "$T/nowhere" "$CL/alpha"
+mkdir "$CL/beta"
+ln -s "$S/gone" "$CL/gone"
+sh "$REPO/install.sh" --apply >"$T/out" 2>&1
+check "repo skill is linked into the Claude folder" [ "$(readlink "$CL/alpha")" = "$S/alpha" ] && [ -f "$CL/alpha/SKILL.md" ]
+check "external skill is linked too" [ "$(readlink "$CL/external")" = "$S/external" ]
+check "folder without SKILL.md is not linked" absent "$CL/nomanifest"
+check "real folder in the Claude folder is kept" [ -d "$CL/beta" ] && [ ! -L "$CL/beta" ]
+check "dangling link to a removed skill is removed" absent "$CL/gone"
+sh "$REPO/install.sh" >"$T/out" 2>&1
+check "second run is a no-op" grep -q '^summary: 0 link, 0 relink, 0 replace, 0 remove, 0 install, 0 conflict' "$T/out"
+printf '%s\n' 'agents:external' >>"$C/skip.txt"
+sh "$REPO/install.sh" --apply >/dev/null 2>&1
+check "skipped skill loses its Claude link in one run" absent "$CL/external"
+ln -s "$S/vanished" "$CL/vanished"
+printf '%s\n' 'agents:alpha' >>"$C/skip.txt"
+ln -sfn "$S/alpha" "$CL/alpha"
+rm -rf "$S/alpha"
+sh "$REPO/install.sh" --apply >"$T/out" 2>&1
+check "skipped skill with a dangling Claude link applies cleanly" [ $? -eq 0 ] && absent "$CL/alpha"
 
 echo
 if [ "$FAILS" -eq 0 ]; then echo "all passed"; else echo "$FAILS failed"; exit 1; fi

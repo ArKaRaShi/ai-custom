@@ -6,6 +6,7 @@
 #   ./install.sh --apply    execute; refuses to start when any conflict exists
 #   ./install.sh --status   list skill folders that are neither linked nor in externals.txt
 #   --yes                   with --apply, run externals.txt commands without asking
+# Every skill in ~/.agents/skills is also linked into ~/.claude/skills for Claude Code.
 set -eu
 
 . "$(dirname "$0")/lib.sh"
@@ -19,7 +20,7 @@ for arg in "$@"; do
     --status) STATUS=1 ;;
     --yes) YES=1 ;;
     -h | --help)
-      sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
@@ -114,6 +115,30 @@ plan_item() {
   fi
 }
 
+# True when the skill folder exists in the repo or in the skills folder with a SKILL.md.
+is_real_skill() {
+  [ -f "$REPO/.agents/skills/$1/SKILL.md" ] || [ -f "$SKILLS_DIR/$1/SKILL.md" ]
+}
+
+# plan_claude_link <skill name>: keep one link in the Claude skills folder in step with
+# the skills folder. Only links into the skills folder are ours to change; real
+# folders and links to anywhere else are left alone.
+plan_claude_link() {
+  name=$1
+  dst=$CLAUDE_SKILLS_DIR/$name
+  if is_real_skill "$name" && ! is_skipped "agents:$name"; then
+    if [ -L "$dst" ]; then
+      [ -e "$dst" ] || op RELINK "$SKILLS_DIR/$name" "$dst"
+    elif [ ! -e "$dst" ]; then
+      op LINK "$SKILLS_DIR/$name" "$dst"
+    fi
+  elif [ -L "$dst" ]; then
+    case $(readlink "$dst") in
+      "$SKILLS_DIR"/*) op UNLINK "$dst" "no longer a skill on this Mac" ;;
+    esac
+  fi
+}
+
 # --- build the plan --------------------------------------------------------
 
 if [ ! -d "$REPO/.agents/skills" ] && [ ! -d "$REPO/.omp" ]; then
@@ -162,6 +187,12 @@ if [ "$STATUS" -eq 0 ]; then
       [ -e "$SKILLS_DIR/$name" ] || [ -L "$SKILLS_DIR/$name" ] || op INSTALL "$name" "$cmd"
     done <"$EXTERNALS"
   fi
+
+  # Claude Code reads skills from ~/.claude/skills, so mirror each skill there.
+  { for src in "$REPO"/.agents/skills/* "$SKILLS_DIR"/* "$CLAUDE_SKILLS_DIR"/*; do
+      [ -e "$src" ] || [ -L "$src" ] && printf '%s\n' "${src##*/}"
+    done; } | sort -u >"$WORK/skill-names"
+  while IFS= read -r name; do plan_claude_link "$name"; done <"$WORK/skill-names"
 fi
 
 # Skip entries that match nothing in the repo are usually typos.
