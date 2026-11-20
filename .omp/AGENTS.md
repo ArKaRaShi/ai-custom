@@ -29,6 +29,32 @@ Skip it for a direct answer or one-step task.
 When the user steers, interrupts, or adds work that changes scope or focus, update the task list before continuing. Add, reorder, split, or remove tasks to reflect the current request. Keep unrelated work distinct and do not silently drop unfinished work.
 Update the task list as work progresses and through completion. Do not skip it because the task seems small or familiar.
 
+### Workflow playbooks
+
+When writing or revising a multi-step workflow or playbook, start with a short numbered list of step titles and tell the reader to initialize a todo list from it. In the detailed instructions, use the exact same numbered titles as step headings, in the same order and count. Put commands, conditions, and recovery instructions under the relevant step heading, not in the todo list. Section names may vary.
+
+```markdown
+<!-- Avoid: detailed steps without an upfront todo list -->
+1. Run `git diff --check` and resolve any whitespace errors before reviewing the diff.
+2. Review the changes with `git diff`.
+
+<!-- Prefer: short todo titles followed by matching step headings -->
+Initialize the todo list:
+
+1. Check whitespace
+2. Review the diff
+
+### 1. Check whitespace
+
+Run `git diff --check`. Resolve any whitespace errors before continuing.
+
+### 2. Review the diff
+
+Run `git diff` and review the changes.
+```
+
+Without matching titles, agents must infer task names and may skip a step or mark the wrong task complete.
+
 ### Standalone scripts
 
 For standalone scripts that do not depend on a specific runtime, framework, library, or ORM, prefer Ruby, then Python via `uv`, then TypeScript/JavaScript via Bun.
@@ -104,3 +130,14 @@ The main agent retains scope, integration, and verification responsibility. It n
 ### Markdown review
 
 Do not use `skill://markdown-quality` for files produced by `skill://writing-plans`, unless the user explicitly requests Markdown quality review.
+
+### Notion tickets (personal board)
+
+Use the private [Engineering Board](https://app.notion.com/p/41c1ad103eb081c78ac2cac9e137d71d) for personal engineering tasks; do not publish them to GitHub or a team tracker.
+
+- Set Repository for the relevant repo; worktrees share it. One ticket is one deliverable; fold small items into a checklist.
+- Title: verb plus outcome, 60 characters or fewer, no project prefix or type word.
+- Tags: one lowercase domain tag and one type, such as `pump` and `api`.
+- Body: source, one-line reason, and a "Done when" checklist of observable checks.
+- Record evidence in a comment: screenshots for UI, a passing test or response for API, row counts for backfills, or an answer linking code for investigation.
+- Use Todo, Doing, Review and Done. Mark Done only after every acceptance criterion is met and evidence is recorded.
