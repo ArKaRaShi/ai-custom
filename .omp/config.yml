@@ -130,7 +130,8 @@ browser:
   relay: true
 colorBlindMode: false
 codexResets:
-  autoRedeem: "no"
+  autoRedeem5h: "no"
+  autoRedeemWeekly: "no"
 disabledProviders: []
 defaultThinkingLevel: auto
 find:
@@ -142,3 +143,6 @@ mnemopi:
 hideThinkingBlock: false
 update:
   auto: false
+claudeResets:
+  autoRedeemFable: "yes"
+  autoRedeem5h: "no"
