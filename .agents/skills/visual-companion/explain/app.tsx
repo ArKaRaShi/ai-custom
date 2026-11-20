@@ -10,6 +10,7 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Chart, Compare, Evidence, Quiz } from "@/blocks/content";
 import { Derivation } from "@/blocks/derivation";
+import { Diagram } from "@/blocks/diagram";
 import { Playground } from "@/blocks/playground";
 import { AnswerProps, BLOCK_PROPS, KATEX_OPTIONS, LessonProps, SectionProps } from "@/catalog";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,7 @@ const catalog = defineCatalog(schema, {
     Compare: { props: BLOCK_PROPS.Compare, description: "Old next to new, changed rows highlighted" },
     Chart: { props: BLOCK_PROPS.Chart, description: "Horizontal bars for a few numbers" },
     Svg: { props: BLOCK_PROPS.Svg, description: "Static SVG illustration in theme colors" },
+    Diagram: { props: BLOCK_PROPS.Diagram, description: "Node and edge graph with steps and reach highlighting" },
   },
   actions: {},
 });
@@ -182,6 +184,7 @@ const { registry } = defineRegistry(catalog, {
       // biome-ignore lint/security/noDangerouslySetInnerHtml: DOMPurify sanitizes the validated illustration.
       <div data-block="Svg" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(props.markup, { USE_PROFILES: { svg: true }, ADD_ATTR: ["role"] }) }} />
     ),
+    Diagram: ({ props }) => <Diagram {...props} />,
   },
 });
 

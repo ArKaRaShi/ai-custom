@@ -1,5 +1,9 @@
 # CLI
 
+## Contents
+
+`start`, `status / stop`, `push`, `explain`, `page`, `compare`, `states`, `stage`, `events`, Files on disk, Troubleshooting, Provenance.
+
 Run these commands from any directory. Bun executes the TypeScript directly; there is nothing to install.
 
 ```bash
@@ -8,7 +12,7 @@ bun "$HOME/.agents/skills/visual-companion/scripts/cli.ts" <command> [args] [--j
 
 `--json` (or `--format=json`) returns structured output for every command. Exit codes: `0` ok, `1` failure, `2` usage error.
 
-Every command except `components` and `gallery` picks its session with `<session>`, which means either `--project-dir <repo>` or `--run-dir <dir>`. Use the same flag and value on every command in one session.
+Every command picks its session with `<session>`, which means either `--project-dir <repo>` or `--run-dir <dir>`. Use the same flag and value on every command in one session.
 
 ## start
 
@@ -56,6 +60,7 @@ Validates a lesson spec and publishes it as an Explain page. The spec is nested 
 Derivations: `inputs` carry a starting value, a slider range and an optional mathjs unit (`km`, `MB/s`). `functions` are mathjs definitions such as `backoff(n) = min(30 s, 0.5 s * 2^n)`. Each Derivation step has an `expr` over inputs, functions and earlier step ids, and a `unit` whenever its result carries one. Before publishing, every step is evaluated at the starting inputs; an unknown name or a unit that does not convert fails the publish and names the step. A Playground sticks to the top while its own section scrolls, so put the Derivation it drives in the same section.
 SVG illustrations use `{ "type": "Svg", "markup": "<svg ...>...</svg>" }`. Use inert drawing elements and theme colors such as `var(--primary)`; scripts, event handlers, external resources, styles and unsupported markup are rejected rather than silently removed.
 
+Diagram blocks are plain JSON: `{ "type": "Diagram", "alt": "How a request is stored", "nodes": [{ "id": "api", "label": "API" }, { "id": "db", "label": "Database" }], "edges": [{ "id": "query", "source": "api", "target": "db", "label": "query" }], "direction": "LR", "steps": [{ "label": "Request", "focus": ["api", "db"] }] }`. `nodes` is required, `edges` may be empty, `direction` is `LR` (the default) or `TB`, and an edge `label` and the `steps` list are optional. Node ids must be unique among the nodes and edge ids among the edges; every edge `source` and `target` and every step `focus` entry must name an existing node, and a mismatch fails the publish at that field. Cycles, self loops and parallel edges are drawn as written. Select a node by click or keyboard; Escape clears selection. Picking a step highlights the nodes it focuses.
 
 JSON: same as `push`, with `mode: "plain"`.
 
@@ -67,7 +72,7 @@ The renderer under `assets/explain/` is prebuilt and committed. After changing a
 bun "$HOME/.agents/skills/visual-companion/scripts/cli.ts" page "Answer" /path/1.html "Steps" /path/2.html [--title <text>] <session>
 ```
 
-Stacks one or more name/file pairs into one long bundle page, in order. Each file must be a fragment. A whole document is a usage error. Each part becomes a numbered `<section id="vc-part-N">` with its name as a heading. A thin rail on the left edge, vertically centred, has one tick per part. Hover or focus a tick to see the part's name, click it or press keys 1–9 to scroll there. The tick for the part in view is longer and uses the accent color. Under 760px wide, the rail becomes a sticky strip of numbered names. Nothing is swapped or hidden, so the whole page scrolls and one full-page screenshot captures every part. Scripts and `data-choice` work as in `push`. Use `page` for explanations. Use `states` for product page states that each need a full viewport and their own CSS.
+Stacks named fragments into one scrolling page with a section index. Click a link or press keys 1–9 to navigate; a whole document is a usage error. Scripts and `data-choice` work as in `push`.
 
 JSON: same as `push`, with `mode: "bundle"`.
 
@@ -77,7 +82,7 @@ JSON: same as `push`, with `mode: "bundle"`.
 bun "$HOME/.agents/skills/visual-companion/scripts/cli.ts" compare "Option A" <a.html> "Option B" <b.html> <session>
 ```
 
-Publishes two or more name/file pairs in separate sandboxed iframes. Previews are static and cannot report choices. A fragment gets the `vc-*` stylesheet inside its iframe, so bundle-mode components render. A whole document keeps only its own styles. Stage dependencies separately under `/files/`; relative links resolve from the generated comparison directory, so use explicit `/files/` URLs for preview assets.
+Publishes separately sandboxed static previews. Scripts and choices are disabled; each preview provides its own styling. Stage local dependencies under `/files/`.
 
 ## states
 
@@ -85,7 +90,7 @@ Publishes two or more name/file pairs in separate sandboxed iframes. Previews ar
 bun "$HOME/.agents/skills/visual-companion/scripts/cli.ts" states "Default" /path/default.html "Empty" /path/empty.html <session>
 ```
 
-Publish one or more name/file pairs as full-viewport static states. Each file is copied at publication time into a separate sandboxed iframe; scripts, forms, external resources, and choices inside previews are disabled. A fragment gets the `vc-*` stylesheet inside its iframe, so bundle-mode components render. A whole document keeps only its own styles. The companion renders the edge rail and mobile selector. Click a label, or use arrow keys on a focused rail tick to move focus and then Enter or Space to select it. Keys 1–9 select directly when focus is outside a preview iframe and not in an input or selector; the mobile selector also selects directly. Keyboard events inside an iframe do not reach the parent. Selectors overlay the preview rather than changing its layout. Use `/files/` URLs for staged dependencies. Republish after editing a file; there is no watcher. A failed input validation leaves the current screen unchanged.
+Publishes full-viewport static states in sandboxed iframes. Scripts, forms and choices are disabled; each preview provides its own styling. Use the rail, arrow keys or keys 1–9 to select a state. Keyboard events inside an iframe do not reach the parent.
 
 JSON: same as `push`. Its `mode` is `plain` because it describes the generated rail page, not your files. To screenshot one state on its own, open `/files/states-<id>/<n>.html`, where `n` starts at 0. The rail page's iframe `src` attributes list these URLs.
 
@@ -112,21 +117,6 @@ bun "$HOME/.agents/skills/visual-companion/scripts/cli.ts" events --clear
 ```
 
 `channel` is `ws` for WebSocket messages, `http` for JSON POST requests, and `form` for form-encoded POST requests.
-
-## components
-
-```bash
-bun "$HOME/.agents/skills/visual-companion/scripts/cli.ts" components         # compact list, grouped
-bun "$HOME/.agents/skills/visual-companion/scripts/cli.ts" components --json  # raw catalogue
-```
-
-## gallery
-
-```bash
-bun "$HOME/.agents/skills/visual-companion/scripts/cli.ts" gallery [--out <file>]
-```
-
-Generates the component gallery from the catalogue snippets. Without `--out` it writes `examples/component-gallery.html`.
 
 ## Files on disk
 
@@ -158,4 +148,4 @@ With `--project-dir`, `start` creates or preserves `.visual-companion/.gitignore
 
 ## Provenance
 
-The idea and the class vocabulary come from the visual companion in `obra/superpowers`. This implementation is a rewrite on Bun: no code is copied, and the browser assets, server, and client are original. No dependencies, no build step, no network calls.
+The companion's original concept comes from `obra/superpowers`. The server and browser client are a Bun rewrite. Explain's prebuilt renderer bundles the dependencies listed in `explain/package.json`; rebuild it after changing its source.

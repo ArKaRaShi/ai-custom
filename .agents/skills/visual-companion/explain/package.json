@@ -8,6 +8,7 @@
     "class-variance-authority": "0.7.1",
     "cn": "0.5.2",
     "dompurify": "3.4.17",
+    "elkjs": "0.12.1",
     "katex": "0.19.1",
     "lucide-react": "1.70.0",
     "mathjs": "15.2.0",

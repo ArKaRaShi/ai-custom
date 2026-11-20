@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en" data-ui-theme="paper">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Band score, explained</title>
+<link rel="stylesheet" href="/assets/ui/themes/paper.css">
+<link rel="stylesheet" href="/assets/ui/themes/paper-dark.css">
+<link rel="stylesheet" href="/assets/ui/components.css">
+<script src="/assets/ui/ui.js" defer></script>
+<script>
+  // A fixed-palette theme pair follows the system: start from the reader's setting, and let the Theme button flip it. Without script the page stays light.
+  (() => {
+    const root = document.documentElement;
+    const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+    root.dataset.uiTheme = dark ? "paper-dark" : "paper";
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("theme").addEventListener("click", () => {
+        root.dataset.uiTheme = root.dataset.uiTheme === "paper" ? "paper-dark" : "paper";
+      });
+    });
+  })();
+</script>
+<style>
+/* Only what the shared components lack: page width, headings, the controls and the score. */
+@property --lo { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --hi { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --at { syntax: "<number>"; inherits: true; initial-value: 0; }
+@media (prefers-reduced-motion: no-preference) { .ui-range { transition: --lo .45s, --hi .45s, --at .45s; } }
+.wrap { max-width: 68rem; margin: 0 auto; padding: 2rem 1.25rem 4.5rem; }
+h1 { margin: 0 0 .35em; max-width: 22em; font: 700 clamp(1.9rem, 5vw, 3rem) / 1.1 var(--font-heading); letter-spacing: -.02em; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--primary); }
+h2 { margin: 0 0 .5em; font: 650 clamp(1.35rem, 3vw, 1.8rem) / 1.2 var(--font-heading); letter-spacing: -.01em; }
+h3.label, .fig h3 { margin: 0 0 .7em; font: 600 .75rem var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted-foreground); }
+.lead, .cap { color: var(--muted-foreground); max-width: 42rem; }
+.cap { font-size: .9rem; margin: .8em 0 0; }
+main > section { margin-top: 3.5rem; }
+.lab { display: grid; gap: 1.8rem; margin-top: 1.4rem; }
+@media (min-width: 56rem) { .lab { grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); } }
+.controls, .out { display: grid; gap: 1.1rem; align-content: start; }
+.slider .row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .5rem .75rem; margin-bottom: .2rem; }
+.slider label { font-weight: 550; }
+.num { display: inline-flex; align-items: center; gap: .4rem; font: 600 .9rem var(--font-mono); color: var(--muted-foreground); }
+.num input { width: 7.2em; min-height: 2.75rem; text-align: right; font-family: var(--font-mono); }
+input[type=range] { width: 100%; height: 2.75rem; margin: 0; accent-color: var(--primary); background: transparent; }
+input:disabled { opacity: .5; }
+.check { display: inline-flex; align-items: center; gap: .6rem; min-height: 2.75rem; cursor: pointer; }
+.check input { width: 1.4rem; height: 1.4rem; margin: 0; accent-color: var(--primary); }
+.score-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem .9rem; }
+.score { font: 700 clamp(3.4rem, 9vw, 5rem) / 1 var(--font-heading); letter-spacing: -.04em; }
+.score-line small { font-size: 1.3rem; color: var(--muted-foreground); }
+.fig { margin: 0; }
+.sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+button.ui-case { font: inherit; text-align: left; cursor: pointer; }
+button.ui-case:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+button.ui-case[aria-pressed=true] { border-color: var(--primary); background: var(--accent); }
+.ui-cases { margin-bottom: 1.4rem; }
+.top { margin: 0 0 .75rem; text-align: right; }
+</style>
+</head>
+<body class="ui-root">
+<div class="wrap">
+<p class="top"><button id="theme" class="ui-button outline" type="button" aria-label="Switch between light and dark theme">Theme</button></p>
+<header>
+  <h1 id="headline">@@HEADLINE@@</h1>
+  <p class="lead">A machine of a given size is expected to run inside a band of readings, and the band moves with its size. The score says where the reading sits in that band: 0 at the low end, 100 at the high end, and it stops at both. The constants are illustrative.</p>
+</header>
+<main>
+<section aria-labelledby="try-h">
+  <h2 id="try-h">Try a machine</h2>
+  <noscript><p class="cap">The controls need JavaScript. The page shows the default case in full.</p></noscript>
+  <h3 class="label" id="cases-h">Start from a case</h3>
+  <div class="ui-cases" id="cases" role="group" aria-labelledby="cases-h">@@CASES@@</div>
+  <div class="ui-card lab">
+    <div class="controls">
+      <h3 class="label">Your machine</h3>
+      <div class="slider">
+        <div class="row">
+          <label for="size-n">Machine size</label>
+          <span class="num"><input class="ui-input" id="size-n" type="number" inputmode="decimal" step="any" autocomplete="off" value="@@SIZE@@" aria-label="Machine size in kilowatts"><span aria-hidden="true">kW</span></span>
+        </div>
+        <input id="size-r" type="range" min="0" max="100" step="0.1" autocomplete="off" value="@@SIZEPOS@@" data-min="@@SIZEMIN@@" data-max="@@SIZEMAX@@" aria-label="Machine size slider, @@SIZEMIN@@ to @@SIZEMAX@@ kilowatts, log scale" aria-valuetext="@@SIZE@@ kilowatts">
+      </div>
+      <div class="slider">
+        <div class="row">
+          <label for="reading-n">Reading</label>
+          <span class="num"><input class="ui-input" id="reading-n" type="number" inputmode="decimal" step="any" autocomplete="off" value="@@READING@@" aria-label="Reading in percent"><span aria-hidden="true">%</span></span>
+        </div>
+        <input id="reading-r" type="range" min="@@AXMIN@@" max="@@AXMAX@@" step="0.1" autocomplete="off" value="@@READING@@" aria-label="Reading slider, @@AXMIN@@ to @@AXMAX@@ percent" aria-valuetext="@@READING@@ percent">
+      </div>
+      <label class="check"><input type="checkbox" id="none" autocomplete="off"> No reading</label>
+    </div>
+    <div class="out">
+      <div class="score-line"><b class="score" id="score">@@SCORE@@</b><small>of 100</small>@@STATUS@@</div>
+      <p class="sr" id="live" role="status" aria-live="polite"></p>
+      <div class="fig">
+        <h3>The reading against the band for this size</h3>
+        @@RANGE@@
+      </div>
+      <div class="fig">
+        <h3>The reading as 100 cells</h3>
+        @@WAFFLE@@
+      </div>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="work-h">
+  <h2 id="work-h">Replay the calculation</h2>
+  <p class="lead">Four steps on whatever the controls say. Each shows the formula, then your numbers put in, then the result. Underlined numbers jump to where they came from.</p>
+  <div class="ui-work" id="work">
+    <section><header><h3>Power</h3><b>@@R0@@</b></header><div>
+      <pre data-label="Formula">The machine's size in kilowatts. This is an input.</pre>
+      <output data-label="With your numbers">@@N0@@</output></div></section>
+    <section><header><h3>Expected band</h3><b>@@R1@@</b></header><div>
+      <pre data-label="Formula">@@F1@@</pre>
+      <output data-label="With your numbers">@@N1@@</output></div></section>
+    <section><header><h3>Place the reading</h3><b>@@R2@@</b></header><div>
+      <pre data-label="Formula">score = (reading − low) ÷ (high − low) × 100
+then kept between 0 and 100</pre>
+      <output data-label="With your numbers">@@N2@@</output></div></section>
+    <section><header><h3>Tone</h3><b>@@R3@@</b></header><div>
+      <pre data-label="Formula">@@F3@@</pre>
+      <output data-label="With your numbers">@@N3@@</output></div></section>
+  </div>
+  <p class="cap">Numbers are rounded for display. The code keeps full precision, so a hand calculation can differ in the last digit.</p>
+</section>
+</main>
+</div>
+<script>@@MODEL@@</script>
+<script>
+(() => {
+  const model = globalThis.bandModel;
+  const CUTS = @@CUTS@@;
+  const $ = (id) => document.getElementById(id);
+  const sizeBox = $("size-n"), sizeSlider = $("size-r"), readBox = $("reading-n"), readSlider = $("reading-r"), none = $("none");
+  const band = document.querySelector(".ui-range");
+  const pin = band.querySelector(".ui-range-pin");
+  const waffle = document.querySelector(".ui-waffle");
+  const SIZE = { min: Number(sizeSlider.dataset.min), max: Number(sizeSlider.dataset.max) };
+  const AXIS = { min: Number(readSlider.min), max: Number(readSlider.max) };
+  const WORD = { critical: "Critical", warning: "Warning", normal: "Normal", no_data: "No data" };
+  const GLYPH = { critical: "▲", warning: "◆", normal: "●", no_data: "◌" };
+  const MODIFIER = { critical: "critical", warning: "warning", normal: "normal", no_data: "nodata" };
+
+  // The formula's constants are read from the model itself: ln(1) = 0 gives the intercepts, ln(e) = 1 adds the slopes.
+  const atOne = model(1, null), atE = model(Math.E, null);
+  const K = { a: atOne.lo, b: atE.lo - atOne.lo, c: atOne.hi, d: atE.hi - atOne.hi };
+  const coef = (v) => String(Number(v.toFixed(6)));
+  const f1 = (v) => v.toFixed(1);
+  const f3 = (v) => v.toFixed(3);
+  const f4 = (v) => v.toFixed(4);
+  const f6 = (v) => v.toFixed(6);
+  const ref = (text, to, what) => `<a class="ui-ref" href="#${to}" aria-label="${text}, ${what}">${text}</a>`;
+
+  /** The words and numbers the page shows for one size and reading. Mirrors describe() in build.ts, which fills the static form. */
+  function describe(size, reading, m) {
+    const tone = WORD[m.tone].toLowerCase();
+    let headline, band1, place;
+    if (m.lo === null) {
+      headline = `A machine of ${size} kW has no expected band, so it has no score`;
+      band1 = { result: "none", numbers: "The size must be above 0 for a band to exist." };
+      place = { result: "no score", numbers: "Without a band there is nothing to place the reading in." };
+    } else {
+      const log = Math.log(size);
+      band1 = {
+        result: `${f1(m.lo)} to ${f1(m.hi)} %`,
+        numbers: `ln(${size}) = ${f6(log)}\n<span id="ln-low">low = ${coef(K.a)} + ${coef(K.b)} × ${f6(log)} ≈ ${f4(m.lo)}</span>\n<span id="ln-high">high = ${coef(K.c)} + ${coef(K.d)} × ${f6(log)} ≈ ${f4(m.hi)}</span>`,
+      };
+      if (reading === null) {
+        headline = `A ${size} kW machine with no reading has no score`;
+        place = { result: "no score", numbers: "There is no reading, so there is nothing to place." };
+      } else {
+        headline = `A ${size} kW machine reading ${reading} % scores <em>${f1(m.score)}</em>: ${tone}`;
+        const raw = ((reading - m.lo) / (m.hi - m.lo)) * 100;
+        const low = ref(f4(m.lo), "ln-low", "the low end from step 2");
+        const high = ref(f4(m.hi), "ln-high", "the high end from step 2");
+        const kept = raw < 0 || raw > 100 ? `\nkept in 0 to 100 → ${f1(m.score)}` : "";
+        place = {
+          result: f1(m.score),
+          numbers: `(${ref(String(reading), "reading-n", "your reading")} − ${low}) ÷ (${high} − ${low}) × 100 ≈ ${f3(raw)}${kept}`,
+        };
+      }
+    }
+    const score = m.score === null ? "" : f3(m.score);
+    const rule = {
+      critical: `${score} ≤ ${CUTS.critical} → critical`,
+      warning: `${score} &gt; ${CUTS.critical} and ≤ ${CUTS.warning} → warning`,
+      normal: `${score} &gt; ${CUTS.warning} → normal`,
+      no_data: "no score → no data",
+    };
+    return {
+      headline,
+      steps: [
+        { result: `${size} kW`, numbers: `size_kw = ${size}` },
+        band1,
+        place,
+        { result: WORD[m.tone].toLowerCase(), numbers: rule[m.tone] },
+      ],
+    };
+  }
+
+  const position = (v, min, max) => String(Number(Math.min(100, Math.max(0, ((v - min) / (max - min)) * 100)).toFixed(2)));
+  const sizeAt = (pos) => Math.round(SIZE.min * (SIZE.max / SIZE.min) ** (pos / 100) * 10) / 10;
+  const posOf = (kw) => (kw > 0 ? position(Math.log(kw), Math.log(SIZE.min), Math.log(SIZE.max)) : "0");
+  const state = { size: Number(sizeBox.value), reading: Number(readBox.value), none: none.checked };
+  const sections = [...document.querySelectorAll(".ui-work > section")];
+
+  function render() {
+    const reading = state.none ? null : state.reading;
+    const m = model(state.size, reading);
+    const text = describe(state.size, reading, m);
+    $("headline").innerHTML = text.headline;
+    $("score").textContent = m.score === null ? "—" : f1(m.score);
+    const status = $("status");
+    status.className = `ui-status ${MODIFIER[m.tone]}`;
+    status.innerHTML = `<i aria-hidden="true">${GLYPH[m.tone]}</i>${WORD[m.tone]}`;
+
+    band.hidden = m.lo === null;
+    if (m.lo !== null) {
+      band.style.setProperty("--lo", position(m.lo, AXIS.min, AXIS.max));
+      band.style.setProperty("--hi", position(m.hi, AXIS.min, AXIS.max));
+      pin.hidden = reading === null;
+      if (reading !== null) {
+        band.style.setProperty("--at", position(reading, AXIS.min, AXIS.max));
+        pin.dataset.label = `${f1(reading)} %`;
+      }
+      band.querySelector(".ui-range-lo").textContent = f1(m.lo);
+      band.querySelector(".ui-range-hi").textContent = f1(m.hi);
+      const marker = reading === null ? "" : `, marker at ${f1(reading)} %`;
+      band.setAttribute("aria-label", `Expected band ${f1(m.lo)} to ${f1(m.hi)} %${marker}`);
+    }
+
+    const cells = [...waffle.children];
+    const percent = reading === null ? 0 : Math.min(100, Math.max(0, reading));
+    const filled = Math.round((percent / 100) * cells.length);
+    cells.forEach((c, i) => c.classList.toggle("on", i < filled));
+    waffle.setAttribute("aria-label", reading === null ? "No reading, no cells filled" : `${filled} of ${cells.length} cells filled (${percent}%)`);
+
+    sections.forEach((s, i) => {
+      s.querySelector("header b").textContent = text.steps[i].result;
+      s.querySelector("output").innerHTML = text.steps[i].numbers;
+    });
+    window.dispatchEvent(new Event("resize")); // ui.js re-places its rail when the steps change height
+
+    if (document.activeElement !== sizeBox) sizeBox.value = String(state.size);
+    if (document.activeElement !== sizeSlider) sizeSlider.value = posOf(state.size);
+    sizeSlider.setAttribute("aria-valuetext", `${state.size} kilowatts`);
+    if (document.activeElement !== readBox) readBox.value = String(state.reading);
+    if (document.activeElement !== readSlider) readSlider.value = String(Math.min(AXIS.max, Math.max(AXIS.min, state.reading)));
+    readSlider.setAttribute("aria-valuetext", state.none ? "no reading" : `${state.reading} percent`);
+    readBox.disabled = readSlider.disabled = state.none;
+    none.checked = state.none;
+    document.querySelectorAll("button.ui-case").forEach((b) => {
+      const same = Number(b.dataset.size) === state.size && (b.dataset.reading === "" ? state.none : !state.none && Number(b.dataset.reading) === state.reading);
+      b.setAttribute("aria-pressed", String(same));
+    });
+  }
+
+  // One announcement after a burst of changes, never one per keystroke or slider step.
+  const live = $("live");
+  let timer = 0;
+  function update() {
+    render();
+    clearTimeout(timer);
+    timer = setTimeout(() => { live.textContent = $("headline").textContent; }, 600);
+  }
+
+  // A typed value is used as typed, even outside the slider's range; only the slider thumb and the axis drawing stop at the ends.
+  sizeBox.addEventListener("input", () => { const v = sizeBox.valueAsNumber; if (Number.isFinite(v)) { state.size = v; update(); } });
+  readBox.addEventListener("input", () => { const v = readBox.valueAsNumber; if (Number.isFinite(v)) { state.reading = v; update(); } });
+  sizeBox.addEventListener("change", () => { sizeBox.value = String(state.size); });
+  readBox.addEventListener("change", () => { readBox.value = String(state.reading); });
+  sizeSlider.addEventListener("input", () => { state.size = sizeAt(Number(sizeSlider.value)); update(); });
+  readSlider.addEventListener("input", () => { state.reading = Number(readSlider.value); update(); });
+  none.addEventListener("change", () => { state.none = none.checked; update(); });
+  $("cases").addEventListener("click", (e) => {
+    const card = e.target.closest("button.ui-case");
+    if (!card) return;
+    state.size = Number(card.dataset.size);
+    state.none = card.dataset.reading === "";
+    if (!state.none) state.reading = Number(card.dataset.reading);
+    update();
+  });
+  render();
+})();
+</script>
+</body>
+</html>

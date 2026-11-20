@@ -1,0 +1,8 @@
+{
+  "events": [
+    { "time": "09:00:00", "title": "A user requests an export", "because": "The API accepts the request and puts a job on the queue; the user sees \"Queued\".", "state": "queued, attempts 0" },
+    { "time": "09:00:02", "title": "A worker claims the job", "because": "A claim stops a second worker from taking the same job, so the export is built once.", "state": "running, attempts 1, lease until 09:10:02" },
+    { "time": "09:00:40", "title": "The storage call times out", "because": "The call has no retry path, so the task ends as failed after 38 s.", "state": "running, attempts 1, lease until 09:10:02" },
+    { "time": "09:10:02", "title": "The lease expires and nothing reads it", "because": "Only a recovery job reads expired leases, and it has not been scheduled, so the job stays \"Running\" for good.", "state": "running, attempts 1" }
+  ]
+}

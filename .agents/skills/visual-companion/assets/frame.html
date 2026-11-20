@@ -7,24 +7,25 @@
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f6f7" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#14161a" />
     <script src="/assets/theme.js"></script>
-    <link rel="stylesheet" href="/assets/components.css" />
+    <link rel="stylesheet" href="/assets/frame.css" />
+    <link rel="stylesheet" href="/assets/page.css" />
   </head>
-  <body class="vc-body">
-    <header class="vc-bar">
-      <span class="vc-dot" data-vc-dot aria-hidden="true"></span>
-      <span class="vc-bar-title"><!--VC:TITLE--></span>
-      <span class="vc-bar-status" data-vc-status role="status" aria-live="polite">Connecting…</span>
+  <body>
+    <header>
+      <span data-vc-dot aria-hidden="true"></span>
+      <span class="title"><!--VC:TITLE--></span>
+      <span data-vc-status role="status" aria-live="polite">Connecting…</span>
       <label for="vc-theme">Theme</label>
-      <select id="vc-theme" class="vc-theme" data-vc-theme-select>
+      <select id="vc-theme" data-vc-theme-select>
         <option value="system">System</option>
         <option value="light">Light</option>
         <option value="dark">Dark</option>
       </select>
     </header>
-    <main class="vc-main">
+    <main>
       <!--VC:CONTENT-->
     </main>
-    <script type="module" src="/assets/components/index.js"></script>
+    <script src="/assets/page.js" defer></script>
     <script src="/assets/client.js" defer></script>
   </body>
 </html>

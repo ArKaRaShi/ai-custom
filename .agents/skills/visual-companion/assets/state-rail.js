@@ -1,19 +1,19 @@
 /* Companion-owned controls; preview documents cannot affect this UI. */
 (() => {
-  const rail = document.querySelector('.vc-rail');
+  const rail = document.querySelector('.state-rail');
   const buttons = [...rail.querySelectorAll('[data-state-index]')];
   const frames = [...document.querySelectorAll('main iframe')];
-  const select = document.querySelector('.vc-mobile select');
+  const select = document.querySelector('.state-mobile select');
   if (!buttons.length || !select) return;
 
   const card = document.createElement('div');
-  card.className = 'vc-preview';
+  card.className = 'state-preview';
   card.hidden = true;
   card.setAttribute('aria-hidden', 'true');
   const title = document.createElement('div');
-  title.className = 'vc-preview-title';
+  title.className = 'state-preview-title';
   const viewport = document.createElement('div');
-  viewport.className = 'vc-preview-viewport';
+  viewport.className = 'state-preview-viewport';
   const miniature = document.createElement('iframe');
   miniature.setAttribute('sandbox', 'allow-same-origin');
   miniature.tabIndex = -1;

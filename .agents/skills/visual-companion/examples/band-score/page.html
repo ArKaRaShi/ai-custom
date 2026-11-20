@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="en" data-ui-theme="paper">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Band score, explained</title>
+<style>
+/* paper: warm paper, ink text, one burnt-orange accent; serif headings, sans body, mono labels.
+   Light only. Thai text uses Noto Sans Thai and Noto Serif Thai. Fonts come from Google Fonts and fall back to system fonts offline.
+   Activate with <html data-ui-theme="paper">. */
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Sans+Thai:wght@400;500;600&family=Noto+Serif+Thai:wght@400;600&display=swap");
+
+:root[data-ui-theme="paper"] {
+  color-scheme: light;
+  --radius: 6px;
+  --ui-text: 18px;
+  --font-sans: "Geist", "Noto Sans Thai", system-ui, sans-serif;
+  --font-heading: "Instrument Serif", "Noto Serif Thai", serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  --background: #f5f5f5;
+  --foreground: #2d3142;
+  --card: #ffffff;
+  --card-foreground: #2d3142;
+  --primary: #bf4520;
+  --primary-foreground: #ffffff;
+  --secondary: #ececec;
+  --secondary-foreground: #2d3142;
+  --muted: #ececec;
+  --muted-foreground: #4f5d75;
+  --subtle: #5a6580;
+  --accent: rgba(191, 69, 32, .08);
+  --accent-foreground: #bf4520;
+  --destructive: #bf4520;
+  --border: rgba(45, 49, 66, .12);
+  --input: #868a92;
+  --ring: #bf4520;
+  --warning: #8a4b00;
+  --success: #176b3a;
+}
+</style>
+<style>
+/* paper-dark: the paper theme in a dark palette. Ink-blue background, warm off-white text, one orange accent.
+   Dark only. Text contrast is at least 6.5:1; the accent is 5.2:1 or more on the background and cards.
+   Activate with <html data-ui-theme="paper-dark">. Thai text uses Noto Sans Thai and Noto Serif Thai. Fonts come from Google Fonts and fall back offline. */
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Sans+Thai:wght@400;500;600&family=Noto+Serif+Thai:wght@400;600&display=swap");
+
+:root[data-ui-theme="paper-dark"] {
+  color-scheme: dark;
+  --radius: 6px;
+  --ui-text: 18px;
+  --font-sans: "Geist", "Noto Sans Thai", system-ui, sans-serif;
+  --font-heading: "Instrument Serif", "Noto Serif Thai", serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  --background: #1b1d26;
+  --foreground: #e9e6df;
+  --card: #242733;
+  --card-foreground: #e9e6df;
+  --primary: #f0764a;
+  --primary-foreground: #1b1d26;
+  --secondary: #2b2e3a;
+  --secondary-foreground: #e9e6df;
+  --muted: #12141b;
+  --muted-foreground: #aab0c0;
+  --subtle: #9aa1b4;
+  --accent: rgba(240, 118, 74, .14);
+  --accent-foreground: #f0764a;
+  --destructive: #f0764a;
+  --border: rgba(233, 230, 223, .14);
+  --input: #707790;
+  --ring: #f0764a;
+  --warning: #ffcf7a;
+  --success: #8be0a8;
+}
+</style>
+<style>
+/* Shared plain-CSS components for Presentation and Freestyle pages. They read only theme tokens
+   (see themes/*.css) and size in em from the element's font-size, so a theme controls colour, shape and scale.
+   Link order: a theme file (indigo is the default), then this file. Add class `ui-root` to <body>. */
+
+:root {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-heading: var(--font-sans);
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --ui-text: 16px;
+  --subtle: var(--muted-foreground);
+}
+
+.ui-root { margin: 0; background: var(--background); color: var(--foreground); font: var(--ui-text) / 1.5 var(--font-sans); -webkit-font-smoothing: antialiased; }
+.ui-root code, .ui-mono { font-family: var(--font-mono); font-size: .86em; overflow-wrap: anywhere; }
+.ui-table th code, .ui-table th .ui-mono { font-size: inherit; }
+.ui-root *, .ui-root *::before, .ui-root *::after { box-sizing: border-box; }
+
+.ui-card { background: var(--card); color: var(--card-foreground); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1em 1.35em; line-height: 1.5; }
+.ui-card > h3 { margin: 0 0 .55em; font: 600 .7em var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted-foreground); }
+.ui-card.focus { border-color: var(--primary); background: var(--accent); }
+
+.ui-badge { display: inline-block; font: 600 .7em var(--font-mono); letter-spacing: .1em; border: 1px solid currentColor; border-radius: calc(var(--radius) / 2); padding: .18em .65em; color: var(--foreground); }
+.ui-badge.primary { color: var(--primary); }
+
+.ui-table { border-collapse: collapse; width: 100%; font-size: 1em; }
+.ui-table th { font: 600 .7em var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted-foreground); text-align: left; padding: .45em .75em; border-bottom: 1.4px solid var(--foreground); }
+.ui-table td { padding: .6em .75em; border-bottom: 1px solid var(--border); vertical-align: top; }
+.ui-table.compact td, .ui-table.compact th { padding: .41em .7em; font-size: .895em; }
+.ui-table.compact td { font-family: var(--font-mono); }
+.ui-table tr.hl td { background: var(--accent); border-bottom-color: var(--primary); }
+.ui-table td.hl, .ui-table th.hl { background: var(--accent); color: var(--primary); font-weight: 600; }
+.ui-table tr.dim td { color: var(--subtle); }
+
+.ui-button { font: 500 1em var(--font-sans); padding: .5em 1em; border-radius: calc(var(--radius) - 2px); border: 1px solid var(--primary); background: var(--primary); color: var(--primary-foreground); cursor: pointer; }
+.ui-button.outline { background: transparent; color: var(--foreground); border-color: var(--input); }
+.ui-button:focus-visible, .ui-input:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.ui-input { font: 1em var(--font-sans); padding: .5em .75em; border: 1px solid var(--input); border-radius: calc(var(--radius) - 2px); background: var(--card); color: var(--foreground); }
+
+.ui-alert { border: 1.5px solid var(--primary); border-radius: var(--radius); padding: .8em 1.1em; background: var(--card); }
+.ui-alert.destructive { border-color: var(--destructive); }
+.ui-separator { border: 0; border-top: 1px solid var(--border); margin: 1em 0; }
+
+.ui-flow { display: flex; align-items: center; gap: .55em; flex-wrap: nowrap; }
+.ui-node { border: 1.2px solid var(--foreground); border-radius: var(--radius); padding: .75em .875em; font: 600 .89em var(--font-sans); text-align: center; min-width: 9.4em; background: var(--background); }
+.ui-node small { display: block; font: 400 .9em var(--font-mono); color: var(--subtle); margin-top: .3em; }
+.ui-node.hot { border-color: var(--primary); background: var(--accent); }
+.ui-node.opt { border-style: dashed; }
+.ui-arrow { color: var(--muted-foreground); font: 400 1.22em var(--font-mono); }
+.ui-chip { display: inline-block; font: 500 1.22em var(--font-mono); border: 1.2px solid var(--foreground); border-radius: var(--radius); padding: .45em .7em; background: var(--card); white-space: nowrap; }
+.ui-chip.accent { border-color: var(--primary); color: var(--primary); }
+.ui-chip.dashed { border-style: dashed; }
+
+/* Interactive components. Without assets/ui/ui.js they stay in their static form: every step shown, every panel stacked with its label. */
+.ui-reveal.armed { cursor: pointer; }
+.ui-reveal.armed:focus-visible { outline: 2px solid var(--ring); outline-offset: 4px; }
+.ui-reveal.armed [data-step]:not(.shown) { visibility: hidden; }
+.ui-toggle > [data-label] + [data-label] { margin-top: 1em; }
+.ui-toggle > [data-label]::before { content: attr(data-label); display: block; font: 600 .7em var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted-foreground); margin-bottom: .5em; }
+.ui-toggle.armed > [data-label]::before { display: none; }
+.ui-toggle.armed > [data-label]:not(.on) { display: none; }
+.ui-toggle-bar { display: inline-flex; gap: 0; margin-bottom: .8em; border: 1px solid var(--input); border-radius: calc(var(--radius) - 2px); overflow: hidden; }
+.ui-toggle-bar button { font: 500 .8em var(--font-sans); padding: .4em .9em; border: 0; background: transparent; color: var(--foreground); cursor: pointer; }
+.ui-toggle-bar button[aria-pressed="true"] { background: var(--primary); color: var(--primary-foreground); }
+.ui-toggle-bar button:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+
+/* A small static mock of a dialog, so a slide can show the UI it talks about. Header is the title bar (with a close mark),
+   direct <div> children are the body, <footer> holds the actions (use .ui-button, with the disabled attribute or .loading). */
+.ui-mock { max-width: 24em; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); color: var(--card-foreground); box-shadow: 0 .5em 1.5em rgba(0, 0, 0, .12); }
+.ui-mock > header { display: flex; justify-content: space-between; padding: .7em 1em; border-bottom: 1px solid var(--border); font-weight: 600; }
+.ui-mock > header::after { content: "\00d7"; color: var(--muted-foreground); }
+.ui-mock.no-x > header::after { display: none; }
+.ui-mock > div { padding: 1em; }
+.ui-mock > footer { display: flex; justify-content: flex-end; gap: .5em; padding: .7em 1em; border-top: 1px solid var(--border); }
+.ui-mock.closed { opacity: .35; border-style: dashed; box-shadow: none; }
+.ui-button:disabled { opacity: .5; cursor: not-allowed; }
+.ui-button.loading { opacity: .6; cursor: progress; }
+
+/* A reference that names its target and jumps to it: <a class="ui-ref" href="#s4">Setup · slide 4</a> */
+.ui-ref { font: 500 .86em var(--font-mono); color: var(--primary); text-decoration: underline; text-underline-offset: .2em; }
+
+/* A traced run: the code, the data going in, then one step at a time with the data after it. Each <output> holds text captured by
+   running the code (scripts/trace.ts), so it is real, not typed. Without assets/ui/ui.js every step is shown, stacked. */
+.ui-trace { border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); color: var(--card-foreground); padding: 1.1em 1.35em; }
+.ui-trace h3 { margin: 1.2em 0 .5em; font: 600 .7em var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted-foreground); }
+.ui-trace > :first-child { margin-top: 0; }
+.ui-trace pre, .ui-trace output { display: block; margin: 0 0 .7em; padding: .6em .85em; font: 400 .86em/1.5 var(--font-mono); white-space: pre; overflow-x: auto; border-radius: calc(var(--radius) - 2px); }
+.ui-trace pre { background: var(--muted); }
+.ui-trace output { border: 1px solid var(--border); background: var(--accent); }
+.ui-trace mark { background: color-mix(in srgb, var(--primary) 30%, transparent); color: var(--foreground); font-weight: 600; padding: 0 .25em; border-radius: .2em; }
+.ui-trace > section + section { margin-top: 1.1em; padding-top: .2em; border-top: 1px solid var(--border); }
+.ui-trace > footer { margin-top: 1.1em; padding-top: .9em; border-top: 1px solid var(--border); }
+.ui-trace-bar { display: flex; gap: .6em; margin: 1em 0 .2em; }
+.ui-trace.armed > section:not(.on), .ui-trace.armed > footer:not(.on) { display: none; }
+
+/* Status colours for ui-status. The theme's --destructive is the critical colour. Themes override these under :root[data-ui-theme]. */
+:root { --warning: #8a4b00; --success: #176b3a; }
+@media (prefers-color-scheme: dark) { :root { --warning: #ffcf7a; --success: #8be0a8; } }
+
+/* A status is a shape and a word; colour only reinforces. Write the shape yourself: <i aria-hidden="true">▲</i>Critical */
+.ui-status { display: inline-flex; align-items: center; gap: .5em; padding: .3em .8em; border: 1.5px solid currentColor; border-radius: 999px; background: var(--card); color: var(--muted-foreground); font: 600 .9em var(--font-sans); white-space: nowrap; }
+.ui-status i { font-style: normal; }
+.ui-status.critical { color: var(--destructive); }
+.ui-status.warning { color: var(--warning); }
+.ui-status.normal { color: var(--success); }
+.ui-status.nodata { border-style: dashed; }
+
+/* One range on a shared axis. --lo and --hi (the span) and --at (a marker line) are percentages along the axis; scripts/figures.ts computes them.
+   The 0 defaults let the CSS define its own variables, so a page that inlines it has none "used but never defined". */
+.ui-range { --lo: 0; --hi: 0; --at: 0; position: relative; margin: 0 2.4em; padding: 1.7em 0 1.7em; }
+.ui-range-bar { position: relative; height: 1.9em; background: var(--muted); border-radius: calc(var(--radius) * 1.5); }
+.ui-range-span { position: absolute; top: .3em; bottom: .3em; left: calc(var(--lo) * 1%); width: calc((var(--hi) - var(--lo)) * 1%); background: var(--accent); border: 2px solid var(--primary); border-radius: var(--radius); }
+.ui-range-pin { position: absolute; top: -.5em; bottom: -.5em; left: calc(var(--at) * 1%); width: .18em; margin-left: -.09em; background: var(--foreground); border-radius: 2px; }
+.ui-range-pin::after { content: attr(data-label); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: .2em; white-space: nowrap; font: 600 .8em var(--font-mono); color: var(--foreground); }
+.ui-range-lo, .ui-range-hi { position: absolute; bottom: 0; font: 600 .8em var(--font-mono); color: var(--primary); }
+.ui-range-lo { left: calc(var(--lo) * 1%); transform: translateX(-100%); }
+.ui-range-hi { left: calc(var(--hi) * 1%); }
+
+/* A grid of cells for one percentage of a whole. Cells with class "on" are filled; scripts/figures.ts builds all 100. */
+.ui-waffle { display: grid; grid-template-columns: repeat(var(--cols, 20), 1fr); gap: .25em; max-width: 32em; }
+.ui-waffle i { aspect-ratio: 1; border: 1.5px solid var(--border); border-radius: .2em; }
+.ui-waffle i.on { background: var(--primary); border-color: var(--primary); }
+
+/* Small multiples: cases that share one shape, side by side. */
+.ui-cases { display: grid; grid-template-columns: repeat(auto-fit, minmax(11em, 1fr)); gap: .9em; }
+.ui-case { display: grid; gap: .45em; align-content: start; justify-items: start; padding: 1em 1.1em; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); color: var(--card-foreground); }
+.ui-case > small { font: 400 .8em var(--font-mono); color: var(--muted-foreground); }
+.ui-case > b { font: 700 2.3em/1 var(--font-heading); letter-spacing: -.03em; }
+
+/* A worked calculation. Each step shows its result, the formula, then the formula with the reader's numbers put in.
+   Without assets/ui/ui.js every step is shown, stacked. */
+.ui-work { position: relative; display: grid; gap: .8em; counter-reset: step; }
+.ui-work > section { counter-increment: step; display: grid; grid-template-columns: 12em minmax(0, 1fr); gap: 1.2em; padding: 1em 1.1em; border: 1.5px solid var(--border); border-radius: var(--radius); background: var(--card); color: var(--card-foreground); transition: opacity .35s, transform .35s, border-color .35s, box-shadow .35s; }
+.ui-work > section > header h3 { margin: 0 0 .4em; font: 600 .7em var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted-foreground); }
+.ui-work > section > header h3::before { content: counter(step) " "; }
+.ui-work > section > header b { display: block; font: 700 1.45em/1.15 var(--font-mono); letter-spacing: -.02em; }
+.ui-work [data-label]::before { content: attr(data-label); display: block; margin-bottom: .3em; font: 600 .72em var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted-foreground); }
+.ui-work pre { margin: 0 0 .8em; font: 400 .85em/1.6 var(--font-mono); white-space: pre-wrap; color: var(--muted-foreground); }
+.ui-work output { display: block; margin: 0; padding: .5em .8em; border: 1px solid var(--border); border-radius: calc(var(--radius) - 2px); background: var(--accent); font: 400 .88em/1.65 var(--font-mono); white-space: pre-wrap; overflow-x: auto; }
+.ui-work.armed { padding-left: 2.7em; }
+.ui-work.armed > section.pending { opacity: .28; transform: translateY(6px); }
+.ui-work.armed > section.now { border-color: var(--primary); box-shadow: 0 0 0 3px var(--accent); }
+.ui-work-rail { position: absolute; left: 1.2em; width: 4px; margin-left: -2px; background: color-mix(in srgb, var(--primary) 25%, var(--background)); border-radius: 2px; }
+.ui-work-dot { position: absolute; left: 1.2em; width: 1em; height: 1em; margin: -.5em 0 0 -.5em; border-radius: 50%; background: var(--primary); box-shadow: 0 0 0 4px var(--accent); transition: top .7s; }
+.ui-work-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .6em; }
+.ui-work-bar > span { font-size: .9em; color: var(--muted-foreground); }
+@media (max-width: 40em) { .ui-work > section { grid-template-columns: 1fr; gap: .5em; } .ui-work.armed { padding-left: 2em; } .ui-work-rail, .ui-work-dot { left: .8em; } }
+@media (prefers-reduced-motion: reduce) { .ui-work > section, .ui-work-dot { transition: none; } }
+
+/* A replay: events one at a time on an axis of numbered ticks, evenly spaced (order, not scale). Without assets/ui/ui.js every event is
+   shown, stacked, under its tick. With it the marker slides to the event on show and the others are hidden. */
+.ui-replay { --at: 100; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); color: var(--card-foreground); padding: 1.1em 1.35em; }
+.ui-replay-axis { position: relative; height: 2.6em; margin: 0 1.4em 1em; }
+.ui-replay-axis::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 2px; margin-top: -1px; background: var(--border); }
+.ui-replay-axis > i { --p: 0; position: absolute; top: 50%; left: calc(var(--p) * 1%); display: grid; place-items: center; width: 2em; height: 2em; margin: -1em 0 0 -1em; border: 1.5px solid var(--primary); border-radius: 50%; background: var(--card); color: var(--primary); font: 600 .8em var(--font-mono); font-style: normal; }
+.ui-replay-axis > i.done { background: var(--primary); color: var(--primary-foreground); }
+.ui-replay-axis > i[role="button"] { cursor: pointer; }
+.ui-replay-axis > i:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+.ui-replay-marker { position: absolute; top: 50%; left: calc(var(--at) * 1%); width: 2.8em; height: 2.8em; margin: -1.4em 0 0 -1.4em; border: 2px solid var(--primary); border-radius: 50%; box-shadow: 0 0 0 4px var(--accent); pointer-events: none; transition: left .5s ease; }
+.ui-replay:not(.armed) .ui-replay-marker { display: none; }
+.ui-replay > section { margin-top: .9em; padding-top: .9em; border-top: 1px solid var(--border); }
+.ui-replay.armed > section { margin-top: 0; padding-top: .2em; border-top: 0; }
+.ui-replay.armed > section:not(.on) { display: none; }
+.ui-replay > section > header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .3em 1em; }
+.ui-replay h3 { margin: 0; font: 650 1.1em/1.3 var(--font-sans); }
+.ui-replay h3::before { content: attr(data-n) " \00b7\0020"; color: var(--primary); }
+.ui-replay header b { font: 600 .85em var(--font-mono); color: var(--muted-foreground); white-space: nowrap; }
+.ui-replay p { margin: .5em 0 0; }
+.ui-replay small { display: block; margin-top: .6em; padding: .5em .8em; border: 1px solid var(--border); border-radius: calc(var(--radius) - 2px); background: var(--accent); font: 400 .88em/1.6 var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.ui-replay small[data-label]::before { content: attr(data-label) " \00b7\0020"; color: var(--muted-foreground); }
+.ui-replay-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .6em; margin-top: 1em; }
+.ui-replay-bar > span { font-size: .9em; color: var(--muted-foreground); }
+@media (prefers-reduced-motion: reduce) { .ui-replay-marker { transition: none; } }
+
+/* Set by ui.js for 1.6 s on the target of a ui-ref, so the reader sees where the jump landed. */
+.ui-flash { background: color-mix(in srgb, var(--primary) 30%, transparent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent); border-radius: 3px; }
+
+/* A visible choice among a few named values. Every option is on screen, so no menu opens over the page; the radios are native, so arrow keys and
+   forms work. A disabled fieldset dims the options and clears the highlight, so a value that no longer applies is not shown as chosen. */
+.ui-choice { min-width: 0; margin: 0; padding: 0; border: 0; }
+.ui-choice > legend { display: block; margin: 0 0 .5em; padding: 0; font: 600 .75em var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted-foreground); }
+.ui-choice > legend small { font: 400 1.15em var(--font-sans); letter-spacing: 0; text-transform: none; }
+.ui-choice > div { display: flex; flex-wrap: wrap; gap: .45em; }
+.ui-choice label { position: relative; display: inline-flex; }
+.ui-choice input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.ui-choice label > span { display: inline-flex; align-items: center; min-height: 2.5em; padding: 0 .85em; border: 1px solid var(--input); border-radius: calc(var(--radius) - 2px); background: var(--card); color: var(--card-foreground); font: 500 .9em var(--font-mono); }
+.ui-choice input:checked + span { border-color: var(--primary); background: var(--accent); color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); font-weight: 650; }
+.ui-choice input:focus-visible + span { outline: 2px solid var(--ring); outline-offset: 2px; }
+.ui-choice:disabled label > span { border-style: dashed; opacity: .5; }
+.ui-choice:disabled input { cursor: not-allowed; }
+.ui-choice:disabled input:checked + span { border-color: var(--input); background: var(--card); color: var(--card-foreground); box-shadow: none; font-weight: 500; }
+
+/* A section menu that stays at the top of a long page. The script marks the section in view with aria-current; a trailing <button> (for example a theme switch) sits at the right. */
+.ui-nav { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: .25em; padding: .5em 1rem; overflow-x: auto; scrollbar-width: none; background: color-mix(in srgb, var(--background) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); font: 500 .9em var(--font-sans); }
+.ui-nav a { flex: none; padding: .5em .85em; border-radius: calc(var(--radius) - 2px); color: var(--muted-foreground); text-decoration: none; white-space: nowrap; }
+.ui-nav a:hover { color: var(--foreground); background: var(--muted); }
+.ui-nav a[aria-current="true"] { color: var(--primary); background: var(--accent); font-weight: 650; }
+.ui-nav a:focus-visible, .ui-nav > button:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+.ui-nav > button { flex: none; margin-left: auto; min-height: 2.25rem; padding: .3em .9em; font-size: .9em; }
+:root:has(.ui-nav) { scroll-padding-top: 4.5rem; }
+</style>
+<script>
+/* Optional behaviour for the interactive components in components.css. Without this file the page is still complete:
+   .ui-reveal shows every step, .ui-toggle stacks its panels, .ui-trace, .ui-work and .ui-replay stack their steps, .ui-nav still jumps (it just does
+   not mark the current section), and a .ui-ref still jumps (it just does not flash its target). Include it only when a page uses those components. */
+(() => {
+  const inDeck = () => document.documentElement.classList.contains("deck");
+  const button = (label, className) => Object.assign(document.createElement("button"), { type: "button", textContent: label, className });
+
+  /** Shows the next hidden [data-step] inside scope. Returns false when none is left, so a deck can advance instead. */
+  const step = (scope) => {
+    const next = scope.querySelector(".ui-reveal.armed [data-step]:not(.shown)");
+    if (!next) return false;
+    next.classList.add("shown");
+    return true;
+  };
+  window.uiReveal = { step };
+
+  // A ui-ref to a number's source flashes the target for 1.6 s so the reader sees where the jump landed. Slides are not flashed.
+  document.addEventListener("click", (e) => {
+    const link = e.target.closest("a.ui-ref[href^='#']");
+    const target = link && document.getElementById(link.getAttribute("href").slice(1));
+    if (!target || target.classList.contains("slide")) return;
+    target.classList.add("ui-flash");
+    setTimeout(() => target.classList.remove("ui-flash"), 1600);
+  });
+
+  const init = () => {
+  for (const box of document.querySelectorAll(".ui-reveal")) {
+    box.classList.add("armed");
+    box.tabIndex = 0;
+    box.addEventListener("click", () => { if (!inDeck()) step(box); });
+    box.addEventListener("keydown", (e) => {
+      if (inDeck() || (e.key !== "Enter" && e.key !== " ")) return;
+      e.preventDefault();
+      step(box);
+    });
+  }
+
+  for (const toggle of document.querySelectorAll(".ui-toggle")) {
+    const panels = [...toggle.children].filter((p) => p.hasAttribute("data-label"));
+    if (!panels.length) continue;
+    const bar = document.createElement("div");
+    bar.className = "ui-toggle-bar";
+    const select = (i) => panels.forEach((p, k) => {
+      p.classList.toggle("on", k === i);
+      bar.children[k].setAttribute("aria-pressed", String(k === i));
+    });
+    panels.forEach((p, i) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = p.dataset.label;
+      button.addEventListener("click", () => select(i));
+      bar.append(button);
+    });
+    toggle.classList.add("armed");
+    toggle.prepend(bar);
+    select(0);
+  }
+
+  for (const trace of document.querySelectorAll(".ui-trace")) {
+    const steps = [...trace.children].filter((c) => c.tagName === "SECTION");
+    if (!steps.length) continue;
+    const summary = trace.querySelector(":scope > footer");
+    const bar = document.createElement("div");
+    bar.className = "ui-trace-bar";
+    const button = (label, className) => Object.assign(document.createElement("button"), { type: "button", textContent: label, className });
+    const back = button("Back", "ui-button outline");
+    const next = button("Next", "ui-button");
+    let at = 0;
+    const show = (i) => {
+      at = i;
+      steps.forEach((s, k) => s.classList.toggle("on", k === i));
+      summary?.classList.toggle("on", i === steps.length - 1);
+      back.disabled = i === 0;
+      next.disabled = i === steps.length - 1;
+    };
+    back.addEventListener("click", () => show(at - 1));
+    next.addEventListener("click", () => show(at + 1));
+    bar.append(back, next);
+    steps[0].before(bar);
+    trace.classList.add("armed");
+    show(0);
+  }
+
+  for (const work of document.querySelectorAll(".ui-work")) {
+    const steps = [...work.children].filter((c) => c.tagName === "SECTION");
+    if (steps.length < 2) continue;
+    const last = steps.length - 1;
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const back = button("Back", "ui-button outline");
+    const next = button("Next", "ui-button outline");
+    const replay = button("Replay", "ui-button");
+    const all = button("Show all", "ui-button outline");
+    const status = document.createElement("span");
+    status.setAttribute("role", "status");
+    const bar = document.createElement("div");
+    bar.className = "ui-work-bar";
+    bar.setAttribute("role", "group");
+    bar.setAttribute("aria-label", "Step controls");
+    bar.append(back, next, replay, all, status);
+    const rail = document.createElement("span");
+    rail.className = "ui-work-rail";
+    const dot = document.createElement("i");
+    dot.className = "ui-work-dot";
+    let at = last;
+    let timer = 0;
+    const mid = (el) => el.offsetTop + el.offsetHeight / 2;
+    const place = () => {
+      rail.style.top = `${mid(steps[0])}px`;
+      rail.style.height = `${mid(steps[last]) - mid(steps[0])}px`;
+      dot.style.top = `${mid(steps[at])}px`;
+    };
+    const stop = () => { clearInterval(timer); timer = 0; };
+    const show = (i) => {
+      at = i;
+      steps.forEach((s, k) => { s.classList.toggle("pending", k > i); s.classList.toggle("now", k === i && i < last); });
+      back.disabled = i === 0;
+      status.textContent = i === last
+        ? "All steps shown."
+        : `Step ${i + 1} of ${steps.length}: ${steps[i].querySelector("h3")?.textContent ?? ""}, ${steps[i].querySelector("header b")?.textContent ?? ""}.`;
+      place();
+    };
+    back.addEventListener("click", () => { stop(); show(Math.max(0, at - 1)); });
+    next.addEventListener("click", () => { stop(); show(at >= last ? 0 : at + 1); });
+    all.addEventListener("click", () => { stop(); show(last); });
+    replay.addEventListener("click", () => {
+      stop();
+      if (reduced) { show(last); return; }
+      show(0);
+      timer = setInterval(() => (at >= last ? stop() : show(at + 1)), 1000);
+    });
+    bar.addEventListener("keydown", (e) => {
+      if (e.target.tagName !== "BUTTON") return;
+      if (e.key === "ArrowRight") { e.preventDefault(); next.click(); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); back.click(); }
+    });
+    window.addEventListener("resize", place);
+    window.addEventListener("load", place);
+    work.classList.add("armed");
+    work.append(rail, dot, bar);
+    show(last);
+  }
+
+  // A replay shows one event at a time on an axis of numbered ticks. It opens on the last event (the complete picture); Play restarts from the first.
+  for (const replay of document.querySelectorAll(".ui-replay")) {
+    const steps = [...replay.children].filter((c) => c.tagName === "SECTION");
+    const axis = replay.querySelector(".ui-replay-axis");
+    if (steps.length < 2 || !axis) continue;
+    const ticks = [...axis.querySelectorAll("i")];
+    const last = steps.length - 1;
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const title = (k) => steps[k].querySelector("h3")?.textContent ?? "";
+    const back = button("Back", "ui-button outline");
+    const next = button("Next", "ui-button outline");
+    const play = button("Play", "ui-button");
+    const status = document.createElement("span");
+    status.setAttribute("role", "status");
+    const bar = document.createElement("div");
+    bar.className = "ui-replay-bar";
+    bar.setAttribute("role", "group");
+    bar.setAttribute("aria-label", "Replay controls");
+    bar.append(back, next, play, status);
+    let at = last;
+    let timer = 0;
+    const stop = () => { clearInterval(timer); timer = 0; };
+    const show = (i) => {
+      at = i;
+      steps.forEach((s, k) => s.classList.toggle("on", k === i));
+      ticks.forEach((t, k) => {
+        t.classList.toggle("done", k <= i);
+        if (k === i) t.setAttribute("aria-current", "step"); else t.removeAttribute("aria-current");
+      });
+      const percent = ticks[i]?.style.getPropertyValue("--p") || "0";
+      axis.style.setProperty("--at", percent);
+      back.disabled = i === 0;
+      next.disabled = i === last;
+      status.textContent = `Event ${i + 1} of ${steps.length}: ${title(i)}`;
+    };
+    ticks.forEach((t, k) => {
+      t.tabIndex = 0;
+      t.setAttribute("role", "button");
+      t.setAttribute("aria-label", `Event ${k + 1}: ${title(k)}`);
+      t.addEventListener("click", () => { stop(); show(k); });
+      t.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); stop(); show(k); } });
+    });
+    back.addEventListener("click", () => { stop(); const prev = Math.max(0, at - 1); show(prev); });
+    next.addEventListener("click", () => { stop(); const following = Math.min(last, at + 1); show(following); });
+    play.addEventListener("click", () => {
+      stop();
+      if (reduced) { show(last); return; }
+      show(0);
+      timer = setInterval(() => (at >= last ? stop() : show(at + 1)), 1200);
+    });
+    bar.addEventListener("keydown", (e) => {
+      if (e.target.tagName !== "BUTTON") return;
+      if (e.key === "ArrowRight") { e.preventDefault(); next.click(); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); back.click(); }
+    });
+    axis.setAttribute("role", "group");
+    replay.classList.add("armed");
+    replay.append(bar);
+    show(last);
+  }
+
+  // A section menu marks the section the reader is in: the last one whose top has reached the upper third of the window, or the line a jump lands on if that is lower.
+  for (const nav of document.querySelectorAll(".ui-nav")) {
+    const links = [...nav.querySelectorAll('a[href^="#"]')];
+    const targets = links.map((a) => {
+      const id = a.getAttribute("href").slice(1);
+      return document.getElementById(id);
+    });
+    const mark = () => {
+      const style = getComputedStyle(document.documentElement);
+      const pad = parseFloat(style.scrollPaddingTop);
+      const base = Number.isFinite(pad) ? pad : nav.getBoundingClientRect().bottom;
+      const line = Math.max(base + 4, window.innerHeight * 0.3);
+      let current = 0;
+      targets.forEach((t, i) => { if (t && t.getBoundingClientRect().top <= line) current = i; });
+      links.forEach((a, i) => (i === current ? a.setAttribute("aria-current", "true") : a.removeAttribute("aria-current")));
+    };
+    window.addEventListener("scroll", mark, { passive: true });
+    window.addEventListener("resize", mark);
+    mark();
+  }
+  };
+  // Inlined into <head>, this runs before the body exists, so wait for the document.
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
+})();
+</script>
+<script>
+  // A fixed-palette theme pair follows the system: start from the reader's setting, and let the Theme button flip it. Without script the page stays light.
+  (() => {
+    const root = document.documentElement;
+    const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+    root.dataset.uiTheme = dark ? "paper-dark" : "paper";
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("theme").addEventListener("click", () => {
+        root.dataset.uiTheme = root.dataset.uiTheme === "paper" ? "paper-dark" : "paper";
+      });
+    });
+  })();
+</script>
+<style>
+/* Only what the shared components lack: page width, headings, the controls and the score. */
+@property --lo { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --hi { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --at { syntax: "<number>"; inherits: true; initial-value: 0; }
+@media (prefers-reduced-motion: no-preference) { .ui-range { transition: --lo .45s, --hi .45s, --at .45s; } }
+.wrap { max-width: 68rem; margin: 0 auto; padding: 2rem 1.25rem 4.5rem; }
+h1 { margin: 0 0 .35em; max-width: 22em; font: 700 clamp(1.9rem, 5vw, 3rem) / 1.1 var(--font-heading); letter-spacing: -.02em; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--primary); }
+h2 { margin: 0 0 .5em; font: 650 clamp(1.35rem, 3vw, 1.8rem) / 1.2 var(--font-heading); letter-spacing: -.01em; }
+h3.label, .fig h3 { margin: 0 0 .7em; font: 600 .75rem var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted-foreground); }
+.lead, .cap { color: var(--muted-foreground); max-width: 42rem; }
+.cap { font-size: .9rem; margin: .8em 0 0; }
+main > section { margin-top: 3.5rem; }
+.lab { display: grid; gap: 1.8rem; margin-top: 1.4rem; }
+@media (min-width: 56rem) { .lab { grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); } }
+.controls, .out { display: grid; gap: 1.1rem; align-content: start; }
+.slider .row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .5rem .75rem; margin-bottom: .2rem; }
+.slider label { font-weight: 550; }
+.num { display: inline-flex; align-items: center; gap: .4rem; font: 600 .9rem var(--font-mono); color: var(--muted-foreground); }
+.num input { width: 7.2em; min-height: 2.75rem; text-align: right; font-family: var(--font-mono); }
+input[type=range] { width: 100%; height: 2.75rem; margin: 0; accent-color: var(--primary); background: transparent; }
+input:disabled { opacity: .5; }
+.check { display: inline-flex; align-items: center; gap: .6rem; min-height: 2.75rem; cursor: pointer; }
+.check input { width: 1.4rem; height: 1.4rem; margin: 0; accent-color: var(--primary); }
+.score-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem .9rem; }
+.score { font: 700 clamp(3.4rem, 9vw, 5rem) / 1 var(--font-heading); letter-spacing: -.04em; }
+.score-line small { font-size: 1.3rem; color: var(--muted-foreground); }
+.fig { margin: 0; }
+.sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+button.ui-case { font: inherit; text-align: left; cursor: pointer; }
+button.ui-case:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+button.ui-case[aria-pressed=true] { border-color: var(--primary); background: var(--accent); }
+.ui-cases { margin-bottom: 1.4rem; }
+.top { margin: 0 0 .75rem; text-align: right; }
+</style>
+</head>
+<body class="ui-root">
+<div class="wrap">
+<p class="top"><button id="theme" class="ui-button outline" type="button" aria-label="Switch between light and dark theme">Theme</button></p>
+<header>
+  <h1 id="headline">A 75 kW machine reading 74 % scores <em>74.9</em>: warning</h1>
+  <p class="lead">A machine of a given size is expected to run inside a band of readings, and the band moves with its size. The score says where the reading sits in that band: 0 at the low end, 100 at the high end, and it stops at both. The constants are illustrative.</p>
+</header>
+<main>
+<section aria-labelledby="try-h">
+  <h2 id="try-h">Try a machine</h2>
+  <noscript><p class="cap">The controls need JavaScript. The page shows the default case in full.</p></noscript>
+  <h3 class="label" id="cases-h">Start from a case</h3>
+  <div class="ui-cases" id="cases" role="group" aria-labelledby="cases-h"><button type="button" class="ui-case" data-size="30" data-reading="55.5" aria-pressed="false"><small>30 kW, 55.5 %</small><b>0.0</b><span class="ui-status critical"><i aria-hidden="true">▲</i>Critical</span></button><button type="button" class="ui-case" data-size="75" data-reading="74" aria-pressed="true"><small>75 kW, 74 %</small><b>74.9</b><span class="ui-status warning"><i aria-hidden="true">◆</i>Warning</span></button><button type="button" class="ui-case" data-size="160" data-reading="80.5" aria-pressed="false"><small>160 kW, 80.5 %</small><b>97.4</b><span class="ui-status normal"><i aria-hidden="true">●</i>Normal</span></button><button type="button" class="ui-case" data-size="55" data-reading="" aria-pressed="false"><small>55 kW, no reading</small><b>—</b><span class="ui-status nodata"><i aria-hidden="true">◌</i>No data</span></button></div>
+  <div class="ui-card lab">
+    <div class="controls">
+      <h3 class="label">Your machine</h3>
+      <div class="slider">
+        <div class="row">
+          <label for="size-n">Machine size</label>
+          <span class="num"><input class="ui-input" id="size-n" type="number" inputmode="decimal" step="any" autocomplete="off" value="75" aria-label="Machine size in kilowatts"><span aria-hidden="true">kW</span></span>
+        </div>
+        <input id="size-r" type="range" min="0" max="100" step="0.1" autocomplete="off" value="62.5" data-min="1" data-max="1000" aria-label="Machine size slider, 1 to 1000 kilowatts, log scale" aria-valuetext="75 kilowatts">
+      </div>
+      <div class="slider">
+        <div class="row">
+          <label for="reading-n">Reading</label>
+          <span class="num"><input class="ui-input" id="reading-n" type="number" inputmode="decimal" step="any" autocomplete="off" value="74" aria-label="Reading in percent"><span aria-hidden="true">%</span></span>
+        </div>
+        <input id="reading-r" type="range" min="30" max="100" step="0.1" autocomplete="off" value="74" aria-label="Reading slider, 30 to 100 percent" aria-valuetext="74 percent">
+      </div>
+      <label class="check"><input type="checkbox" id="none" autocomplete="off"> No reading</label>
+    </div>
+    <div class="out">
+      <div class="score-line"><b class="score" id="score">74.9</b><small>of 100</small><span class="ui-status warning" id="status"><i aria-hidden="true">◆</i>Warning</span></div>
+      <p class="sr" id="live" role="status" aria-live="polite"></p>
+      <div class="fig">
+        <h3>The reading against the band for this size</h3>
+        <div class="ui-range" style="--lo:48.21;--hi:67.76;--at:62.86" role="img" aria-label="Expected band 63.7 to 77.4 %, marker at 74.0 %"><div class="ui-range-bar"><i class="ui-range-span"></i><i class="ui-range-pin" data-label="74.0 %"></i></div><span class="ui-range-lo">63.7</span><span class="ui-range-hi">77.4</span></div>
+      </div>
+      <div class="fig">
+        <h3>The reading as 100 cells</h3>
+        <div class="ui-waffle" style="--cols:20" role="img" aria-label="74 of 100 cells filled (74%)"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="work-h">
+  <h2 id="work-h">Replay the calculation</h2>
+  <p class="lead">Four steps on whatever the controls say. Each shows the formula, then your numbers put in, then the result. Underlined numbers jump to where they came from.</p>
+  <div class="ui-work" id="work">
+    <section><header><h3>Power</h3><b>75 kW</b></header><div>
+      <pre data-label="Formula">The machine's size in kilowatts. This is an input.</pre>
+      <output data-label="With your numbers">size_kw = 75</output></div></section>
+    <section><header><h3>Expected band</h3><b>63.7 to 77.4 %</b></header><div>
+      <pre data-label="Formula">low  = 40 + 5.5 × ln(P)
+high = 58 + 4.5 × ln(P)
+P = the size in kW, ln = natural logarithm</pre>
+      <output data-label="With your numbers">ln(75) = 4.317488
+<span id="ln-low">low = 40 + 5.5 × 4.317488 ≈ 63.7462</span>
+<span id="ln-high">high = 58 + 4.5 × 4.317488 ≈ 77.4287</span></output></div></section>
+    <section><header><h3>Place the reading</h3><b>74.9</b></header><div>
+      <pre data-label="Formula">score = (reading − low) ÷ (high − low) × 100
+then kept between 0 and 100</pre>
+      <output data-label="With your numbers">(<a class="ui-ref" href="#reading-n" aria-label="74, your reading">74</a> − <a class="ui-ref" href="#ln-low" aria-label="63.7462, the low end from step 2">63.7462</a>) ÷ (<a class="ui-ref" href="#ln-high" aria-label="77.4287, the high end from step 2">77.4287</a> − <a class="ui-ref" href="#ln-low" aria-label="63.7462, the low end from step 2">63.7462</a>) × 100 ≈ 74.941</output></div></section>
+    <section><header><h3>Tone</h3><b>warning</b></header><div>
+      <pre data-label="Formula">score ≤ 50 → critical
+score ≤ 75 → warning
+otherwise → normal</pre>
+      <output data-label="With your numbers">74.941 &gt; 50 and ≤ 75 → warning</output></div></section>
+  </div>
+  <p class="cap">Numbers are rounded for display. The code keeps full precision, so a hand calculation can differ in the last digit.</p>
+</section>
+</main>
+</div>
+<script>/* The band score, with no DOM, so scripts/model-check.ts can test it against the reference code.
+   A machine of a given size is expected to run inside a band of readings that moves with its size. The score is where the reading
+   sits in that band, 0 to 100, cut off at both ends. The constants are illustrative, not from a real system.
+   A page inlines this file in a <script>; the check script imports it. */
+globalThis.bandModel = (size, reading) => {
+  const log = size > 0 ? Math.log(size) : null;
+  const lo = log === null ? null : 40 + 5.5 * log;
+  const hi = log === null ? null : 58 + 4.5 * log;
+  const hasBand = lo !== null && lo < hi;
+  const raw = hasBand && reading !== null ? ((reading - lo) / (hi - lo)) * 100 : null;
+  const score = raw === null ? null : Math.max(0, Math.min(100, raw));
+  const tone = score === null ? "no_data" : score <= 50 ? "critical" : score <= 75 ? "warning" : "normal";
+  return { lo: hasBand ? lo : null, hi: hasBand ? hi : null, score, tone };
+};
+</script>
+<script>
+(() => {
+  const model = globalThis.bandModel;
+  const CUTS = {"critical":50,"warning":75};
+  const $ = (id) => document.getElementById(id);
+  const sizeBox = $("size-n"), sizeSlider = $("size-r"), readBox = $("reading-n"), readSlider = $("reading-r"), none = $("none");
+  const band = document.querySelector(".ui-range");
+  const pin = band.querySelector(".ui-range-pin");
+  const waffle = document.querySelector(".ui-waffle");
+  const SIZE = { min: Number(sizeSlider.dataset.min), max: Number(sizeSlider.dataset.max) };
+  const AXIS = { min: Number(readSlider.min), max: Number(readSlider.max) };
+  const WORD = { critical: "Critical", warning: "Warning", normal: "Normal", no_data: "No data" };
+  const GLYPH = { critical: "▲", warning: "◆", normal: "●", no_data: "◌" };
+  const MODIFIER = { critical: "critical", warning: "warning", normal: "normal", no_data: "nodata" };
+
+  // The formula's constants are read from the model itself: ln(1) = 0 gives the intercepts, ln(e) = 1 adds the slopes.
+  const atOne = model(1, null), atE = model(Math.E, null);
+  const K = { a: atOne.lo, b: atE.lo - atOne.lo, c: atOne.hi, d: atE.hi - atOne.hi };
+  const coef = (v) => String(Number(v.toFixed(6)));
+  const f1 = (v) => v.toFixed(1);
+  const f3 = (v) => v.toFixed(3);
+  const f4 = (v) => v.toFixed(4);
+  const f6 = (v) => v.toFixed(6);
+  const ref = (text, to, what) => `<a class="ui-ref" href="#${to}" aria-label="${text}, ${what}">${text}</a>`;
+
+  /** The words and numbers the page shows for one size and reading. Mirrors describe() in build.ts, which fills the static form. */
+  function describe(size, reading, m) {
+    const tone = WORD[m.tone].toLowerCase();
+    let headline, band1, place;
+    if (m.lo === null) {
+      headline = `A machine of ${size} kW has no expected band, so it has no score`;
+      band1 = { result: "none", numbers: "The size must be above 0 for a band to exist." };
+      place = { result: "no score", numbers: "Without a band there is nothing to place the reading in." };
+    } else {
+      const log = Math.log(size);
+      band1 = {
+        result: `${f1(m.lo)} to ${f1(m.hi)} %`,
+        numbers: `ln(${size}) = ${f6(log)}\n<span id="ln-low">low = ${coef(K.a)} + ${coef(K.b)} × ${f6(log)} ≈ ${f4(m.lo)}</span>\n<span id="ln-high">high = ${coef(K.c)} + ${coef(K.d)} × ${f6(log)} ≈ ${f4(m.hi)}</span>`,
+      };
+      if (reading === null) {
+        headline = `A ${size} kW machine with no reading has no score`;
+        place = { result: "no score", numbers: "There is no reading, so there is nothing to place." };
+      } else {
+        headline = `A ${size} kW machine reading ${reading} % scores <em>${f1(m.score)}</em>: ${tone}`;
+        const raw = ((reading - m.lo) / (m.hi - m.lo)) * 100;
+        const low = ref(f4(m.lo), "ln-low", "the low end from step 2");
+        const high = ref(f4(m.hi), "ln-high", "the high end from step 2");
+        const kept = raw < 0 || raw > 100 ? `\nkept in 0 to 100 → ${f1(m.score)}` : "";
+        place = {
+          result: f1(m.score),
+          numbers: `(${ref(String(reading), "reading-n", "your reading")} − ${low}) ÷ (${high} − ${low}) × 100 ≈ ${f3(raw)}${kept}`,
+        };
+      }
+    }
+    const score = m.score === null ? "" : f3(m.score);
+    const rule = {
+      critical: `${score} ≤ ${CUTS.critical} → critical`,
+      warning: `${score} &gt; ${CUTS.critical} and ≤ ${CUTS.warning} → warning`,
+      normal: `${score} &gt; ${CUTS.warning} → normal`,
+      no_data: "no score → no data",
+    };
+    return {
+      headline,
+      steps: [
+        { result: `${size} kW`, numbers: `size_kw = ${size}` },
+        band1,
+        place,
+        { result: WORD[m.tone].toLowerCase(), numbers: rule[m.tone] },
+      ],
+    };
+  }
+
+  const position = (v, min, max) => String(Number(Math.min(100, Math.max(0, ((v - min) / (max - min)) * 100)).toFixed(2)));
+  const sizeAt = (pos) => Math.round(SIZE.min * (SIZE.max / SIZE.min) ** (pos / 100) * 10) / 10;
+  const posOf = (kw) => (kw > 0 ? position(Math.log(kw), Math.log(SIZE.min), Math.log(SIZE.max)) : "0");
+  const state = { size: Number(sizeBox.value), reading: Number(readBox.value), none: none.checked };
+  const sections = [...document.querySelectorAll(".ui-work > section")];
+
+  function render() {
+    const reading = state.none ? null : state.reading;
+    const m = model(state.size, reading);
+    const text = describe(state.size, reading, m);
+    $("headline").innerHTML = text.headline;
+    $("score").textContent = m.score === null ? "—" : f1(m.score);
+    const status = $("status");
+    status.className = `ui-status ${MODIFIER[m.tone]}`;
+    status.innerHTML = `<i aria-hidden="true">${GLYPH[m.tone]}</i>${WORD[m.tone]}`;
+
+    band.hidden = m.lo === null;
+    if (m.lo !== null) {
+      band.style.setProperty("--lo", position(m.lo, AXIS.min, AXIS.max));
+      band.style.setProperty("--hi", position(m.hi, AXIS.min, AXIS.max));
+      pin.hidden = reading === null;
+      if (reading !== null) {
+        band.style.setProperty("--at", position(reading, AXIS.min, AXIS.max));
+        pin.dataset.label = `${f1(reading)} %`;
+      }
+      band.querySelector(".ui-range-lo").textContent = f1(m.lo);
+      band.querySelector(".ui-range-hi").textContent = f1(m.hi);
+      const marker = reading === null ? "" : `, marker at ${f1(reading)} %`;
+      band.setAttribute("aria-label", `Expected band ${f1(m.lo)} to ${f1(m.hi)} %${marker}`);
+    }
+
+    const cells = [...waffle.children];
+    const percent = reading === null ? 0 : Math.min(100, Math.max(0, reading));
+    const filled = Math.round((percent / 100) * cells.length);
+    cells.forEach((c, i) => c.classList.toggle("on", i < filled));
+    waffle.setAttribute("aria-label", reading === null ? "No reading, no cells filled" : `${filled} of ${cells.length} cells filled (${percent}%)`);
+
+    sections.forEach((s, i) => {
+      s.querySelector("header b").textContent = text.steps[i].result;
+      s.querySelector("output").innerHTML = text.steps[i].numbers;
+    });
+    window.dispatchEvent(new Event("resize")); // ui.js re-places its rail when the steps change height
+
+    if (document.activeElement !== sizeBox) sizeBox.value = String(state.size);
+    if (document.activeElement !== sizeSlider) sizeSlider.value = posOf(state.size);
+    sizeSlider.setAttribute("aria-valuetext", `${state.size} kilowatts`);
+    if (document.activeElement !== readBox) readBox.value = String(state.reading);
+    if (document.activeElement !== readSlider) readSlider.value = String(Math.min(AXIS.max, Math.max(AXIS.min, state.reading)));
+    readSlider.setAttribute("aria-valuetext", state.none ? "no reading" : `${state.reading} percent`);
+    readBox.disabled = readSlider.disabled = state.none;
+    none.checked = state.none;
+    document.querySelectorAll("button.ui-case").forEach((b) => {
+      const same = Number(b.dataset.size) === state.size && (b.dataset.reading === "" ? state.none : !state.none && Number(b.dataset.reading) === state.reading);
+      b.setAttribute("aria-pressed", String(same));
+    });
+  }
+
+  // One announcement after a burst of changes, never one per keystroke or slider step.
+  const live = $("live");
+  let timer = 0;
+  function update() {
+    render();
+    clearTimeout(timer);
+    timer = setTimeout(() => { live.textContent = $("headline").textContent; }, 600);
+  }
+
+  // A typed value is used as typed, even outside the slider's range; only the slider thumb and the axis drawing stop at the ends.
+  sizeBox.addEventListener("input", () => { const v = sizeBox.valueAsNumber; if (Number.isFinite(v)) { state.size = v; update(); } });
+  readBox.addEventListener("input", () => { const v = readBox.valueAsNumber; if (Number.isFinite(v)) { state.reading = v; update(); } });
+  sizeBox.addEventListener("change", () => { sizeBox.value = String(state.size); });
+  readBox.addEventListener("change", () => { readBox.value = String(state.reading); });
+  sizeSlider.addEventListener("input", () => { state.size = sizeAt(Number(sizeSlider.value)); update(); });
+  readSlider.addEventListener("input", () => { state.reading = Number(readSlider.value); update(); });
+  none.addEventListener("change", () => { state.none = none.checked; update(); });
+  $("cases").addEventListener("click", (e) => {
+    const card = e.target.closest("button.ui-case");
+    if (!card) return;
+    state.size = Number(card.dataset.size);
+    state.none = card.dataset.reading === "";
+    if (!state.none) state.reading = Number(card.dataset.reading);
+    update();
+  });
+  render();
+})();
+</script>
+</body>
+</html>

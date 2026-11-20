@@ -1,0 +1,151 @@
+/* Diagram block: one SVG laid out by elkjs, plus the controls that drive its highlight modes. */
+.explain-diagram {
+  container-type: inline-size;
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--card);
+  color: var(--card-foreground);
+}
+.explain-diagram > p {
+  margin: 0.5rem 0 0;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+.explain-diagram > p[role="alert"] {
+  color: var(--destructive);
+}
+.diagram-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.diagram-tools button {
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  padding: 0.35rem 0.6rem;
+  min-height: 32px;
+  font-size: 0.8125rem;
+  line-height: 1.2;
+  background: var(--card);
+  color: var(--card-foreground);
+  cursor: pointer;
+}
+.diagram-tools button[aria-pressed="true"] {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.diagram-frame {
+  position: relative;
+}
+/* The position bar below the frame is the only scrollbar: a native one would stack a second
+   track under it. Nodes are focusable and scroll themselves into view for keyboard readers. */
+.diagram-scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.diagram-scroll::-webkit-scrollbar {
+  display: none;
+}
+/* A diagram wider than its column must look scrollable: the fade marks hidden content and
+   leaves once the reader reaches the end. */
+.diagram-frame[data-overflow]:not([data-at-end])::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  width: 2rem;
+  pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--card));
+}
+/* macOS hides overlay scrollbars until the reader scrolls, which makes a wide diagram look
+   clipped rather than scrollable. This indicator is drawn from the measured scroll position. */
+.diagram-scrollbar {
+  position: relative;
+  height: 8px;
+  margin-top: 0.5rem;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--border) 70%, transparent);
+  cursor: pointer;
+}
+.diagram-scrollbar-thumb {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--muted-foreground) 55%, transparent);
+}
+.diagram-canvas {
+  display: block;
+  max-width: none;
+  /* A diagram narrower than its card should sit in the middle, not hug the left edge. */
+  margin-inline: auto;
+}
+.diagram-node {
+  cursor: pointer;
+}
+.diagram-node-box {
+  fill: var(--card);
+  stroke: var(--muted-foreground);
+  stroke-width: 1.5;
+}
+.diagram-node-label {
+  fill: var(--card-foreground);
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  pointer-events: none;
+}
+.diagram-node[aria-pressed="true"] .diagram-node-box {
+  stroke: var(--primary);
+  stroke-width: 2.5;
+}
+.diagram-node:focus-visible {
+  outline: none;
+}
+.diagram-node:focus-visible .diagram-node-box {
+  stroke: var(--ring);
+  stroke-width: 3;
+}
+.diagram-edges path {
+  fill: none;
+  stroke: var(--muted-foreground);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+.diagram-arrow {
+  fill: context-stroke;
+  stroke: none;
+}
+.diagram-edge-label rect {
+  fill: var(--card);
+  stroke: var(--border);
+}
+.diagram-edge-label text {
+  fill: var(--muted-foreground);
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+}
+/* Unfocused nodes stay readable: the box and label recede to secondary ink instead of the
+   whole group dropping to a low opacity, which would push 13px text under AA contrast. */
+.explain-diagram[data-diagram-mode="step"] .diagram-node:not([data-step-focus]) .diagram-node-box {
+  stroke: var(--border);
+}
+.explain-diagram[data-diagram-mode="step"] .diagram-node:not([data-step-focus]) .diagram-node-label {
+  fill: var(--muted-foreground);
+}
+.explain-diagram[data-diagram-mode="step"] [data-edge]:not([data-step-focus]) {
+  opacity: 0.3;
+}
+.explain-diagram .diagram-edges [data-step-focus] {
+  stroke: var(--primary);
+  stroke-width: 2.4;
+}

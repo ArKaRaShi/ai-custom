@@ -2,8 +2,7 @@
 import { appendFile, chmod, lstat, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
-import { type Entry, loadCatalogue } from "./catalogue";
-import { composePage, escapeHtml, renderGallery, renderScreen } from "./render";
+import { composePage, escapeHtml, renderScreen } from "./render";
 import { cookieName, createKey } from "./auth";
 import { detectMode, type Mode } from "./domain";
 import {
@@ -36,12 +35,10 @@ const USAGE = `visual-companion — show mockups and choices in a local browser 
   states <name> <file> [<name> <file> ...]  publish full-page isolated states with an edge rail
   stage <file> <relative-path>              copy one dependency to session/files
   events  [--wait <seconds>] [--clear]      read (or wait for) recorded choices
-  components [--json]                       list the component catalogue, grouped
-  gallery [--out <file>]                    write examples/component-gallery.html from the catalogue
 
   Staging does not rewrite CSS URLs: stage dependencies and use paths resolving under /files/.
 
-  session: every command above except components and gallery takes --project-dir <dir> or --run-dir <dir>
+  session: every command takes --project-dir <dir> or --run-dir <dir>
   flags: --json (structured output)
   exit: 0 ok, 1 failure, 2 usage`;
 
@@ -376,11 +373,11 @@ async function states(args: Args): Promise<void> {
   const buttons = previews.map((p, i) => `<button type="button" data-state-index="${i}" aria-pressed="${i === 0}">${escapeHtml(p.name)}</button>`).join("");
   const options = previews.map((p, i) => `<option value="${i}">${escapeHtml(p.name)}</option>`).join("");
   const frames = previews.map((p, i) => `<iframe title="${escapeHtml(p.name)}" sandbox="allow-same-origin" src="/files/${directory}/${i}.html"${i ? " hidden" : ""}></iframe>`).join("");
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>States</title><link rel="stylesheet" href="/assets/state-rail.css"><script src="/assets/state-rail.js" defer></script></head><body><main>${frames}</main><nav aria-label="Preview states"><div class="vc-rail">${buttons}</div><label class="vc-mobile">State <select aria-label="Preview state">${options}</select></label></nav></body></html>`;
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>States</title><link rel="stylesheet" href="/assets/state-rail.css"><script src="/assets/state-rail.js" defer></script></head><body><main>${frames}</main><nav aria-label="Preview states"><div class="state-rail">${buttons}</div><label class="state-mobile">State <select aria-label="Preview state">${options}</select></label></nav></body></html>`;
   await publish(args, html);
 }
 
-/** A fragment gets the vc-* stylesheet inside its sandbox; a whole document is kept as written. */
+/** Isolated previews cannot run scripts. */
 async function isolatedPreview(preview: { name: string; html: string }): Promise<string> {
   const mode = detectMode(preview.html);
   return renderScreen({ mode, title: preview.name, content: preview.html, isolated: true });
@@ -476,37 +473,6 @@ function describeEvent(event: { choice: string; text?: string; channel: string; 
   return `${when}  ${event.choice}${label}  [${event.channel}]`;
 }
 
-function describeEntry(entry: Entry): string {
-  if (entry.kind === "class") return `  ${entry.names.join(" / ")} — ${entry.what}`;
-  const attrs = Object.keys(entry.attrs);
-  const tags = entry.names.map((name) => `<${name}>`).join(" ");
-  return `  ${tags}${attrs.length > 0 ? ` (${attrs.join(", ")})` : ""} — ${entry.what}`;
-}
-
-async function components(args: Args): Promise<void> {
-  const catalogue = loadCatalogue();
-  const lines = [
-    "modes:",
-    ...catalogue.modes.map((mode) => `  ${mode.mode}: ${mode.when}`),
-    ...catalogue.groups.flatMap((group) => [
-      `${group.title}:`,
-      ...catalogue.entries.filter((entry) => entry.group === group.id).map(describeEntry),
-    ]),
-    `recorded: ${catalogue.recorded}`,
-  ];
-  emit(catalogue, json(args.flags), lines);
-}
-
-/** The gallery is generated, never hand-written: one specimen per catalogue entry. */
-async function gallery(args: Args): Promise<void> {
-  if (args.positional.length > 0) throw new UsageError("gallery takes no arguments");
-  const catalogue = loadCatalogue();
-  const flag = args.flags.get("out");
-  const path = typeof flag === "string" ? resolve(flag) : join(import.meta.dir, "..", "examples", "component-gallery.html");
-  await writeFile(path, `${renderGallery(catalogue)}\n`, "utf8");
-  const summary = { path, groups: catalogue.groups.length, entries: catalogue.entries.length };
-  emit(summary, json(args.flags), [`wrote ${path}`, `${summary.entries} entries in ${summary.groups} groups`]);
-}
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
@@ -537,10 +503,6 @@ async function main(): Promise<void> {
       return states(args);
     case "events":
       return events(args);
-    case "components":
-      return components(args);
-    case "gallery":
-      return gallery(args);
     case "help":
       process.stdout.write(`${USAGE}\n`);
       return;

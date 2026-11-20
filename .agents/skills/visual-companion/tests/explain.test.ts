@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { playwright } from "./playwright";
 
 const CLI = join(import.meta.dir, "..", "scripts", "cli.ts");
 
@@ -347,11 +347,6 @@ describe("given spec text that could misuse the evaluator or the terminal, when 
 
 // Optional browser seam, like theme-browser.test.ts: needs Google Chrome and the explain/ dev dependencies.
 const chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-let playwright: typeof import("playwright") | undefined;
-try {
-  const explainRequire = createRequire(join(import.meta.dir, "..", "explain", "package.json"));
-  playwright = explainRequire("playwright");
-} catch {}
 
 describe("given a published lesson, when it opens in a headless browser, then the Explain page renders", () => {
 test.skipIf(!playwright || !existsSync(chrome))("an SVG illustration renders inside its section using theme colors", async () => {

@@ -19,6 +19,6 @@ Stage the profile as an explicit dependency, then link it from the preview:
 bun "$HOME/.agents/skills/visual-companion/scripts/cli.ts" stage <project>/.visual-companion/styles/checkout.css checkout.css --project-dir <project>
 ```
 
-Link `/files/checkout.css`. Stage referenced assets as well. Preserve CSS-relative paths that resolve under `/files/`; rewrite URLs that escape it. See [CLI](cli.md#stage) for staging and isolation limits.
+Link `/files/checkout.css`. Stage referenced assets as well. Preserve CSS-relative paths that resolve under `/files/`; rewrite URLs that escape it. See `cli.md`, section `stage`, for staging and isolation limits.
 
 The project-local `.visual-companion/.gitignore` ignores these profiles with `*`. They persist across local sessions, but are not shared through Git unless deliberately promoted elsewhere.

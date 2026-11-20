@@ -65,13 +65,13 @@ describe("http surface", () => {
     expect(html).toContain('role="status"');
     expect(html).toContain("Connecting…");
     expect(html).not.toContain("bun scripts/cli.ts");
-    expect(html).toContain("/assets/components.css");
+    expect(html).toContain("/assets/frame.css");
   });
 
   test("a fragment is wrapped in the frame with its title escaped", async () => {
-    await store.push('<div class="vc-card"><h2>Pick</h2></div>', { title: '<script>x</script>' });
+    await store.push('<div><h2>Pick</h2></div>', { title: '<script>x</script>' });
     const html = await (await fetch(`${base}/`, { headers: auth })).text();
-    expect(html).toContain('<div class="vc-card"><h2>Pick</h2></div>');
+    expect(html).toContain('<div><h2>Pick</h2></div>');
     expect(html).toContain("&lt;script&gt;x&lt;/script&gt;");
     expect(html).not.toContain("<script>x</script>");
     expect(html).toContain("/assets/client.js");
@@ -84,7 +84,7 @@ describe("http surface", () => {
     const response = await fetch(`${base}/`, { headers: auth });
     const html = await response.text();
     expect(html).toContain(`<title>Price $$ $&amp; $\` $'</title>`);
-    expect(html).toContain(`<span class="vc-bar-title">Price $$ $&amp; $\` $'</span>`);
+    expect(html).toContain(`<span class="title">Price $$ $&amp; $\` $'</span>`);
     expect(html).toContain(content);
   });
 
@@ -113,18 +113,18 @@ describe("http surface", () => {
   });
 
   test("isolated bundle preview shows content without inert frame controls", async () => {
-    await store.push('<p class="vc-card">Preview</p>', { isolated: true });
+    await store.push('<p>Preview</p>', { isolated: true });
     const response = await fetch(`${base}/files/__preview`, { headers: auth });
     const html = await response.text();
-    expect(html).toContain('<p class="vc-card">Preview</p>');
-    expect(html).toContain("/assets/components.css");
+    expect(html).toContain('<p>Preview</p>');
+    expect(html).not.toContain("/assets/components.css");
     expect(html).not.toContain("data-vc-theme-select");
     expect(html).not.toContain("data-vc-status");
     expect(html).not.toContain("<script");
   });
 
   test("assets are served with a real content type", async () => {
-    const css = await fetch(`${base}/assets/components.css`, { headers: auth });
+    const css = await fetch(`${base}/assets/frame.css`, { headers: auth });
     expect(css.status).toBe(200);
     expect(css.headers.get("content-type")).toContain("text/css");
     expect((await css.text()).length).toBeGreaterThan(1000);
@@ -137,44 +137,6 @@ describe("http surface", () => {
     }
   });
 
-  test("the frame loads the component modules from a nested asset path, served as JavaScript", async () => {
-    await store.push("<p>frame</p>");
-    const html = await (await fetch(`${base}/`, { headers: auth })).text();
-    expect(html).toContain('<script type="module" src="/assets/components/index.js"></script>');
-    expect(html.match(/<script[^>]*src="\/assets\/components/g)).toHaveLength(1);
-    for (const name of ["index.js", "core.js", "tabs.js"]) {
-      const response = await fetch(`${base}/assets/components/${name}`, { headers: auth });
-      expect(response.status).toBe(200);
-      expect(response.headers.get("content-type")).toContain("text/javascript");
-    }
-    for (const path of ["/assets/components/../../scripts/cli.ts", "/assets/components/.hidden", "/assets/components/", "/assets/components"]) {
-      expect((await fetch(`${base}${path}`, { headers: auth })).status).toBe(404);
-    }
-  });
-
-  test("a whole document with data-vc-components gets the stylesheet, the module and a pinned palette", async () => {
-    await store.push('<!doctype html><html lang="en" data-vc-components><head><title>t</title></head><body><vc-tabs><vc-tab label="a">x</vc-tab></vc-tabs></body></html>');
-    const html = await (await fetch(`${base}/`, { headers: auth })).text();
-    expect(html).toContain('data-vc-theme="light"');
-    expect(html).toContain('<link rel="stylesheet" href="/assets/components.css">');
-    expect(html.indexOf("/assets/components/index.js")).toBeLessThan(html.indexOf("/assets/client.js"));
-    expect(html).not.toContain("vc-bar");
-  });
-
-  test("the opt-in is not inferred from vc-* markup in the document", async () => {
-    await store.push('<!doctype html><html><body><div class="vc-card">mine</div></body></html>');
-    const html = await (await fetch(`${base}/`, { headers: auth })).text();
-    expect(html).not.toContain("/assets/components.css");
-    expect(html).not.toContain("/assets/components/index.js");
-  });
-
-  test("an isolated plain document with the opt-in gets the stylesheet and no script", async () => {
-    await store.push('<!doctype html><html data-vc-components="dark"><head></head><body>p</body></html>', { isolated: true });
-    const html = await (await fetch(`${base}/files/__preview`, { headers: auth })).text();
-    expect(html).toContain('data-vc-theme="dark"');
-    expect(html).toContain('<link rel="stylesheet" href="/assets/components.css">');
-    expect(html).not.toContain("<script");
-  });
 
   test("a file dropped into files/ is served", async () => {
     await mkdir(store.filesDir, { recursive: true });

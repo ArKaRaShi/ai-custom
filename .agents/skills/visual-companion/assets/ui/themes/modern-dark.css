@@ -1,0 +1,30 @@
+/* modern-dark: the modern theme in a dark palette. Deep blue-black page, slightly lighter cards, one light-blue accent.
+   Dark only. Text contrast is at least 6.4:1; control borders are at least 3.9:1 on the page and on cards.
+   Activate with <html data-ui-theme="modern-dark">. */
+:root[data-ui-theme="modern-dark"] {
+  color-scheme: dark;
+  --radius: 10px;
+  --ui-text: 16px;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-heading: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --background: #0b1020;
+  --foreground: #e8ecf5;
+  --card: #121a2e;
+  --card-foreground: #e8ecf5;
+  --primary: #7aa2ff;
+  --primary-foreground: #0b1020;
+  --secondary: #19233b;
+  --secondary-foreground: #e8ecf5;
+  --muted: #19233b;
+  --muted-foreground: #9aa6bd;
+  --subtle: #9aa6bd;
+  --accent: rgba(122, 162, 255, .14);
+  --accent-foreground: #7aa2ff;
+  --destructive: #ffa8a0;
+  --border: #26324d;
+  --input: #6577a0;
+  --ring: #7aa2ff;
+  --warning: #ffcf7a;
+  --success: #8be0a8;
+}

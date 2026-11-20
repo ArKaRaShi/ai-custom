@@ -22067,6 +22067,17 @@ var EvidenceRow = exports_external.object({
 var CompareRow = exports_external.object({ label: Text().min(1), before: Text(), after: Text() });
 var ChartTone = exports_external.enum(["neutral", "good", "bad"]).default("neutral").describe("good and bad color the bar; meaning stays in the label");
 var ChartBar = exports_external.object({ label: Text().min(1), value: exports_external.number(), tone: ChartTone });
+var DiagramNode = exports_external.object({
+  id: Text().min(1).regex(/\S/, "use an id containing a non-whitespace character").describe("Name edges and step focus use to point at this node"),
+  label: Text().min(1)
+});
+var DiagramEdge = exports_external.object({
+  id: Text().min(1).describe("Name of this connection, unique among the block's edges"),
+  source: Text().min(1).describe("Id of the node the arrow starts at"),
+  target: Text().min(1).describe("Id of the node the arrow points at"),
+  label: Text().min(1).optional()
+});
+var DiagramStep = exports_external.object({ label: Text().min(1), focus: exports_external.array(Text().min(1)).min(1).describe("Node ids this step highlights") });
 var LessonProps = exports_external.object({ title: Text().min(1), subtitle: Text().min(1).optional() });
 var AnswerProps = exports_external.object({ text: Text().min(1).describe("The conclusion, shown first") });
 var SectionProps = exports_external.object({ id: SectionId, title: Text().min(1) });
@@ -22093,7 +22104,14 @@ var BLOCK_PROPS = {
     rows: exports_external.array(CompareRow).min(1)
   }),
   Chart: exports_external.object({ unit: Text().min(1).optional(), bars: exports_external.array(ChartBar).min(1).max(12) }),
-  Svg: exports_external.object({ markup: Text().min(1).describe("Static SVG illustration using theme colors") })
+  Svg: exports_external.object({ markup: Text().min(1).describe("Static SVG illustration using theme colors") }),
+  Diagram: exports_external.object({
+    alt: Text().min(1).describe("Accessible description of the whole diagram"),
+    nodes: exports_external.array(DiagramNode).min(1).describe("Boxes to draw; ids are what edges and step focus refer to"),
+    edges: exports_external.array(DiagramEdge).describe("Connections; leave empty for unconnected parts"),
+    direction: exports_external.enum(["LR", "TB"]).default("LR").describe("Lay the graph out left to right, or top to bottom"),
+    steps: exports_external.array(DiagramStep).default([]).describe("Named steps; picking one highlights the nodes it focuses")
+  })
 };
 
 // node_modules/mathjs/lib/esm/core/config.js
@@ -64046,7 +64064,8 @@ var Block = exports_external.discriminatedUnion("type", [
   BLOCK_PROPS.Evidence.extend({ type: exports_external.literal("Evidence") }),
   BLOCK_PROPS.Compare.extend({ type: exports_external.literal("Compare") }),
   BLOCK_PROPS.Chart.extend({ type: exports_external.literal("Chart") }),
-  BLOCK_PROPS.Svg.extend({ type: exports_external.literal("Svg") })
+  BLOCK_PROPS.Svg.extend({ type: exports_external.literal("Svg") }),
+  BLOCK_PROPS.Diagram.extend({ type: exports_external.literal("Diagram") })
 ]);
 var Section = SectionProps.extend({ blocks: exports_external.array(Block).min(1) });
 var Lesson = LessonProps.extend({
@@ -64097,6 +64116,31 @@ var Lesson = LessonProps.extend({
         const error62 = svgError(block.markup);
         if (error62)
           issue2(["sections", s, "blocks", b, "markup"], error62);
+      }
+      if (block.type === "Diagram") {
+        const at = (path, message) => issue2(["sections", s, "blocks", b, ...path], message);
+        const nodeIds = new Set;
+        block.nodes.forEach((node2, n) => {
+          if (nodeIds.has(node2.id))
+            at(["nodes", n, "id"], `duplicate node id "${node2.id}"`);
+          nodeIds.add(node2.id);
+        });
+        const edgeIds = new Set;
+        block.edges.forEach((edge, e2) => {
+          if (edgeIds.has(edge.id))
+            at(["edges", e2, "id"], `duplicate edge id "${edge.id}"`);
+          edgeIds.add(edge.id);
+          for (const end of ["source", "target"]) {
+            if (!nodeIds.has(edge[end]))
+              at(["edges", e2, end], `"${edge[end]}" is not one of the node ids; add it to nodes or fix the spelling`);
+          }
+        });
+        block.steps.forEach((item, t) => {
+          item.focus.forEach((id, f) => {
+            if (!nodeIds.has(id))
+              at(["steps", t, "focus", f], `"${id}" is not one of the node ids; add it to nodes or fix the spelling`);
+          });
+        });
       }
       if (block.type === "Derivation") {
         block.steps.forEach((step, t) => {

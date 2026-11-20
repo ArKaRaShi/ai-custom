@@ -36,7 +36,7 @@ describe("cli end to end", () => {
     const info = await startCompanion();
 
     const screenPath = join(project, "draft.html");
-    await writeFile(screenPath, '<h1 class="vc-h1">Draft</h1><div class="vc-options"><button class="vc-option" data-choice="a">A</button></div>');
+    await writeFile(screenPath, '<h1>Draft</h1><button data-choice="a">A</button>');
 
     const pushed = await run(["push", screenPath, "--project-dir", project, "--title", "Draft", "--json"]);
     expect(pushed.code).toBe(0);
@@ -47,7 +47,7 @@ describe("cli end to end", () => {
 
     const page = await (await fetch(info.url)).text();
     expect(page).toContain("Draft</h1>");
-    expect(page).toContain("/assets/components.css");
+    expect(page).toContain("/assets/frame.css");
 
     const status = await run(["status", "--project-dir", project, "--json"]);
     expect((JSON.parse(status.out) as { state: string }).state).toBe("running");
@@ -127,9 +127,7 @@ describe("cli end to end", () => {
       expect(response.headers.get("content-security-policy")).toContain("sandbox allow-same-origin; default-src 'none'");
       const body = await response.text();
       expect(body).toContain(i ? 'color:blue' : 'color:red');
-      // A fragment is wrapped with the vc-* stylesheet; a whole document stays as written.
-      if (i) expect(body).not.toContain("/assets/components.css");
-      else expect(body).toContain('<link rel="stylesheet" href="/assets/components.css"></head><body class="vc-body"><main class="vc-main">');
+      expect(body).not.toContain("/assets/components.css");
     }
     expect((await run(["states", "Missing", join(project, "missing"), "--project-dir", project])).code).toBe(1);
     expect(await (await fetch(info.url)).text()).toBe(page);
@@ -146,9 +144,9 @@ describe("cli end to end", () => {
     expect((await run(["page", "Answer", a, "Why <it>", b, "--project-dir", project])).code).toBe(0);
     const response = await fetch(info.url);
     const html = await response.text();
-    expect(html).toContain('class="vc-bar"');
-    expect(html).toContain('<vc-contents variant="rail"></vc-contents>');
-    expect(html).toContain('id="vc-part-2"');
+    expect(html).toContain('aria-label="Sections"');
+    expect(html).toContain('href="#part-2"');
+    expect(html).toContain('id="part-2"');
     expect(html).toContain("Why &lt;it&gt;");
     expect(html.indexOf('id="first"')).toBeLessThan(html.indexOf('id="second"'));
     expect(html).not.toContain("<iframe");
@@ -282,28 +280,10 @@ describe("cli end to end", () => {
     expect(usage.err).toContain("unknown command");
   }, 20_000);
 
-  test("components prints the grouped v2 catalogue, and --json prints every entry", async () => {
-    const text = await run(["components"]);
-    expect(text.code).toBe(0);
-    expect(text.out).toContain("Layout:");
-    expect(text.out).toContain("<vc-tabs> (active, id, variant, arrows, hide-tabs)");
-    expect(text.out).toContain("vc-options / vc-option");
-    const structured = JSON.parse((await run(["components", "--json"])).out) as { version: number; entries: { names: string[] }[]; groups: unknown[] };
-    expect(structured.version).toBe(2);
-    expect(structured.entries.flatMap((entry) => entry.names)).toContain("vc-grid");
-    expect(structured.groups.length).toBeGreaterThan(0);
-  }, 20_000);
-
-  test("gallery writes a page with one specimen per catalogue entry to the chosen file", async () => {
-    const out = join(project, "gallery.html");
-    const result = await run(["gallery", "--out", out, "--json"]);
-    expect(result.code).toBe(0);
-    const summary = JSON.parse(result.out) as { path: string; entries: number; groups: number };
-    expect(summary.path).toBe(out);
-    const html = await readFile(out, "utf8");
-    expect(html).toContain('<vc-contents variant="rail"></vc-contents>');
-    expect(html.match(/<section class="vc-part"/g)).toHaveLength(summary.groups);
-    expect(html.match(/<h3 class="vc-h2"><code>/g)).toHaveLength(summary.entries);
-    expect((await run(["gallery", "extra"])).code).toBe(2);
-  }, 20_000);
+  test("removed component commands are rejected", async () => {
+    for (const command of ["components", "gallery"]) expect((await run([command])).code).toBe(2);
+    const help = await run(["help"]);
+    expect(help.out).not.toContain("components");
+    expect(help.out).not.toContain("gallery");
+  });
 });

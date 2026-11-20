@@ -1,0 +1,30 @@
+/* modern: cool grey page, white cards, one blue accent, system fonts (nothing to download), 10px corners.
+   Light only. Text contrast is at least 5.3:1; control borders are at least 3.5:1 on the page and on cards.
+   Activate with <html data-ui-theme="modern">; the dark palette is themes/modern-dark.css. */
+:root[data-ui-theme="modern"] {
+  color-scheme: light;
+  --radius: 10px;
+  --ui-text: 16px;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-heading: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --background: #f6f7f9;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --primary: #2457d6;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f3f6;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f3f6;
+  --muted-foreground: #5b6577;
+  --subtle: #5b6577;
+  --accent: rgba(36, 87, 214, .08);
+  --accent-foreground: #2457d6;
+  --destructive: #b42318;
+  --border: #dde2ea;
+  --input: #7b8598;
+  --ring: #2457d6;
+  --warning: #8a4b00;
+  --success: #176b3a;
+}

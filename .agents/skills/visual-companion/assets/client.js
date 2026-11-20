@@ -31,9 +31,8 @@
   const status = document.querySelector("[data-vc-status]");
   const emptyCopy = document.querySelector("[data-vc-empty-copy]");
   const overlay = document.createElement("div");
-  overlay.className = "vc-paused";
-  // Plain and isolated shells do not load the component stylesheet.
-  overlay.style.cssText = "position: fixed; inset: 0; place-items: center; background: var(--vc-bg, #fff); color: var(--vc-muted, #333); font: 14px system-ui, sans-serif; z-index: 2147483647;";
+  overlay.className = "connection-paused";
+  overlay.style.cssText = "position: fixed; inset: 0; place-items: center; background: var(--background, #fff); color: var(--foreground, #333); font: 14px system-ui, sans-serif; z-index: 2147483647;";
   overlay.style.display = "none";
   overlay.hidden = true;
   overlay.textContent = "Paused — the companion server is not running.";

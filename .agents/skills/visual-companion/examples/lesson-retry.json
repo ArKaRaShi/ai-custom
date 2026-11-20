@@ -1,0 +1,6 @@
+{
+  "title": "Illustrative retry delay",
+  "answer": "The example doubles a one-second base delay twice, giving four seconds.",
+  "inputs": [{ "key": "base", "label": "Base delay", "value": 1, "min": 0, "max": 10, "step": 1 }],
+  "sections": [{ "id": "calculation", "title": "Calculate the delay", "blocks": [{ "type": "Derivation", "steps": [{ "id": "delay", "title": "Delay", "plain": "Double the base delay twice; values are illustrative.", "ref": "Illustrative example", "expr": "base * 2^2", "expect": 4 }] }] }]
+}

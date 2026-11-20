@@ -5,10 +5,10 @@ import { runInNewContext } from "node:vm";
 const client = readFileSync(new URL("../assets/client.js", import.meta.url), "utf8");
 const early = readFileSync(new URL("../assets/theme.js", import.meta.url), "utf8");
 const frame = readFileSync(new URL("../assets/frame.html", import.meta.url), "utf8");
-const css = readFileSync(new URL("../assets/components.css", import.meta.url), "utf8");
+const css = readFileSync(new URL("../assets/frame.css", import.meta.url), "utf8");
 
 test("early theme is limited to valid saved values and tolerates blocked storage", () => {
-  expect(frame.indexOf('/assets/theme.js')).toBeLessThan(frame.indexOf('/assets/components.css'));
+  expect(frame.indexOf('/assets/theme.js')).toBeLessThan(frame.indexOf('/assets/frame.css'));
   for (const value of ["light", "dark", "system", "invalid", null]) {
     let applied: string | undefined;
     runInNewContext(early, { localStorage: { getItem: () => value }, document: { documentElement: { setAttribute: (_: string, v: string) => { applied = v; } } } });
@@ -18,7 +18,7 @@ test("early theme is limited to valid saved values and tolerates blocked storage
 });
 
 test("neutral presets provide both palettes and explicit system override", () => {
-  for (const color of ["#f6f6f7", "#ffffff", "#16181d", "#5b6270", "#d9dce2", "#3b62f6", "#14161a", "#1c1f25", "#e8eaee", "#a2a9b6", "#2f343d", "#7d9bff"]) expect(css).toContain(color);
+  for (const color of ["#f6f6f7", "#16181d", "#d9dce2", "#14161a", "#e8eaee", "#2f343d"]) expect(css).toContain(color);
   expect(css).toContain(':root:not([data-vc-theme="light"]):not([data-vc-theme="dark"])');
   expect(css).toContain(':root[data-vc-theme="dark"]');
 });

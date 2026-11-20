@@ -58,6 +58,19 @@ const CompareRow = z.object({ label: Text().min(1), before: Text(), after: Text(
 const ChartTone = z.enum(["neutral", "good", "bad"]).default("neutral").describe("good and bad color the bar; meaning stays in the label");
 const ChartBar = z.object({ label: Text().min(1), value: z.number(), tone: ChartTone });
 
+/** Diagram parts. Ids are matched up inside a block: the lesson check rejects duplicates and dangling references. */
+const DiagramNode = z.object({
+  id: Text().min(1).regex(/\S/, "use an id containing a non-whitespace character").describe("Name edges and step focus use to point at this node"),
+  label: Text().min(1),
+});
+const DiagramEdge = z.object({
+  id: Text().min(1).describe("Name of this connection, unique among the block's edges"),
+  source: Text().min(1).describe("Id of the node the arrow starts at"),
+  target: Text().min(1).describe("Id of the node the arrow points at"),
+  label: Text().min(1).optional(),
+});
+const DiagramStep = z.object({ label: Text().min(1), focus: z.array(Text().min(1)).min(1).describe("Node ids this step highlights") });
+
 export const LessonProps = z.object({ title: Text().min(1), subtitle: Text().min(1).optional() });
 export const AnswerProps = z.object({ text: Text().min(1).describe("The conclusion, shown first") });
 export const SectionProps = z.object({ id: SectionId, title: Text().min(1) });
@@ -87,6 +100,13 @@ export const BLOCK_PROPS = {
   }),
   Chart: z.object({ unit: Text().min(1).optional(), bars: z.array(ChartBar).min(1).max(12) }),
   Svg: z.object({ markup: Text().min(1).describe("Static SVG illustration using theme colors") }),
+  Diagram: z.object({
+    alt: Text().min(1).describe("Accessible description of the whole diagram"),
+    nodes: z.array(DiagramNode).min(1).describe("Boxes to draw; ids are what edges and step focus refer to"),
+    edges: z.array(DiagramEdge).describe("Connections; leave empty for unconnected parts"),
+    direction: z.enum(["LR", "TB"]).default("LR").describe("Lay the graph out left to right, or top to bottom"),
+    steps: z.array(DiagramStep).default([]).describe("Named steps; picking one highlights the nodes it focuses"),
+  }),
 } as const;
 
 export type InputSpec = z.infer<typeof Input>;

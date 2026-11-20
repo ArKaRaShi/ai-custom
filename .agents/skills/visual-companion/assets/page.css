@@ -1,0 +1,9 @@
+.page-index { position: fixed; left: .5rem; top: 50%; transform: translateY(-50%); z-index: 5; }
+.page-index ol { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
+.page-index a { display: flex; align-items: center; min-width: 24px; min-height: 24px; color: var(--foreground); font-size: 0; text-decoration: none; }
+.page-index a::before { content: ""; display: block; width: 1rem; height: .25rem; background: currentColor; opacity: .5; border-radius: 1rem; }
+.page-index a[aria-current]::before { width: 1.5rem; opacity: 1; }
+.page-index a:hover, .page-index a:focus-visible { width: max-content; padding: .25rem; gap: .5rem; background: var(--background); font-size: .875rem; }
+.page-index a:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.page-sections section { scroll-margin-top: 4rem; margin-bottom: 3rem; }
+@media (max-width: 760px) { .page-index { position: sticky; top: 3rem; transform: none; background: var(--background); } .page-index ol { display: flex; overflow-x: auto; } .page-index a { width: max-content; padding: .25rem; font-size: .875rem; } .page-index a::before { display: none; } .page-index a[aria-current] { font-weight: bold; } }

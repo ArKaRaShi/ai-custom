@@ -29,7 +29,7 @@ test("rail previews without selecting, supports keyboard and mobile selection", 
   container.querySelectorAll = () => buttons;
   const document = {
     activeElement: null as Element | null,
-    querySelector: (query: string) => query === '.vc-rail' ? container : select,
+    querySelector: (query: string) => query === '.state-rail' ? container : select,
     querySelectorAll: () => frames,
     createElement: () => new Element(),
     addEventListener: (_: string, fn: (event: any) => void) => { documentKeydown = fn; },

@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
 import { readFileSync, existsSync } from "node:fs";
+import type { Route } from "playwright";
+import { playwright } from "./playwright";
 
 // Optional integration smoke: no browser dependency is required for the unit suite.
 const chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-let playwright: any;
-try { playwright = require("playwright"); } catch {}
 if (!playwright || !existsSync(chrome)) {
   console.warn("Browser smoke skipped: install playwright and Google Chrome to run it.");
 }
@@ -35,13 +35,13 @@ test.skipIf(!playwright || !existsSync(chrome))("saved theme is applied before C
       await page.evaluate((value: string) => localStorage.setItem("visual-companion-theme", value), theme);
       // Hold CSS back until the parser-blocking theme script has run.
       let early: string | null = null;
-      await page.route("**/assets/components.css", async (route: any) => {
+      await page.route("**/assets/frame.css", async (route: Route) => {
         await page.waitForFunction((value: string) => document.documentElement.getAttribute("data-vc-theme") === value, theme);
         early = await page.evaluate(() => document.documentElement.getAttribute("data-vc-theme"));
         await route.continue();
       });
       await page.reload();
-      await page.unroute("**/assets/components.css");
+      await page.unroute("**/assets/frame.css");
       expect(early).toBe(theme);
       const colors = await page.locator("select[data-vc-theme-select]").evaluate((el: HTMLElement) => {
         const style = getComputedStyle(el);

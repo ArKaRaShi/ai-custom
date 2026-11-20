@@ -1,0 +1,32 @@
+/* paper: warm paper, ink text, one burnt-orange accent; serif headings, sans body, mono labels.
+   Light only. Thai text uses Noto Sans Thai and Noto Serif Thai. Fonts come from Google Fonts and fall back to system fonts offline.
+   Activate with <html data-ui-theme="paper">. */
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Sans+Thai:wght@400;500;600&family=Noto+Serif+Thai:wght@400;600&display=swap");
+
+:root[data-ui-theme="paper"] {
+  color-scheme: light;
+  --radius: 6px;
+  --ui-text: 18px;
+  --font-sans: "Geist", "Noto Sans Thai", system-ui, sans-serif;
+  --font-heading: "Instrument Serif", "Noto Serif Thai", serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  --background: #f5f5f5;
+  --foreground: #2d3142;
+  --card: #ffffff;
+  --card-foreground: #2d3142;
+  --primary: #bf4520;
+  --primary-foreground: #ffffff;
+  --secondary: #ececec;
+  --secondary-foreground: #2d3142;
+  --muted: #ececec;
+  --muted-foreground: #4f5d75;
+  --subtle: #5a6580;
+  --accent: rgba(191, 69, 32, .08);
+  --accent-foreground: #bf4520;
+  --destructive: #bf4520;
+  --border: rgba(45, 49, 66, .12);
+  --input: #868a92;
+  --ring: #bf4520;
+  --warning: #8a4b00;
+  --success: #176b3a;
+}

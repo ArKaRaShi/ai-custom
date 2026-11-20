@@ -1,0 +1,14 @@
+{
+  "title": "How a request reaches storage",
+  "answer": "The API sends the request to a service, which reads storage.",
+  "sections": [
+    {
+      "id": "path",
+      "title": "Request path",
+      "blocks": [
+        { "type": "Concept", "simple": "A front desk passes a request to the right team.", "expert": "The API delegates to a service that reads the database." },
+        { "type": "Diagram", "alt": "A request flows from API to service to database", "nodes": [{ "id": "api", "label": "API" }, { "id": "service", "label": "Service" }, { "id": "db", "label": "Database" }], "edges": [{ "id": "call", "source": "api", "target": "service", "label": "request" }, { "id": "read", "source": "service", "target": "db", "label": "read" }] }
+      ]
+    }
+  ]
+}

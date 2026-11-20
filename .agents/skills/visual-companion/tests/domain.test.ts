@@ -4,7 +4,7 @@ import { detectMode, parseChoiceEvent, parseEventJson } from "../scripts/domain"
 describe("detectMode", () => {
   test("fragments are bundle mode", () => {
     expect(detectMode("<h2>Which layout?</h2>")).toBe("bundle");
-    expect(detectMode("  <div class=\"vc-card\">x</div>")).toBe("bundle");
+    expect(detectMode("  <div class=\"card\">x</div>")).toBe("bundle");
     expect(detectMode("<!-- comment --><p>hi</p>")).toBe("bundle");
   });
 

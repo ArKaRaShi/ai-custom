@@ -1,0 +1,23 @@
+{
+  "code": "df.dropna().mean()",
+  "input": {
+    "title": "Data in \u00b7 df",
+    "cmd": "uv run --quiet --with pandas python examples/trace-dropna.py df",
+    "mark": ["NaN"]
+  },
+  "steps": [
+    {
+      "title": ".dropna(): remove any row that has a blank",
+      "code": ".dropna()",
+      "plain": "Row 09:01 has a blank in sensor B, so the whole row goes, including sensor A's valid 12.0.",
+      "cmd": "uv run --quiet --with pandas python examples/trace-dropna.py dropna"
+    },
+    {
+      "title": ".mean(): average each column",
+      "code": ".mean()",
+      "plain": "Sensor A is (10 + 18) / 2. Sensor B is (20 + 26) / 2.",
+      "cmd": "uv run --quiet --with pandas python examples/trace-dropna.py mean"
+    }
+  ],
+  "summary": "3 rows go in, 2 survive, 2 averages come out. Without .dropna(), df.mean() would give sensor A 13.33, because the 12.0 would be kept."
+}

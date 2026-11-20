@@ -1,0 +1,310 @@
+{
+  "$comment": "Contract for assets/ui/components.css and presentation.css. `ui.ts show <name>` prints an entry; `ui.ts check` lints pages against it; tests/ui.test.ts fails when this file and the CSS disagree. Using these components is optional: a page may style itself. `mode` is static (no JavaScript), or both (a static form plus an interactive layer from `script`).",
+  "components": {
+    "root": {
+      "class": "ui-root",
+      "mode": "static",
+      "modifiers": [],
+      "where": "<body>",
+      "use": "Page base: background, text colour, base font and size from the theme.",
+      "snippet": "<body class=\"ui-root\">"
+    },
+    "card": {
+      "class": "ui-card",
+      "mode": "static",
+      "modifiers": [
+        "focus"
+      ],
+      "children": "optional first child <h3> is the small caps label",
+      "use": "A note or aside. `focus` tints it with the accent for the one card that matters.",
+      "snippet": "<div class=\"ui-card focus\"><h3>The point</h3>One or two sentences.</div>"
+    },
+    "badge": {
+      "class": "ui-badge",
+      "mode": "static",
+      "modifiers": [
+        "primary"
+      ],
+      "use": "Short uppercase status label inline with text.",
+      "snippet": "<span class=\"ui-badge primary\">NEW</span>"
+    },
+    "table": {
+      "class": "ui-table",
+      "mode": "static",
+      "modifiers": [
+        "compact",
+        "hl",
+        "dim"
+      ],
+      "children": "`hl` and `dim` go on <tr> (highlight or de-emphasise a row) or on one <td>/<th>; `compact` goes on the table and sets monospace cells",
+      "use": "Data table with a header row of <th>.",
+      "snippet": "<table class=\"ui-table compact\"><tr><th>name</th><th>count</th></tr><tr class=\"hl\"><td>alpha</td><td>12</td></tr><tr class=\"dim\"><td>beta</td><td>7</td></tr></table>"
+    },
+    "button": {
+      "class": "ui-button",
+      "mode": "static",
+      "modifiers": [
+        "outline",
+        "loading"
+      ],
+      "use": "Native <button>; `outline` is the quiet variant, `loading` dims it and shows a busy cursor (put the busy text in the label yourself, such as \"Deleting\u2026\"), the disabled attribute dims it.",
+      "snippet": "<button class=\"ui-button outline\">Cancel</button>"
+    },
+    "input": {
+      "class": "ui-input",
+      "mode": "static",
+      "modifiers": [],
+      "use": "Native <input> or <select>.",
+      "snippet": "<input class=\"ui-input\" placeholder=\"value\">"
+    },
+    "alert": {
+      "class": "ui-alert",
+      "mode": "static",
+      "modifiers": [
+        "destructive"
+      ],
+      "use": "Callout with a coloured outline; `destructive` for errors.",
+      "snippet": "<div class=\"ui-alert destructive\">Something needs attention.</div>"
+    },
+    "separator": {
+      "class": "ui-separator",
+      "mode": "static",
+      "modifiers": [],
+      "where": "<hr>",
+      "use": "Horizontal rule.",
+      "snippet": "<hr class=\"ui-separator\">"
+    },
+    "flow": {
+      "class": "ui-flow",
+      "mode": "static",
+      "modifiers": [],
+      "children": "alternate .ui-node and .ui-arrow",
+      "use": "Row of steps. Does not wrap; keep to about five nodes at 1280px.",
+      "snippet": "<div class=\"ui-flow\"><div class=\"ui-node\">A<small>detail</small></div><span class=\"ui-arrow\">&rarr;</span><div class=\"ui-node hot\">B<small>changed</small></div></div>"
+    },
+    "node": {
+      "class": "ui-node",
+      "mode": "static",
+      "modifiers": [
+        "hot",
+        "opt"
+      ],
+      "children": "optional <small> under the title",
+      "use": "A step box. `hot` marks the changed step, `opt` (dashed) a step that only sometimes runs.",
+      "snippet": "<div class=\"ui-node hot\">Step B<small>detail</small></div>"
+    },
+    "arrow": {
+      "class": "ui-arrow",
+      "mode": "static",
+      "modifiers": [],
+      "use": "Glyph between nodes.",
+      "snippet": "<span class=\"ui-arrow\">&rarr;</span>"
+    },
+    "chip": {
+      "class": "ui-chip",
+      "mode": "static",
+      "modifiers": [
+        "accent",
+        "dashed"
+      ],
+      "use": "One value in a box. It is large (1.22em) and does not wrap, so use it for values, not inside running text; use <b> or <span class=\"ui-mono\"> there. `accent` colours it, `dashed` dashes it.",
+      "snippet": "<span class=\"ui-chip accent\">label 42</span>"
+    },
+    "mono": {
+      "class": "ui-mono",
+      "mode": "static",
+      "modifiers": [],
+      "use": "Inline monospace for code and values.",
+      "snippet": "<span class=\"ui-mono\">lo=0 hi=10</span>"
+    },
+    "reveal": {
+      "class": "ui-reveal",
+      "mode": "both",
+      "script": "ui.js",
+      "modifiers": [],
+      "children": "elements with the data-step attribute, revealed one per click or Enter/Space; in a deck, one per \u2192 before the next slide",
+      "use": "Show a list or sequence one step at a time. Static form: every step visible.",
+      "snippet": "<div class=\"ui-reveal\"><p data-step>First</p><p data-step>Second</p></div>",
+      "states": [
+        "armed"
+      ]
+    },
+    "toggle": {
+      "class": "ui-toggle",
+      "also": [
+        "ui-toggle-bar"
+      ],
+      "mode": "both",
+      "script": "ui.js",
+      "modifiers": [],
+      "children": "panels are direct children with a data-label attribute; the script adds the .ui-toggle-bar buttons",
+      "use": "Switch between panels such as before and after. Static form: all panels stacked, each under its label.",
+      "snippet": "<div class=\"ui-toggle\"><div data-label=\"Before\">Old flow</div><div data-label=\"After\">New flow</div></div>",
+      "states": [
+        "armed"
+      ]
+    },
+    "trace": {
+      "class": "ui-trace",
+      "also": [
+        "ui-trace-bar"
+      ],
+      "mode": "both",
+      "script": "ui.js",
+      "modifiers": [],
+      "children": "a <pre> with the code, an <h3> and an <output> for the data going in, then one <section> per step (an <h3> title, a <pre> with that step's code, a <p> saying in plain words what it does, an <output> with the data after it; <mark> inside an <output> highlights what changed), then an optional <footer> shown at the last step; every <output> carries data-ran naming the command that printed it; the script adds the Back and Next buttons. The headings are h3, so put the block under an h2",
+      "use": "Show real data going into a piece of code and coming out, one meaningful step at a time. Build it with scripts/trace.ts so each output is captured from a real run, not typed. Static form: every step stacked. On a slide give it the whole slide and keep each output to about 6 lines.",
+      "snippet": "<div class=\"ui-trace\"><pre>df.mean()</pre><h3>Data in</h3><output data-ran=\"print(df)\">a  b 1  2</output><section><h3>Step 1 of 1 \u00b7 .mean()</h3><pre>.mean()</pre><p>Average each column.</p><output data-ran=\"print(df.mean())\">a  1.0</output></section><footer>One average per column.</footer></div>",
+      "states": [
+        "armed"
+      ]
+    },
+    "mock": {
+      "class": "ui-mock",
+      "mode": "static",
+      "modifiers": [
+        "closed",
+        "no-x"
+      ],
+      "children": "<header> is the title bar (shows a close mark; `no-x` hides it), direct <div> children are the body, <footer> holds .ui-button actions; `closed` fades and dashes the whole mock to show a dialog that has been dismissed (it can read as disabled, so caption it); put an error or note in the body with .ui-alert",
+      "use": "Draw the dialog or prompt a slide talks about, so the reader sees it instead of imagining it. One mock per state; change it per step.",
+      "snippet": "<div class=\"ui-mock\"><header>Confirm</header><div>Apply this change?</div><footer><button class=\"ui-button outline\">Cancel</button><button class=\"ui-button\">Apply</button></footer></div>"
+    },
+    "ref": {
+      "class": "ui-ref",
+      "also": ["ui-flash"],
+      "mode": "static",
+      "modifiers": [],
+      "use": "A link that names its target and jumps to it. In a deck the slide ids are s1, s2, \u2026; use href=\"#s4\". Prefer it to \"next slide\" or \"above\". Also use it on a number to jump to where the number came from (give the target an id); with ui.js linked, the target flashes for 1.6 s.",
+      "snippet": "<a class=\"ui-ref\" href=\"#s4\">Setup \u00b7 slide 4</a>"
+    },
+    "status": {
+      "class": "ui-status",
+      "mode": "static",
+      "modifiers": ["critical", "warning", "normal", "nodata"],
+      "children": "a shape and a word, for example <i aria-hidden=\"true\">\u25b2</i>Critical; nodata draws a dashed outline",
+      "use": "A status as a shape and a word, never colour alone. Use \u25b2 critical, \u25c6 warning, \u25cf normal, \u25cc no data.",
+      "snippet": "<span class=\"ui-status warning\"><i aria-hidden=\"true\">\u25c6</i>Warning</span>"
+    },
+    "range": {
+      "class": "ui-range",
+      "also": ["ui-range-bar", "ui-range-span", "ui-range-pin", "ui-range-lo", "ui-range-hi"],
+      "mode": "static",
+      "modifiers": [],
+      "children": "a .ui-range-bar holding .ui-range-span and an optional .ui-range-pin (data-label is its text), then .ui-range-lo and .ui-range-hi with the end values",
+      "use": "One range on an axis shared with other bars, with an optional marker line. --lo, --hi and --at are percentages along the axis; do not compute them by hand: run scripts/figures.ts range.",
+      "snippet": "<div class=\"ui-range\" style=\"--lo:49.57;--hi:69.14;--at:62.86\" role=\"img\" aria-label=\"Expected range 64.7 to 78.4 %, marker at 74.0 %\"><div class=\"ui-range-bar\"><i class=\"ui-range-span\"></i><i class=\"ui-range-pin\" data-label=\"74.0 %\"></i></div><span class=\"ui-range-lo\">64.7</span><span class=\"ui-range-hi\">78.4</span></div>"
+    },
+    "waffle": {
+      "class": "ui-waffle",
+      "mode": "static",
+      "modifiers": [],
+      "children": "one <i> per cell, class \"on\" on the filled ones; --cols sets the columns (default 20)",
+      "use": "A grid of 100 cells showing one percentage of a whole. Give it role=\"img\" and an aria-label that states the value. Build it with scripts/figures.ts waffle so the count is exact.",
+      "snippet": "<div class=\"ui-waffle\" style=\"--cols:5\" role=\"img\" aria-label=\"3 of 10 cells filled\"><i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>"
+    },
+    "cases": {
+      "class": "ui-cases",
+      "mode": "static",
+      "modifiers": [],
+      "children": "one .ui-case per case",
+      "use": "Small multiples: several cases that share one shape, side by side at one scale.",
+      "snippet": "<div class=\"ui-cases\"><div class=\"ui-case\"><small>30 kW, 55.5 %</small><b>0.0</b><span class=\"ui-status critical\"><i aria-hidden=\"true\">\u25b2</i>Critical</span></div><div class=\"ui-case\"><small>160 kW, 80.5 %</small><b>87.3</b><span class=\"ui-status normal\"><i aria-hidden=\"true\">\u25cf</i>Normal</span></div></div>"
+    },
+    "case": {
+      "class": "ui-case",
+      "mode": "static",
+      "modifiers": [],
+      "children": "a <small> label with the inputs, a <b> with the result, then a ui-status",
+      "use": "One case inside ui-cases.",
+      "snippet": "<div class=\"ui-case\"><small>75 kW, 74 %</small><b>67.8</b><span class=\"ui-status warning\"><i aria-hidden=\"true\">\u25c6</i>Warning</span></div>"
+    },
+    "choice": {
+      "class": "ui-choice",
+      "mode": "static",
+      "modifiers": [],
+      "where": "<fieldset>",
+      "children": "a <legend> naming the group (a <small> inside it can show the chosen option's full name) and a <div> of <label><input type=\"radio\" name=...><span>text</span></label>, one per option",
+      "use": "A visible choice among a few named values, up to about 12. Every option is on screen, so nothing opens over the page the way a drop-down menu does. Native radios, so arrow keys and forms work; a disabled fieldset dims the options and clears the highlight.",
+      "snippet": "<fieldset class=\"ui-choice\"><legend>WR status</legend><div><label><input type=\"radio\" name=\"wr\" value=\"1\" checked><span>INIT</span></label><label><input type=\"radio\" name=\"wr\" value=\"2\"><span>RJCT</span></label></div></fieldset>"
+    },
+    "nav": {
+      "class": "ui-nav",
+      "mode": "both",
+      "script": "ui.js",
+      "modifiers": [],
+      "where": "<nav>",
+      "children": "one <a href=\"#id\"> per section, then an optional <button> such as a theme switch",
+      "use": "A section menu that stays at the top of a long page. Give the <nav> an aria-label. Static form: plain sticky links. With ui.js: the link of the section in view gets aria-current=\"true\". Use it when a page has three or more sections.",
+      "snippet": "<nav class=\"ui-nav\" aria-label=\"On this page\"><a href=\"#why\">Why</a><a href=\"#how\">How</a><a href=\"#try\">Try it</a></nav>"
+    },
+    "work": {
+      "class": "ui-work",
+      "also": ["ui-work-bar", "ui-work-rail", "ui-work-dot"],
+      "mode": "both",
+      "script": "ui.js",
+      "states": ["armed", "pending", "now"],
+      "modifiers": [],
+      "children": "one <section> per step: a <header> with an <h3> title (no number; the CSS numbers the steps) and a <b> result, then a <div> with a <pre data-label=\"Formula\"> and an <output data-label=\"With your numbers\">",
+      "use": "A worked calculation: for each step the result, the formula, then the formula with the reader's numbers put in. Static form: every step stacked. With ui.js: Back, Next, Replay and Show all, arrow keys on the buttons, a dot on a rail, and later steps dimmed. The numbers must come from a run or from a model tested against the real code (see references/live-model.md).",
+      "snippet": "<div class=\"ui-work\"><section><header><h3>Power</h3><b>75 kW</b></header><div><pre data-label=\"Formula\">The pump's power in kilowatts. This is an input.</pre><output data-label=\"With your numbers\">power_kw = 75</output></div></section><section><header><h3>Expected range</h3><b>64.7 to 78.4 %</b></header><div><pre data-label=\"Formula\">low = 38.0 + 6.19 \u00d7 ln(P)</pre><output data-label=\"With your numbers\">low = 38.0 + 6.19 \u00d7 4.3175 \u2248 64.7253</output></div></section></div>"
+    }
+    ,
+    "replay": {
+      "class": "ui-replay",
+      "also": ["ui-replay-axis", "ui-replay-marker", "ui-replay-bar"],
+      "mode": "both",
+      "script": "ui.js",
+      "states": ["armed"],
+      "modifiers": [],
+      "children": "a .ui-replay-axis (role=\"img\", an aria-label, one <i style=\"--p:N\"> numbered tick per event, N the percent along the axis, class done on each in the static form) followed by one <section> per event: a <header> with an <h3 data-n=\"N\"> title (N is the event's number, shown before the title) and a <b> time, a <p> saying why it happened, and an optional <small data-label=\"State after\"> with the state that results",
+      "use": "Events in time order, one at a time. Each event says what happened and why. Ticks are evenly spaced, so the axis shows order, not duration; put durations in the text. Static form: every event stacked. With ui.js: Back, Next and Play, arrow keys on the buttons, click or Enter on a tick, a marker that slides. It opens on the last event. Build it with scripts/figures.ts replay (see references/motion.md).",
+      "snippet": "<div class=\"ui-replay\"><div class=\"ui-replay-axis\" role=\"img\" aria-label=\"3 events in order, not to scale\"><i class=\"done\" style=\"--p:0\">1</i><i class=\"done\" style=\"--p:50\">2</i><i class=\"done\" style=\"--p:100\">3</i><b class=\"ui-replay-marker\"></b></div><section><header><h3 data-n=\"1\">Worker claims the lease</h3><b>17:15:07</b></header><p>A claim blocks a second worker from taking the same export.</p><small data-label=\"State after\">running, attempts 0</small></section><section><header><h3 data-n=\"2\">GCS call hangs</h3><b>17:16:50</b></header><p>The call has no retry path, so the task fails after 103 s.</p></section><section><header><h3 data-n=\"3\">Nothing retries</h3><b>17:30:07</b></header><p>The lease expired but nothing reads it again.</p></section></div>"
+    }
+  },
+  "layout": {
+    "$comment": "Slide layout classes from presentation.css. Only meaningful inside the deck stage.",
+    "slide": {
+      "class": "slide",
+      "mode": "both",
+      "use": "One slide. The first carries `on`. Direct child of #stage.",
+      "snippet": "<section class=\"slide on\">...</section>"
+    },
+    "eyebrow": {
+      "class": "eyebrow",
+      "mode": "static",
+      "use": "Small caps line above a title.",
+      "snippet": "<p class=\"eyebrow\">Step 1 of 4</p>"
+    },
+    "sub": {
+      "class": "sub",
+      "mode": "static",
+      "use": "Lead paragraph under a title, 22px.",
+      "snippet": "<p class=\"sub\">One or two lines.</p>"
+    },
+    "foot": {
+      "class": "foot",
+      "mode": "static",
+      "use": "Footer pinned to the bottom: source on the left, `n / N` on the right. N must equal the slide count.",
+      "snippet": "<div class=\"foot\"><span>path or command</span><span>2 / 8</span></div>"
+    },
+    "cols": {
+      "class": "cols",
+      "mode": "static",
+      "use": "Grid; set columns inline.",
+      "snippet": "<div class=\"cols\" style=\"grid-template-columns:1fr 1fr\">...</div>"
+    },
+    "big": {
+      "class": "big",
+      "mode": "static",
+      "use": "A single large number in the heading font.",
+      "snippet": "<div class=\"big\">4</div>"
+    },
+    "steps": {
+      "class": "steps",
+      "mode": "static",
+      "use": "Vertical stack with a 16px gap.",
+      "snippet": "<div class=\"steps\">...</div>"
+    }
+  }
+}

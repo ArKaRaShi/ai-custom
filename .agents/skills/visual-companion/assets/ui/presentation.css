@@ -1,0 +1,47 @@
+/* Slide layout for Presentation decks. Two forms of one file:
+   static (no JavaScript): slides stack top to bottom, each 1280x720, everything readable;
+   interactive: the deck script adds class `deck` to <html>, which shows one slide at a time on a scaled stage.
+   Colour, fonts and component styling come from the theme and components.css; nothing here names a colour. */
+body { margin: 0; background: var(--muted); }
+#stage { width: 1280px; margin: 0 auto; }
+.slide { position: relative; width: 1280px; height: 720px; margin: 0 0 24px; background: var(--background); padding: 56px 72px 48px; display: flex; flex-direction: column; }
+html:not(.deck) .slide { height: auto; min-height: 720px; }
+#hud { display: none; }
+html.deck, html.deck body { height: 100%; overflow: hidden; }
+html.deck #stage { position: absolute; left: 50%; top: 50%; height: 720px; transform-origin: center center; }
+html.deck .slide { position: absolute; inset: 0; margin: 0; display: none; }
+html.deck .slide.on { display: flex; }
+html.deck #hud { display: block; position: fixed; right: 16px; bottom: 12px; font: 400 12px var(--font-mono); color: var(--subtle); }
+
+.eyebrow { font: 500 13px var(--font-mono); letter-spacing: .18em; text-transform: uppercase; color: var(--muted-foreground); margin-bottom: 14px; }
+.slide h1 { font: 400 56px/1.08 var(--font-heading); letter-spacing: -.02em; margin: 0 0 18px; }
+.slide h2 { font: 400 44px/1.1 var(--font-heading); letter-spacing: -.02em; margin: 0 0 22px; }
+.sub { font-size: 22px; line-height: 1.45; color: var(--muted-foreground); max-width: 900px; margin: 0; }
+.foot { margin-top: auto; display: flex; justify-content: space-between; font: 400 12px var(--font-mono); color: var(--subtle); letter-spacing: .06em; }
+.foot .ui-mono { font-size: inherit; }
+.cols { display: grid; gap: 28px; }
+.big { font: 400 120px/1 var(--font-heading); letter-spacing: -.03em; }
+.slide ul { padding-left: 22px; } .slide li { margin-bottom: 8px; }
+.slide pre { font: 400 14px/1.5 var(--font-mono); background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; white-space: pre-wrap; }
+:where(.slide *) { margin: 0; padding: 0; }
+.slide .ui-table { font-size: 19px; }
+/* A ui-trace on a slide: the slide is the card, and the spacing is packed so the longest step plus its summary fits 720px. */
+.slide .ui-trace { border: 0; background: transparent; padding: 0; font-size: 16px; }
+.slide .ui-trace h3 { margin: 14px 0 6px; }
+.slide .ui-trace pre, .slide .ui-trace output { margin: 0 0 6px; padding: 6px 12px; font-size: 14px; line-height: 1.4; }
+.slide .ui-trace-bar { margin: 10px 0 0; }
+.slide .ui-trace > footer { margin-top: 12px; padding-top: 10px; }
+.steps { display: grid; gap: 16px; }
+
+/* Thai stacks combining marks above and below the line and breaks if letters are spaced apart or lines are tight. */
+:lang(th) * { letter-spacing: 0 !important; }
+:lang(th) .slide h1, :lang(th) .slide h2 { line-height: 1.35; }
+:lang(th) .sub, :lang(th) .ui-card { line-height: 1.6; }
+
+@media print {
+  html, body { overflow: visible !important; height: auto !important; background: #fff; }
+  #stage { position: static !important; transform: none !important; }
+  .slide { display: flex !important; position: relative !important; inset: auto !important; margin: 0; page-break-after: always; }
+  #hud { display: none !important; }
+  @page { size: 1280px 720px; margin: 0; }
+}

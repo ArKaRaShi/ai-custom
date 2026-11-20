@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" data-ui-theme="modern">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<title>@@TITLE@@</title>
+<!-- A vertical page: the answer first, then sections the reader can scan or jump to. Shared UI: swap the theme pair for another in assets/ui/themes/.
+     Run scripts/inline-ui.ts for a file that opens anywhere. Without JavaScript the page stays light and every part shows its static form. -->
+<link rel="stylesheet" href="/assets/ui/themes/modern.css">
+<link rel="stylesheet" href="/assets/ui/themes/modern-dark.css">
+<link rel="stylesheet" href="/assets/ui/components.css">
+<script src="/assets/ui/ui.js" defer></script>
+<script>
+  // The theme pair follows the reader's system setting; the Theme button flips it. Without script the page stays light.
+  (() => {
+    const root = document.documentElement;
+    root.dataset.uiTheme = matchMedia("(prefers-color-scheme: dark)").matches ? "modern-dark" : "modern";
+    document.addEventListener("DOMContentLoaded", () => {
+      const button = document.getElementById("theme");
+      button.hidden = false;
+      button.addEventListener("click", () => {
+        root.dataset.uiTheme = root.dataset.uiTheme === "modern" ? "modern-dark" : "modern";
+      });
+    });
+  })();
+</script>
+<style>
+/* Only what the shared parts lack: page width, headings and spacing. Colours come from the theme tokens. */
+.wrap { max-width: 68rem; margin: 0 auto; padding: 2rem 1.25rem 4.5rem; }
+h1 { margin: 0 0 .4em; max-width: 24em; font: 700 clamp(1.9rem, 5vw, 3rem) / 1.15 var(--font-heading); letter-spacing: -.02em; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--primary); }
+h2 { margin: 0 0 .5em; font: 650 clamp(1.35rem, 3vw, 1.8rem) / 1.25 var(--font-heading); }
+.eyebrow { margin: 0 0 .6em; font: 500 .8rem var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted-foreground); }
+.lead { max-width: 42rem; margin: 0; font-size: 1.1rem; color: var(--muted-foreground); }
+main > section { margin-top: 3.5rem; }
+.src { margin: 1rem 0 0; font: .8rem var(--font-mono); color: var(--muted-foreground); }
+.src .ui-mono { font-size: inherit; }
+.sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* Thai stacks marks above and below the line and breaks if letters are spaced apart or lines are tight. */
+:lang(th) * { letter-spacing: 0 !important; }
+:lang(th) h1, :lang(th) h2 { line-height: 1.4; }
+:lang(th) .lead, :lang(th) .ui-card { line-height: 1.7; }
+</style>
+</head>
+<body class="ui-root">
+<!-- Three or more sections: keep the menu. Fewer: delete it and its script need. -->
+<nav class="ui-nav" aria-label="@@MENU LABEL@@">
+  <a href="#s1">@@SECTION 1@@</a>
+  <a href="#s2">@@SECTION 2@@</a>
+  <a href="#s3">@@SECTION 3@@</a>
+  <button id="theme" class="ui-button outline" type="button" hidden aria-label="Switch between light and dark theme">Theme</button>
+</nav>
+<main class="wrap">
+<header>
+  <p class="eyebrow">@@TOPIC@@</p>
+  <h1>@@THE ANSWER AS ONE SENTENCE@@</h1>
+  <p class="lead">@@ONE OR TWO LINES THAT DEFINE THE WORDS THE HEADLINE USES@@</p>
+</header>
+
+<!-- One section per claim that matters: the title is the claim, a figure or a live part carries it, and the source sits under it. Five or more items of one shape: the few that matter get a section, the rest become one-line <details> rows (problem, fix and cost closed; evidence open). -->
+<section id="s1" aria-labelledby="s1-h">
+  <h2 id="s1-h">@@CLAIM 1@@</h2>
+  <div class="ui-cases">
+    <div class="ui-case"><small>@@CASE INPUTS@@</small><b>@@RESULT@@</b><span class="ui-status normal"><i aria-hidden="true">●</i>Normal</span></div>
+  </div>
+  <p class="src">@@SOURCE: path:line or command@@</p>
+</section>
+
+<section id="s2" aria-labelledby="s2-h">
+  <h2 id="s2-h">@@CLAIM 2@@</h2>
+  <div class="ui-work">
+    <section><header><h3>@@STEP@@</h3><b>@@RESULT@@</b></header><div><pre data-label="Formula">@@FORMULA@@</pre><output data-label="With your numbers">@@NUMBERS FROM A RUN@@</output></div></section>
+    <section><header><h3>@@STEP@@</h3><b>@@RESULT@@</b></header><div><pre data-label="Formula">@@FORMULA@@</pre><output data-label="With your numbers">@@NUMBERS FROM A RUN@@</output></div></section>
+  </div>
+  <p class="src">@@SOURCE@@</p>
+</section>
+
+<section id="s3" aria-labelledby="s3-h">
+  <h2 id="s3-h">@@CLAIM 3@@</h2>
+  <p class="src">@@SOURCE@@</p>
+</section>
+</main>
+</body>
+</html>

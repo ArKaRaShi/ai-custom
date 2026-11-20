@@ -1,6 +1,6 @@
 # State preview rail
 
-Use the state rail for product page states, such as Default, Empty, and Error, that each need the full viewport and their own CSS. For explanations, use `page` instead, which stacks every part on one scrolling page. See [CLI](cli.md#page).
+Use the state rail for product page states, such as Default, Empty, and Error, that each need the full viewport and their own CSS. For explanations, use `page` instead, which stacks every part on one scrolling page (`cli.md`, section `page`).
 
 Publish separate complete HTML files as a state set:
 
@@ -10,7 +10,7 @@ bun "$HOME/.agents/skills/visual-companion/scripts/cli.ts" states "Default" /pat
 
 The companion supplies the edge rail and narrow-screen selector outside the previews. Each preview occupies the full viewport in its own sandboxed iframe, so page CSS cannot affect the rail or another state. Hover or focus a tick to see its miniature without changing the page; click or activate it to select. Arrow keys move focus between ticks without selecting; press Enter or Space to activate the focused tick. On narrow screens use the selector. Keyboard events in a preview iframe do not propagate to the rail. The miniature uses a fixed viewport and can differ from the full preview's responsive layout.
 
-Previews are static: scripts, forms, external resources, and choice reporting are disabled. Stage dependencies individually and reference them with `/files/` URLs; see [CLI](cli.md#stage). Edits do not automatically appear: rerun `states` to publish a new snapshot. Input errors leave the prior publication in place.
+Previews are static: scripts, forms, external resources, and choice reporting are disabled. Stage dependencies individually and reference them with `/files/` URLs (`cli.md`, section `stage`). Edits do not automatically appear: rerun `states` to publish a new snapshot. Input errors leave the prior publication in place.
 
 ## Verification
 

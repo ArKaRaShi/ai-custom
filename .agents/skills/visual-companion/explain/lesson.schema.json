@@ -480,6 +480,134 @@
                     "markup",
                     "type"
                   ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "alt": {
+                      "type": "string",
+                      "minLength": 1,
+                      "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$",
+                      "description": "Accessible description of the whole diagram"
+                    },
+                    "nodes": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "allOf": [
+                              {
+                                "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
+                              },
+                              {
+                                "pattern": "\\S"
+                              }
+                            ],
+                            "description": "Name edges and step focus use to point at this node"
+                          },
+                          "label": {
+                            "type": "string",
+                            "minLength": 1,
+                            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "label"
+                        ]
+                      },
+                      "description": "Boxes to draw; ids are what edges and step focus refer to"
+                    },
+                    "edges": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$",
+                            "description": "Name of this connection, unique among the block's edges"
+                          },
+                          "source": {
+                            "type": "string",
+                            "minLength": 1,
+                            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$",
+                            "description": "Id of the node the arrow starts at"
+                          },
+                          "target": {
+                            "type": "string",
+                            "minLength": 1,
+                            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$",
+                            "description": "Id of the node the arrow points at"
+                          },
+                          "label": {
+                            "type": "string",
+                            "minLength": 1,
+                            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "source",
+                          "target"
+                        ]
+                      },
+                      "description": "Connections; leave empty for unconnected parts"
+                    },
+                    "direction": {
+                      "default": "LR",
+                      "description": "Lay the graph out left to right, or top to bottom",
+                      "type": "string",
+                      "enum": [
+                        "LR",
+                        "TB"
+                      ]
+                    },
+                    "steps": {
+                      "default": [],
+                      "description": "Named steps; picking one highlights the nodes it focuses",
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "label": {
+                            "type": "string",
+                            "minLength": 1,
+                            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
+                          },
+                          "focus": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1,
+                              "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]*$"
+                            },
+                            "description": "Node ids this step highlights"
+                          }
+                        },
+                        "required": [
+                          "label",
+                          "focus"
+                        ]
+                      }
+                    },
+                    "type": {
+                      "type": "string",
+                      "const": "Diagram"
+                    }
+                  },
+                  "required": [
+                    "alt",
+                    "nodes",
+                    "edges",
+                    "type"
+                  ]
                 }
               ]
             }

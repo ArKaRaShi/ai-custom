@@ -5,49 +5,7 @@
 @source "./blocks";
 @source "./components";
 
-/* Explain theme in shadcn's token names: indigo/violet accent, light by default, dark when the system asks. */
-:root {
-  --radius: 0.875rem;
-  --background: #f6f7f9;
-  --foreground: #0f172a;
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  --primary: #4f46e5;
-  --primary-foreground: #ffffff;
-  --primary-2: #7c3aed;
-  --secondary: #ecfdf5;
-  --secondary-foreground: #047857;
-  --muted: #eef1f5;
-  --muted-foreground: #475569;
-  --accent: #eef2ff;
-  --accent-foreground: #4338ca;
-  --destructive: #dc2626;
-  --border: #e2e8f0;
-  --input: #d5dbe4;
-  --ring: #6366f1;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0b0d12;
-    --foreground: #e5e7eb;
-    --card: #12151c;
-    --card-foreground: #e5e7eb;
-    --primary: #818cf8;
-    --primary-foreground: #0b0d12;
-    --primary-2: #a78bfa;
-    --secondary: #0f2a22;
-    --secondary-foreground: #34d399;
-    --muted: #1a1e27;
-    --muted-foreground: #a1a8b5;
-    --accent: #1b1f33;
-    --accent-foreground: #c7d2fe;
-    --destructive: #f87171;
-    --border: #232834;
-    --input: #2e3442;
-    --ring: #818cf8;
-  }
-}
+@import "../assets/ui/themes/indigo.css";
 
 @theme inline {
   --radius-md: calc(var(--radius) - 6px);

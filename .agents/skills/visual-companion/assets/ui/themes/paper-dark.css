@@ -1,0 +1,32 @@
+/* paper-dark: the paper theme in a dark palette. Ink-blue background, warm off-white text, one orange accent.
+   Dark only. Text contrast is at least 6.5:1; the accent is 5.2:1 or more on the background and cards.
+   Activate with <html data-ui-theme="paper-dark">. Thai text uses Noto Sans Thai and Noto Serif Thai. Fonts come from Google Fonts and fall back offline. */
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Sans+Thai:wght@400;500;600&family=Noto+Serif+Thai:wght@400;600&display=swap");
+
+:root[data-ui-theme="paper-dark"] {
+  color-scheme: dark;
+  --radius: 6px;
+  --ui-text: 18px;
+  --font-sans: "Geist", "Noto Sans Thai", system-ui, sans-serif;
+  --font-heading: "Instrument Serif", "Noto Serif Thai", serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  --background: #1b1d26;
+  --foreground: #e9e6df;
+  --card: #242733;
+  --card-foreground: #e9e6df;
+  --primary: #f0764a;
+  --primary-foreground: #1b1d26;
+  --secondary: #2b2e3a;
+  --secondary-foreground: #e9e6df;
+  --muted: #12141b;
+  --muted-foreground: #aab0c0;
+  --subtle: #9aa1b4;
+  --accent: rgba(240, 118, 74, .14);
+  --accent-foreground: #f0764a;
+  --destructive: #f0764a;
+  --border: rgba(233, 230, 223, .14);
+  --input: #707790;
+  --ring: #f0764a;
+  --warning: #ffcf7a;
+  --success: #8be0a8;
+}

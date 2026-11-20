@@ -17,6 +17,7 @@ const Block = z.discriminatedUnion("type", [
   BLOCK_PROPS.Compare.extend({ type: z.literal("Compare") }),
   BLOCK_PROPS.Chart.extend({ type: z.literal("Chart") }),
   BLOCK_PROPS.Svg.extend({ type: z.literal("Svg") }),
+  BLOCK_PROPS.Diagram.extend({ type: z.literal("Diagram") }),
 ]);
 
 const Section = SectionProps.extend({ blocks: z.array(Block).min(1) });
@@ -66,6 +67,28 @@ export const Lesson = LessonProps.extend({
       if (block.type === "Svg") {
         const error = svgError(block.markup);
         if (error) issue(["sections", s, "blocks", b, "markup"], error);
+      }
+      if (block.type === "Diagram") {
+        const at = (path: PropertyKey[], message: string) => issue(["sections", s, "blocks", b, ...path], message);
+        const nodeIds = new Set<string>();
+        block.nodes.forEach((node, n) => {
+          if (nodeIds.has(node.id)) at(["nodes", n, "id"], `duplicate node id "${node.id}"`);
+          nodeIds.add(node.id);
+        });
+        const edgeIds = new Set<string>();
+        block.edges.forEach((edge, e) => {
+          if (edgeIds.has(edge.id)) at(["edges", e, "id"], `duplicate edge id "${edge.id}"`);
+          edgeIds.add(edge.id);
+          // Cycles, self loops and parallel edges are drawn as authored; only endpoints naming no node are errors.
+          for (const end of ["source", "target"] as const) {
+            if (!nodeIds.has(edge[end])) at(["edges", e, end], `"${edge[end]}" is not one of the node ids; add it to nodes or fix the spelling`);
+          }
+        });
+        block.steps.forEach((item, t) => {
+          item.focus.forEach((id, f) => {
+            if (!nodeIds.has(id)) at(["steps", t, "focus", f], `"${id}" is not one of the node ids; add it to nodes or fix the spelling`);
+          });
+        });
       }
       if (block.type === "Derivation") {
         block.steps.forEach((step, t) => {
