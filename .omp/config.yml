@@ -9,7 +9,7 @@ modelRoles:
   free: "@free-free-openrouter"
   payg: "@payg-payg-openrouter"
   tiny: "@tiny-free-local"
-  judge: "@judge-payg-openrouter"
+  judge: "@judge-payg-vercel"
   arena-candidate-1: "@arena-candidate-1-sub-anthropic"
   arena-candidate-2: "@arena-candidate-2-sub-codex"
   arena-judge: "@arena-judge-sub-anthropic"
@@ -38,7 +38,7 @@ modelRoles:
   payg-payg-openrouter: openrouter/z-ai/glm-5.3-flash:auto
   payg-payg-openrouter-2: openrouter/qwen/qwen3.8-flash:auto
   tiny-free-local: local/lfm2.5-230m
-  judge-payg-openrouter: openrouter/~typesafe/jev-latest
+  judge-payg-vercel: vercel-ai-gateway/typesafe-ai/jev-1.14.0
   arena-candidate-1-sub-anthropic: anthropic/claude-sonnet-5-5:high
   arena-candidate-2-sub-codex: openai-codex/gpt-6.1-terra:high
   arena-judge-sub-anthropic: anthropic/claude-opus-5-5:medium
