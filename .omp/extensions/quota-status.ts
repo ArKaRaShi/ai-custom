@@ -949,11 +949,7 @@ export class KimiResolver extends BaseQuotaResolver {
  */
 export class DefaultResolver extends BaseQuotaResolver {
   readonly id = "default";
-  readonly prefix = "󰚩 antigravity";
-
-  protected isReportExhausted(report: ProviderReport): boolean {
-    return this.isShortWindowExhausted(report);
-  }
+  readonly prefix = "";
 
   matches(_provider: string): boolean {
     return true;
@@ -964,7 +960,8 @@ export class DefaultResolver extends BaseQuotaResolver {
     usageData: UsagePayload,
     options: RenderOptions,
   ): string {
-    const matchingReports = this.filterMatchingReports(provider, usageData);
+    const lower = provider.toLowerCase();
+    const matchingReports = (usageData.reports || []).filter((report) => report.provider.toLowerCase() === lower);
     if (matchingReports.length === 0) return "";
     if (matchingReports.length > 1) {
       return this.renderAccountRows(provider, matchingReports, usageData, options, getProviderPrefix(provider));
@@ -1047,8 +1044,9 @@ export function getProviderPrefix(provider: string): string {
     case "google-antigravity":
     case "google":
     case "gemini":
-    default:
       return "󰚩 antigravity";
+    default:
+      return `◈ ${provider}`;
   }
 }
 

@@ -74,12 +74,42 @@ describe("given quota-status extension, when rendering usage sparklines and form
     expect(formatReset(undefined, fixedNow)).toBe("");
   });
 
-  it("getProviderPrefix returns correct icon and label", () => {
+  it("labels unknown providers without misidentifying them as Antigravity", () => {
     expect(getProviderPrefix("anthropic")).toBe("󰛄 claude");
     expect(getProviderPrefix("openai-codex")).toBe("󰚩 codex");
     expect(getProviderPrefix("kimi")).toBe("󰍛 kimi");
     expect(getProviderPrefix("google-antigravity")).toBe("󰚩 antigravity");
-    expect(getProviderPrefix("unknown-provider")).toBe("󰚩 antigravity");
+    expect(getProviderPrefix("unknown-provider")).toBe("◈ unknown-provider");
+  });
+
+  it("renders OpenCode Go quota windows under its own provider label", () => {
+    const mockUsage: UsagePayload = {
+      reports: [
+        {
+          provider: "opencode-go",
+          limits: [
+            { id: "rolling-5h", amount: { usedFraction: 0.05 } },
+            { id: "weekly", amount: { usedFraction: 0.38 } },
+            { id: "monthly", amount: { usedFraction: 0.19 } },
+          ],
+        },
+      ],
+    };
+
+    const output = buildProviderSparklineString("opencode-go", mockUsage);
+    expect(output).toContain("◈ opencode-go");
+    expect(output).toContain("rolling-5h");
+    expect(output).toContain("weekly");
+    expect(output).toContain("monthly");
+    expect(output).not.toContain("antigravity");
+  });
+
+  it("does not mix reports from providers whose names overlap", () => {
+    const usage: UsagePayload = {
+      reports: [{ provider: "opencode", limits: [{ id: "weekly", amount: { usedFraction: 0.75 } }] }],
+    };
+    const output = buildProviderSparklineString("opencode-go", usage);
+    expect(output).toBe("");
   });
 
   it("buildProviderSparklineString applies Smart Focus for Antigravity and picks the active account", () => {
