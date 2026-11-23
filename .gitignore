@@ -1,3 +1,6 @@
+# Machine-local agent config (linked by install.sh, not shared)
+.omp/config.yml
+
 # Runtime / cache files
 .DS_Store
 *.log
