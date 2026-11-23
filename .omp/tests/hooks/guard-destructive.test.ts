@@ -74,18 +74,31 @@ describe("given guard-destructive pre-hook, when evaluating bash commands, then 
   });
 });
 
-describe("given guard-destructive pre-hook, when evaluating gh commands, then confirm GitHub writes and allow read-only use", () => {
-  it("flags gh issue and gh pr write subcommands", () => {
+describe("given guard-destructive pre-hook, when evaluating gh commands, then confirm destructive writes and allow routine work", () => {
+  it("flags gh pr writes and issue delete/transfer", () => {
     const commands: string[] = [
-      'gh issue create --title "x" --body "y"',
-      "gh issue edit 12 --add-label ready-for-agent",
-      "gh issue close 12",
+      "gh issue delete 12 --yes",
+      "gh issue transfer 12 owner/repo",
       "gh pr create --fill",
       "gh pr merge 7 --squash",
     ];
     for (const command of commands) {
       const hit = findDestructiveCommand(command);
       expect(hit?.category).toBe("github");
+    }
+  });
+
+  it("allows routine gh issue writes", () => {
+    const commands: string[] = [
+      'gh issue create --title "x" --body "y"',
+      "gh issue edit 12 --add-label ready-for-agent",
+      "gh issue close 12",
+      "gh issue comment 12 --body done",
+      "gh issue reopen 12",
+    ];
+    for (const command of commands) {
+      const hit = findDestructiveCommand(command);
+      expect(hit).toBeUndefined();
     }
   });
 
