@@ -18,10 +18,10 @@ link_into_repo() {
 }
 
 # Machine-local omp files: never linked into the agent folder, never promoted.
-# They live in the agent folder as real files, so a repo copy cannot replace them.
+# They live in the agent folder as real files, so a repo copy is stale, not a source.
 is_local_only() {
   case $1 in
-    omp:config.yml | omp:mcp.json) return 0 ;;
+    omp:config.yml | omp:config.yml.lock | omp:mcp.json) return 0 ;;
   esac
   return 1
 }

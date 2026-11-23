@@ -143,5 +143,28 @@ rm -rf "$S/alpha"
 sh "$REPO/install.sh" --apply >"$T/out" 2>&1
 check "skipped skill with a dangling Claude link applies cleanly" [ $? -eq 0 ] && absent "$CL/alpha"
 
+echo "7. machine-local omp files are never linked; a repo copy is stale"
+fresh t7
+echo '{}' >"$T/repo/.omp/mcp.json"
+sh "$REPO/install.sh" >"$T/out" 2>&1
+rc=$?
+check "preview fails when the repo holds a local-only file" [ "$rc" -eq 1 ]
+check "plan reports it as STALE" grep -q '^  STALE' "$T/out"
+check "it is not linked" absent "$O/mcp.json"
+sh "$REPO/install.sh" --apply >"$T/out" 2>&1
+rc=$?
+check "apply refuses and changes nothing" [ "$rc" -eq 1 ] && absent "$O/mcp.json"
+rm "$REPO/.omp/mcp.json"
+echo '{}' >"$O/mcp.json"
+sh "$REPO/install.sh" >"$T/out" 2>&1
+check "a real local file is left alone" [ ! -L "$O/mcp.json" ] && grep -q '^summary: 0 link' "$T/out"
+check "promote refuses a local-only key" sh -c "! '$REPO/promote.sh' omp:mcp.json"
+check "demote refuses a local-only key" sh -c "! '$REPO/demote.sh' omp:mcp.json"
+
+echo "8. every local-only path is gitignored in the real repo"
+for f in config.yml config.yml.lock mcp.json; do
+  check ".omp/$f is ignored" git -C "$SRC" check-ignore -q ".omp/$f"
+done
+
 echo
 if [ "$FAILS" -eq 0 ]; then echo "all passed"; else echo "$FAILS failed"; exit 1; fi

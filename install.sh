@@ -157,7 +157,10 @@ if [ "$STATUS" -eq 0 ]; then
     find "$REPO/.omp" -type f ! -name .DS_Store | sort >"$WORK/omp-files"
     while IFS= read -r src; do
       rel=${src#"$REPO"/.omp/}
-      is_local_only "omp:$rel" && continue
+      if is_local_only "omp:$rel"; then
+        op STALE "$src" "machine-local; remove it from the repo"
+        continue
+      fi
       plan_item "$src" "$OMP_DIR/$rel" "omp:$rel"
     done <"$WORK/omp-files"
   fi
@@ -255,10 +258,11 @@ while IFS="$TAB" read -r kind a b c; do
       printf '  CONFLICT  %s %s\n' "$a" "$b"
       sed 's/^/      /' "$c"
       ;;
+    STALE) printf '  STALE     %s  (%s)\n' "$a" "$b" ;;
   esac
 done <"$PLAN"
 
-n_conflict=$(count CONFLICT)
+n_conflict=$(( $(count CONFLICT) + $(count STALE) ))
 echo "summary: $(count LINK) link, $(count RELINK) relink, $(count REPLACE) replace, $(count UNLINK) remove, $(count INSTALL) install, $n_conflict conflict"
 if [ ! -f "$SKIP_FILE" ]; then echo "skip list: $SKIP_FILE does not exist yet; --apply creates it"; fi
 stale=$(stale_skip_entries)
@@ -268,7 +272,7 @@ if [ -n "$stale" ]; then
 fi
 
 if [ "$n_conflict" -gt 0 ]; then
-  echo "Resolve each conflict (move or delete the local copy, or promote it), then rerun." >&2
+  echo "Resolve each conflict (move or delete the local copy, promote it, or delete a STALE repo copy), then rerun." >&2
   [ "$APPLY" -eq 1 ] && echo "Nothing was changed." >&2
   exit 1
 fi
