@@ -126,3 +126,17 @@ Kokkonen
 Schalk
 Fyfe
 Kaminski
+shadcn
+TSDoc
+lefthook
+PGlite
+Zod
+Cerbos
+Permify
+DTOs
+Biome
+TailwindCSS
+Turbopack
+Vitest
+heredoc
+Wayfinding
