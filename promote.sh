@@ -16,6 +16,10 @@ if [ $# -ne 1 ]; then
 fi
 
 resolve_key "$1"
+if is_local_only "$KEY"; then
+  echo "$KEY is machine-local; install.sh never links or replaces it" >&2
+  exit 1
+fi
 if [ -L "$LOCAL_PATH" ]; then
   echo "$LOCAL_PATH is already a link; nothing to promote" >&2
   exit 1

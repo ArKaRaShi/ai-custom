@@ -1,5 +1,6 @@
 # Machine-local agent config (linked by install.sh, not shared)
 .omp/config.yml
+.omp/mcp.json
 
 # Runtime / cache files
 .DS_Store

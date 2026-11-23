@@ -17,6 +17,10 @@ if [ $# -ne 1 ]; then
 fi
 
 resolve_key "$1"
+if is_local_only "$KEY"; then
+  echo "$KEY is machine-local already; nothing to demote" >&2
+  exit 1
+fi
 if [ ! -L "$LOCAL_PATH" ] || [ "$(readlink "$LOCAL_PATH")" != "$REPO_PATH" ]; then
   echo "$LOCAL_PATH is not a link to $REPO_PATH; nothing to demote" >&2
   exit 1

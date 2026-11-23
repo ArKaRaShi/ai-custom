@@ -17,6 +17,15 @@ link_into_repo() {
   return 1
 }
 
+# Machine-local omp files: never linked into the agent folder, never promoted.
+# They live in the agent folder as real files, so a repo copy cannot replace them.
+is_local_only() {
+  case $1 in
+    omp:config.yml | omp:mcp.json) return 0 ;;
+  esac
+  return 1
+}
+
 # Resolve an item key into KEY, REPO_PATH and LOCAL_PATH.
 # Keys are "agents:<skill>", "omp:<path under the omp folder>", or a bare skill name.
 resolve_key() {

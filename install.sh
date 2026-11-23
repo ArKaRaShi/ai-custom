@@ -157,6 +157,7 @@ if [ "$STATUS" -eq 0 ]; then
     find "$REPO/.omp" -type f ! -name .DS_Store | sort >"$WORK/omp-files"
     while IFS= read -r src; do
       rel=${src#"$REPO"/.omp/}
+      is_local_only "omp:$rel" && continue
       plan_item "$src" "$OMP_DIR/$rel" "omp:$rel"
     done <"$WORK/omp-files"
   fi

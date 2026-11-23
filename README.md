@@ -40,7 +40,7 @@ This repo is the only copy of your authored skills and OMP config. Each Mac has 
 
 - **Authored** items live in this repo. `~/.agents/skills/<skill>` and each file under `~/.omp/agent` link into it, so an edit changes the repo files directly.
 - **External** skills (installed by `npx skills add` or similar) stay as real folders on each Mac. `externals.txt` lists their install commands.
-- **Local-only** files (`orca-*` extensions, databases, sessions) are never in the repo and never touched. The shared `.omp/config.yml` is linked into `~/.omp/agent/config.yml`.
+- **Local-only** files (`orca-*` extensions, databases, sessions, `~/.omp/agent/config.yml`, `~/.omp/agent/mcp.json`) are real files on each Mac. `install.sh` neither links nor replaces them, and `promote.sh` refuses them.
 
 ## Set up a Mac
 
