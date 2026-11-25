@@ -12,10 +12,10 @@ link_cached() {
   package=$1
   destination=$2
   source=$(ls -d "$HOME"/.bun/install/cache/"$package"@* 2>/dev/null | tail -1)
-  if [ -n "$source" ]; then
-    mkdir -p "$(dirname "$destination")"
-    ln -sfn "$source" "$destination"
-  fi
+  if [ -z "$source" ]; then return 0; fi
+  if [ -L "$destination" ] && [ "$(readlink "$destination")" = "$source" ]; then return 0; fi
+  mkdir -p "$(dirname "$destination")"
+  ln -sfn "$source" "$destination"
 }
 
 link_cached bun-types .omp/node_modules/bun-types

@@ -8,6 +8,8 @@
     "lib": ["ES2022"],
     "typeRoots": ["node_modules"],
     "types": ["bun-types"],
+    "incremental": true,
+    "tsBuildInfoFile": "./node_modules/.cache/tsconfig.hooks.tsbuildinfo",
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },

@@ -19,6 +19,15 @@ enforced at runtime by `tests/hooks/standard.test.ts`.
 
 ## Run
 
+From the ai-custom repo:
+
+```bash
+bun run typecheck                    # hooks/shared type contract, ~0.3 s warm
+bun run test                         # the repo suite, including the typecheck gate
+```
+
+Against the installed copy (may also hold machine-local tests that the repo does not track):
+
 ```bash
 bun test ~/.omp/agent/tests          # full suite
 bun test ~/.omp/agent/tests/rules    # rules only

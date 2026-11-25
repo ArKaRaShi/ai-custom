@@ -1,0 +1,8 @@
+{
+  "name": "ai-custom",
+  "private": true,
+  "scripts": {
+    "test": "bun test ./.omp/tests",
+    "typecheck": "sh ./typecheck.sh"
+  }
+}
