@@ -60,39 +60,6 @@ Without matching titles, agents must infer task names and may skip a step or mar
 For standalone scripts that do not depend on a specific runtime, framework, library, or ORM, prefer Ruby, then Python via `uv`, then TypeScript/JavaScript via Bun.
 Otherwise, choose the language and framework that best fit the task.
 
-### UI mockup and image inspection
-
-When extracting exact styling (padding, margins, borders, dimensions, colors) from UI screenshots or mockups:
-
-- NEVER rely solely on visual LLM estimation for pixel-exact CSS specifications.
-- MUST inspect programmatically using Python via `uv` combining Pillow (`PIL`) and OpenCV (`cv2`).
-- Use OpenCV (`cv.findContours`, `cv.boundingRect`) to extract card, button, and widget bounding boxes.
-- Use Pillow (`im.crop`, `im.getpixel`) to extract inner padding and exact RGB hex codes.
-
-```python
-# Avoid: visual estimation guessing CSS values
-# CSS: padding: 16px; border: 1px solid #ccc; /* guessed by looking at screenshot */
-
-# Prefer: programmatic inspection with OpenCV and Pillow
-import cv2 as cv
-import numpy as np
-from PIL import Image
-
-pil_img = Image.open("mockup.png").convert("RGB")
-cv_img = cv.cvtColor(np.array(pil_img), cv.COLOR_RGB2BGR)
-gray = cv.cvtColor(cv_img, cv.COLOR_BGR2GRAY)
-_, thresh = cv.threshold(gray, 240, 255, cv.THRESH_BINARY_INV)
-contours, _ = cv.findContours(thresh, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-for cnt in contours:
-    x, y, w, h = cv.boundingRect(cnt)
-    if w > 100 and h > 50:
-        card = pil_img.crop((x, y, x + w, y + h))
-        r, g, b = card.getpixel((0, 0))
-        hex_color = f"#{r:02x}{g:02x}{b:02x}"
-```
-
-Rationale: visual LLM estimation hallucinates pixel dimensions and color shades. Programmatic extraction provides ground-truth bounding boxes, padding measurements, and RGB hex codes without BGR channel-swap defects.
-
 ### Explanations
 
 Include at least one concrete example in every explanation: a real path, value, command, or before-and-after. Technical descriptions alone are not enough.
