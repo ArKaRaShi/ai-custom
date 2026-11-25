@@ -11,3 +11,13 @@ Shared agent files for every harness on this Mac.
   instruction file. The instruction file is paid on every turn; a standard is read when
   it matters.
 - Adding a root-level entry means adding one row to the table above.
+
+## Enforced by
+
+| Harness | Adapter | Category |
+| --- | --- | --- |
+| omp | ~/.omp/agent/hooks/post/agents-index.ts | WARN |
+| claude-code | — | — |
+
+The omp adapter warns after a write leaves a root-level entry out of this table or out of
+`standards/README.md`. Add the row in the same change as the file, not later.

@@ -47,13 +47,15 @@ box in the original file, not a guess made by looking at a thumbnail.
 
 ## A crop is a new path
 
-Reading the same path twice does not show the image again: the repeat is deduplicated
-to a note. A later read of the same file may show `Superseded by a newer read of this
-file`. Both are context policy, not failures.
+Whether a repeat read returns the pixels depends on context state, not on the file: an
+earlier read can be replaced with `[Superseded by a newer read of this file]`, and a
+repeat can be answered with a note instead of the image. A fresh isolated session proves
+the opposite case too — the same path can come back as an image again. Never count on
+either.
 
 Read once, write down what you saw as text, and crop to a new filename when you need a
-closer look: measure, crop, then read. A claim that must survive pruning belongs in
-your reply, not in an image you will not be shown again.
+closer look: measure, crop, then read. A claim that must survive pruning belongs in your
+reply, not in an image you may not be shown again.
 
 ## Selectors
 

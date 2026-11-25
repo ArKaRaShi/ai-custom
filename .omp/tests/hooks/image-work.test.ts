@@ -41,13 +41,12 @@ describe("given the image-work hook, when an agent touches an image, then the pa
     expect(second).toBeUndefined();
   });
 
-  it("warns when the same path is read again, which returns no image", async () => {
+  it("leaves a repeated read alone, because the harness can return the image again", async () => {
     const handlers = mount();
     const call = handlers.get("tool_call");
     const payload = readPayload("/tmp/ref/ours/eq-review-p1.png");
     await call?.(payload, {});
-    const again = await call?.(payload, {});
-    expect(again).toMatchObject({ additionalContext: expect.stringContaining("crop to a new path") });
+    expect(await call?.(payload, {})).toBeUndefined();
   });
 
   it("catches screenshots taken through bash", async () => {

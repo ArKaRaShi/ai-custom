@@ -1,6 +1,6 @@
 import * as path from "path";
 import type { HookAPI } from "@oh-my-pi/pi-coding-agent/extensibility/hooks";
-import { advisory, error, resetOnSessionChange, sessionOnce, warn, type HookMeta, type Verdict } from "../shared/verdict";
+import { advisory, error, resetOnSessionChange, sessionOnce, type HookMeta, type Verdict } from "../shared/verdict";
 
 export const HOOK_META = {
   id: "image-work",
@@ -22,9 +22,7 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 export default function imageWork(pi: HookAPI): void {
   const once = sessionOnce();
-  const seen = new Set<string>();
-  const cleared = { reset: () => seen.clear() };
-  resetOnSessionChange(pi, once, cleared);
+  resetOnSessionChange(pi, once);
 
   const point = (): Verdict | undefined => {
     if (!once.take("image-work")) return undefined;
@@ -44,10 +42,6 @@ export default function imageWork(pi: HookAPI): void {
         const plain = file.replace(/:(img|raw)$/, "");
         return error(HOOK_META, `raster image ${path.basename(plain)} rejects the ${selector[2]} selector`, `read "${plain}"`);
       }
-      if (seen.has(file)) {
-        return warn(HOOK_META, `${path.basename(file)} was already read this session and the repeat returns no image; crop to a new path instead`);
-      }
-      seen.add(file);
       return point();
     }
 
