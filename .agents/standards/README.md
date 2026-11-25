@@ -7,6 +7,7 @@ enforced by a hook or a test; none relies on an agent remembering to read it.
 | --- | --- | --- |
 | [working-with-image](working-with-image.md) | reading, cropping, screenshotting, or measuring any image | — |
 | [authoring-hooks](authoring-hooks.md) | writing or editing a file under `hooks/{pre,post}/` | — |
+| [authoring-standards](authoring-standards.md) | writing or editing a file under `.agents/standards/` | `~/.omp/agent/hooks/pre/standards-doc.ts` (ERROR) |
 
 A dash means no adapter yet: the standard is stated, but nothing in that harness fails
 when an agent skips it. Replace the dash in the same change that adds the adapter.
