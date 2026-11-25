@@ -9,6 +9,7 @@ Tests mirror the source layout under `~/.omp/agent/`:
 | `hooks/shared/<name>.ts` | `tests/hooks/<name>.test.ts` |
 | `rules/<name>.md` | `tests/rules/<name>.test.ts` |
 | `.agents/standards/<name>.md` | `tests/standards/index.test.ts` |
+| `.agents/standards/<name>.md` shape | `tests/standards/shape.test.ts` |
 | `hooks/shared/**` type contract | `tests/typecheck.test.ts` → `./typecheck.sh` |
 
 `typecheck.sh` checks `hooks/shared` and the typecheck wrapper only. The hook adapters
