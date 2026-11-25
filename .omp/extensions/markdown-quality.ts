@@ -175,6 +175,7 @@ export default function markdownQualityExtension(pi: ExtensionAPI): void {
       await pi.sendMessage({
         customType: "markdown-quality",
         display: true,
+        excludeFromContext: true,
         attribution: "agent",
         content: `Markdown quality findings for ${rawPath}`,
         details: {
