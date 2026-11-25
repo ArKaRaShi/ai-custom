@@ -3,16 +3,9 @@ import { describe, it, expect } from "bun:test";
 import * as fs from "fs";
 import * as path from "path";
 import { pathToFileURL } from "url";
+import { checkHookMeta, type HookMeta } from "../../hooks/shared/verdict";
 
 const HOOKS_DIR = path.resolve(import.meta.dir, "../../hooks");
-const CATEGORIES = ["advisory", "warn", "error", "block", "sanitize", "observe"];
-
-interface HookMeta {
-  id: string;
-  category: string;
-  events: string[];
-  standards: string[];
-}
 
 interface HookModule {
   HOOK_META?: HookMeta;
@@ -37,11 +30,8 @@ describe("given the shared hook standard, when scanning hooks, then every hook d
   it("declares HOOK_META with a known category, a kebab-case id, and at least one event", async () => {
     for (const file of hookFiles()) {
       const meta = (await load(file)).HOOK_META;
-      expect({ file, meta: Boolean(meta) }).toEqual({ file, meta: true });
-      if (!meta) continue;
-      expect(CATEGORIES).toContain(meta.category);
-      expect(meta.id).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
-      expect({ file, events: meta.events.length > 0 }).toEqual({ file, events: true });
+      const problems = meta ? checkHookMeta(meta) : ["HOOK_META is missing"];
+      expect({ file, problems }).toEqual({ file, problems: [] });
     }
   });
 

@@ -3,7 +3,7 @@ import { block, type HookMeta } from "../shared/verdict";
 
 export const HOOK_META = {
   id: "guard-destructive",
-  category: "block",
+  category: "BLOCK",
   events: ["tool_call"],
   standards: [],
 } satisfies HookMeta;

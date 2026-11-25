@@ -8,6 +8,9 @@
 *.log
 *.tmp
 *.bak
+
+# Type-check support linked from the bun cache by typecheck.sh
+.omp/node_modules/
 *.swp
 
 # Node / Bun

@@ -7,6 +7,7 @@
 #   ./install.sh --status   list skill folders that are neither linked nor in externals.txt
 #   --yes                   with --apply, run externals.txt commands without asking
 # Every skill in ~/.agents/skills is also linked into ~/.claude/skills for Claude Code.
+# Shared agent files outside skills (standards/, README.md) are linked into ~/.agents.
 set -eu
 
 . "$(dirname "$0")/lib.sh"
@@ -141,8 +142,8 @@ plan_claude_link() {
 
 # --- build the plan --------------------------------------------------------
 
-if [ ! -d "$REPO/.agents/skills" ] && [ ! -d "$REPO/.omp" ]; then
-  echo "nothing to link: $REPO has no .agents/skills or .omp" >&2
+if [ ! -d "$REPO/.agents/skills" ] && [ ! -d "$REPO/.agents/standards" ] && [ ! -d "$REPO/.omp" ]; then
+  echo "nothing to link: $REPO has no .agents/skills, .agents/standards, or .omp" >&2
   exit 1
 fi
 
@@ -165,6 +166,17 @@ if [ "$STATUS" -eq 0 ]; then
     done <"$WORK/omp-files"
   fi
 
+  if [ -d "$REPO/.agents/standards" ]; then
+    find "$REPO/.agents/standards" -type f ! -name .DS_Store | sort >"$WORK/shared-files"
+    while IFS= read -r src; do
+      rel=${src#"$REPO"/.agents/}
+      plan_item "$src" "$AGENTS_DIR/$rel" "shared:$rel"
+    done <"$WORK/shared-files"
+  fi
+  if [ -f "$REPO/.agents/README.md" ]; then
+    plan_item "$REPO/.agents/README.md" "$AGENTS_DIR/README.md" "shared:README.md"
+  fi
+
   # Links into the repo whose target was renamed or deleted.
   for dst in "$SKILLS_DIR"/* "$SKILLS_DIR"/.[!.]*; do
     [ -L "$dst" ] || continue
@@ -177,6 +189,13 @@ if [ "$STATUS" -eq 0 ]; then
     while IFS= read -r dst; do
       [ -e "$dst" ] || op UNLINK "$dst" "dangling, target left the repo"
     done <"$WORK/omp-links"
+  fi
+
+  if [ -d "$AGENTS_DIR" ]; then
+    find "$AGENTS_DIR" -maxdepth 3 -type l -lname "$REPO/*" ! -path "$AGENTS_DIR/skills/*" >"$WORK/shared-links"
+    while IFS= read -r dst; do
+      [ -e "$dst" ] || op UNLINK "$dst" "dangling, target left the repo"
+    done <"$WORK/shared-links"
   fi
 
   # External skills that are missing on this Mac.

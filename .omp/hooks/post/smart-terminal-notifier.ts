@@ -9,7 +9,7 @@ import type { HookMeta } from "../shared/verdict";
 
 export const HOOK_META = {
   id: "smart-terminal-notifier",
-  category: "observe",
+  category: "OBSERVE",
   events: ["agent_start", "agent_end", "tool_approval_requested", "session_before_compact"],
   standards: [],
 } satisfies HookMeta;

@@ -3,7 +3,7 @@ import { sanitized, type HookMeta } from "../shared/verdict";
 
 export const HOOK_META = {
   id: "redact",
-  category: "sanitize",
+  category: "SANITIZE",
   events: ["tool_result"],
   standards: [],
 } satisfies HookMeta;

@@ -3,6 +3,7 @@
 
 REPO=$(cd "$(dirname "$0")" && pwd -P)
 SKILLS_DIR=${AI_CUSTOM_SKILLS_DIR:-$HOME/.agents/skills}
+AGENTS_DIR=${AI_CUSTOM_AGENTS_DIR:-$HOME/.agents}
 CLAUDE_SKILLS_DIR=${AI_CUSTOM_CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}
 OMP_DIR=${AI_CUSTOM_OMP_DIR:-$HOME/.omp/agent}
 CONFIG_DIR=${AI_CUSTOM_CONFIG_DIR:-$HOME/.config/ai-custom}
@@ -27,13 +28,19 @@ is_local_only() {
 }
 
 # Resolve an item key into KEY, REPO_PATH and LOCAL_PATH.
-# Keys are "agents:<skill>", "omp:<path under the omp folder>", or a bare skill name.
+# Keys are "agents:<skill>", "shared:<path under the agents folder outside skills>",
+# "omp:<path under the omp folder>", or a bare skill name.
 resolve_key() {
   case $1 in
     omp:*)
       KEY=$1
       REPO_PATH=$REPO/.omp/${1#omp:}
       LOCAL_PATH=$OMP_DIR/${1#omp:}
+      ;;
+    shared:*)
+      KEY=$1
+      REPO_PATH=$REPO/.agents/${1#shared:}
+      LOCAL_PATH=$AGENTS_DIR/${1#shared:}
       ;;
     agents:*)
       KEY=$1
