@@ -6,7 +6,15 @@ Tests mirror the source layout under `~/.omp/agent/`:
 |---|---|
 | `extensions/<name>.ts` | `tests/extensions/<name>.test.ts` |
 | `hooks/<type>/<name>.ts` | `tests/hooks/<name>.test.ts` |
+| `hooks/shared/<name>.ts` | `tests/hooks/<name>.test.ts` |
 | `rules/<name>.md` | `tests/rules/<name>.test.ts` |
+| `.agents/standards/<name>.md` | `tests/standards/index.test.ts` |
+| `hooks/shared/**` type contract | `tests/typecheck.test.ts` → `./typecheck.sh` |
+
+`typecheck.sh` checks `hooks/shared` and the typecheck wrapper only. The hook adapters
+under `hooks/pre` and `hooks/post` are not type-checked: the running omp is a native
+binary and ships no type declarations. Their category, event, and standard contracts are
+enforced at runtime by `tests/hooks/standard.test.ts`.
 
 ## Run
 
