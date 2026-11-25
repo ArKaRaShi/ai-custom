@@ -1,4 +1,12 @@
 import type { HookAPI } from "@oh-my-pi/pi-coding-agent/extensibility/hooks";
+import { sanitized, type HookMeta } from "../shared/verdict";
+
+export const HOOK_META = {
+  id: "redact",
+  category: "sanitize",
+  events: ["tool_result"],
+  standards: [],
+} satisfies HookMeta;
 
 // Redact obvious secrets from tool output before they hit context/transcript.
 // Uses an explicit, self-documenting marker so subagents and models understand:
@@ -138,6 +146,6 @@ export default function (pi: HookAPI): void {
       if (text !== chunk.text) changed = true;
       return { ...chunk, text };
     });
-    if (changed) return { content };
+    if (changed) return sanitized(HOOK_META, content);
   });
 }

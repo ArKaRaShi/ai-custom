@@ -5,6 +5,14 @@
 //   tool_approval_requested -> Bong.mp3 + native banner (always)
 //   session_before_compact  -> Thump.mp3 + native banner
 import type { HookAPI } from "@oh-my-pi/pi-coding-agent/extensibility/hooks";
+import type { HookMeta } from "../shared/verdict";
+
+export const HOOK_META = {
+  id: "smart-terminal-notifier",
+  category: "observe",
+  events: ["agent_start", "agent_end", "tool_approval_requested", "session_before_compact"],
+  standards: [],
+} satisfies HookMeta;
 
 interface ToolApprovalEvent {
   toolName?: string;

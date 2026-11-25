@@ -1,4 +1,12 @@
 import type { HookAPI } from "@oh-my-pi/pi-coding-agent/extensibility/hooks";
+import { block, type HookMeta } from "../shared/verdict";
+
+export const HOOK_META = {
+  id: "guard-destructive",
+  category: "block",
+  events: ["tool_call"],
+  standards: [],
+} satisfies HookMeta;
 
 // Comprehensive safety guard: confirms before commands that can destroy data,
 // discard uncommitted work, or overwrite remote git history.
@@ -67,7 +75,7 @@ export default function guardDestructive(pi: HookAPI): void {
     if (!hit) return;
 
     if (!ctx.hasUI) {
-      return { block: true, reason: `Blocked destructive command (${hit.label}): "${cmd}". Run manually if needed.` };
+      return block(HOOK_META, `destructive command (${hit.label}): "${cmd}". Run manually if needed.`);
     }
 
     const ok = await ctx.ui.confirm(
@@ -76,7 +84,7 @@ export default function guardDestructive(pi: HookAPI): void {
     );
 
     if (!ok) {
-      return { block: true, reason: `User declined execution of ${hit.label}: "${cmd}"` };
+      return block(HOOK_META, `user declined ${hit.label}: "${cmd}"`);
     }
   });
 }
