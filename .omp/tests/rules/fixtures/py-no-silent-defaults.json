@@ -1,0 +1,27 @@
+{
+  "fallback": [
+    { "label": "or zero", "snippet": "total = subtotal or 0" },
+    { "label": "or empty list", "snippet": "rows = payload.get(\"rows\") or []" },
+    { "label": "or empty dict", "snippet": "options = payload.get(\"options\") or {}" },
+    { "label": "or empty string with single quotes", "snippet": "name = payload.get(\"name\") or ''" },
+    { "label": "or empty string with double quotes", "snippet": "name = payload.get(\"name\") or \"\"" },
+    { "label": "get with zero default", "snippet": "qty = row.get(\"qty\", 0)" },
+    { "label": "get with empty list default", "snippet": "tags = row.get(\"tags\", [])" },
+    { "label": "get with false default", "snippet": "flag = row.get(\"flag\", False)" }
+  ],
+  "textMatch": [
+    { "label": "string holding a fallback phrase", "snippet": "note = \"unknown or 0\"" }
+  ],
+  "notFallback": [
+    { "label": "absence preserved", "snippet": "price = record.get(\"price\")" },
+    { "label": "plain arithmetic", "snippet": "total = a + b" },
+    { "label": "empty literal without a fallback", "snippet": "rows = []" },
+    { "label": "conditional expression default", "snippet": "value if value is not None else 0" },
+    { "label": "typescript operator", "snippet": "const v = a ?? 0" }
+  ],
+  "bodyMarkers": [
+    "guideline, not a gate",
+    "counters.get(key, 0) + 1",
+    "skill://principle-model-the-domain"
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "fallback": [
+    { "label": "nullish zero", "snippet": "const value = measurement.value ?? 0" },
+    { "label": "nullish empty array", "snippet": "const rows = payload.rows ?? []" },
+    { "label": "nullish empty object", "snippet": "const opts = payload.opts ?? {}" },
+    { "label": "nullish empty string", "snippet": "const name = payload.name ?? \"\"" },
+    { "label": "nullish false", "snippet": "const flag = payload.enabled ?? false" },
+    { "label": "invented timestamp", "snippet": "const at = payload.at ?? new Date()" },
+    { "label": "logical or zero", "snippet": "const count = total || 0" },
+    { "label": "logical or empty string", "snippet": "const label = payload.label || \"\"" },
+    { "label": "get with zero default", "snippet": "const v = map.get(\"k\", 0)" }
+  ],
+  "textMatch": [
+    { "label": "string holding a fallback phrase", "snippet": "const note = \"unknown ?? 0\"" }
+  ],
+  "notFallback": [
+    { "label": "absence preserved", "snippet": "const value = measurement.value" },
+    { "label": "plain literal", "snippet": "const x = 0" },
+    { "label": "empty literal without a fallback", "snippet": "const rows = []" },
+    { "label": "non-empty default", "snippet": "const label = value ?? \"unknown\"" },
+    { "label": "python operator", "snippet": "price = record.get(\"price\") or 0" }
+  ],
+  "bodyMarkers": [
+    "guideline, not a gate",
+    "counters.get(key, 0) + 1",
+    "skill://principle-model-the-domain"
+  ]
+}
