@@ -51,6 +51,40 @@ describe("given the hook-authoring gate, when an agent writes a hook file, then 
     expect(second).toBeUndefined();
   });
 
+  it("warns once when a hook hardcodes a machine path, and names the standard", async () => {
+    const { handlers } = mount();
+    const call = handlers.get("tool_call");
+    const content = GOOD_HOOK.replace(
+      'advisory(HOOK_META, "note")',
+      'advisory(HOOK_META, "/Users/someone/work/repo/.agents/standards/x.md")',
+    );
+    const payload = { toolName: "write", input: { path: ".omp/hooks/pre/pathful.ts", content } };
+    const first = await call?.(payload, {});
+    expect(JSON.stringify(first)).toContain("hardcodes a machine path");
+    expect(JSON.stringify(first)).toContain("authoring-hooks.md");
+    const second = await call?.(payload, {});
+    expect(second).toBeUndefined();
+  });
+
+  it("stays silent when the hook resolves the root from the event context", async () => {
+    const { handlers } = mount();
+    const call = handlers.get("tool_call");
+    const content = GOOD_HOOK.replace(
+      'advisory(HOOK_META, "note")',
+      'advisory(HOOK_META, ctx.cwd)',
+    ).replace("pi.on(\"tool_call\", async () =>", "pi.on(\"tool_call\", async (event, ctx) =>");
+    const verdict = await call?.({ toolName: "write", input: { path: ".omp/hooks/pre/rooted.ts", content } }, {});
+    expect(JSON.stringify(verdict ?? {})).not.toContain("hardcodes a machine path");
+  });
+
+  it("does not flag a comment that names the hook's own home location", async () => {
+    const { handlers } = mount();
+    const call = handlers.get("tool_call");
+    const content = `// ~/.omp/agent/hooks/post/x.ts\n${GOOD_HOOK}`;
+    const verdict = await call?.({ toolName: "write", input: { path: ".omp/hooks/post/noted.ts", content } }, {});
+    expect(JSON.stringify(verdict ?? {})).not.toContain("hardcodes a machine path");
+  });
+
   it("re-arms the pointer after a session reset", async () => {
     const { handlers } = mount();
     const call = handlers.get("tool_call");
