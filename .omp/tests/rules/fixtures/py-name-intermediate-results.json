@@ -1,0 +1,37 @@
+{
+  "nestedCall": [
+    { "label": "single argument is a call", "snippet": "save(normalize(parse(payload)))" },
+    { "label": "trailing argument is a call", "snippet": "f(a, g(b))" },
+    { "label": "leading argument is a call", "snippet": "f(g(a), b)" },
+    { "label": "middle argument is a call", "snippet": "f(a, g(b), c)" },
+    { "label": "awaited argument", "snippet": "handle_result(await store.create(data))" },
+    { "label": "attribute call", "snippet": "obj.method(build(x))" },
+    { "label": "multi-line argument list", "snippet": "result = handle(\n    store.create(data),\n)" },
+    { "label": "list built from a call", "snippet": "active = list(filter(is_active, rows))" },
+    { "label": "comprehension", "snippet": "x = [f(g(i)) for i in rows]" },
+    { "label": "math composition", "snippet": "value = max(0, min(x, 100))" },
+    { "label": "test predicate", "snippet": "assert validator(normalize(payload))" }
+  ],
+  "singleCall": [
+    { "label": "flat arguments", "snippet": "f(a, b)" },
+    { "label": "single call", "snippet": "print(value)" },
+    { "label": "method call", "snippet": "session.commit()" },
+    { "label": "awaited binding", "snippet": "user = await load(user_id)" },
+    { "label": "flat assertion", "snippet": "assert check(rows)" }
+  ],
+  "controlFlowParens": [
+    { "label": "if wrapping one call", "snippet": "if(check(rows)):" },
+    { "label": "if with await", "snippet": "if(await ready()):" },
+    { "label": "while with call", "snippet": "while(pending()):" },
+    { "label": "with manager", "snippet": "with(open_session()):" },
+    { "label": "except clause", "snippet": "except(load_error()):" }
+  ],
+  "stringOrComment": [
+    { "label": "quoted text", "snippet": "note = \"f(g(h))\"" },
+    { "label": "comment", "snippet": "# save(normalize(parse(x)))" }
+  ],
+  "bodyMarkers": [
+    "guideline, not a gate",
+    "skill://principle-minimize-reader-load"
+  ]
+}

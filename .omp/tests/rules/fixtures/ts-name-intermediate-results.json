@@ -1,0 +1,33 @@
+{
+  "nestedCall": [
+    { "label": "single argument is a call", "snippet": "formatDate(parseIso(row.createdAt))" },
+    { "label": "trailing argument is a call", "snippet": "f(a, g(b))" },
+    { "label": "middle argument is a call", "snippet": "const x = f(a, g(b), c)" },
+    { "label": "awaited argument", "snippet": "handleResult(await store.create(data))" },
+    { "label": "attribute call", "snippet": "obj.method(g(x))" },
+    { "label": "multi-line argument list", "snippet": "const x = f(\n  g(a),\n)" },
+    { "label": "math composition", "snippet": "Math.max(0, Math.min(x, 100))" },
+    { "label": "assertion with a call", "snippet": "expect(triggers(snippet)).toBe(true)" }
+  ],
+  "singleCall": [
+    { "label": "flat arguments", "snippet": "f(a, b)" },
+    { "label": "callback reference", "snippet": "rows.filter(isActive)" },
+    { "label": "awaited binding", "snippet": "const user = await load(id)" },
+    { "label": "flat assertion", "snippet": "expect(value).toBe(1)" },
+    { "label": "logging one value", "snippet": "console.log(value)" }
+  ],
+  "controlFlowParens": [
+    { "label": "if without space", "snippet": "if(await ready()) start()" },
+    { "label": "while without space", "snippet": "while(await pending()) tick()" },
+    { "label": "if with space", "snippet": "if (await ready()) start()" },
+    { "label": "switch on one call", "snippet": "switch(check(x)) {}" }
+  ],
+  "stringOrComment": [
+    { "label": "quoted text", "snippet": "const note = \"f(g(h))\"" },
+    { "label": "comment", "snippet": "// save(normalize(parse(x)))" }
+  ],
+  "bodyMarkers": [
+    "guideline, not a gate",
+    "skill://principle-minimize-reader-load"
+  ]
+}
