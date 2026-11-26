@@ -1,0 +1,18 @@
+{
+  "handler": [
+    { "label": "catch with binding", "snippet": "catch (error) {\n  return null\n}" },
+    { "label": "optional catch binding", "snippet": "catch {\n  return null\n}" },
+    { "label": "promise catch", "snippet": "fetchOrders().catch(() => [])" },
+    { "label": "promise catch with a space", "snippet": "fetchOrders().catch (() => [])" }
+  ],
+  "notHandler": [
+    { "label": "identifier starting with catch", "snippet": "catchError(value)" },
+    { "label": "method starting with catch", "snippet": "results.catchAll()" },
+    { "label": "python handler", "snippet": "except Exception:\n    return []" },
+    { "label": "python contextlib suppress", "snippet": "with contextlib.suppress(Exception):" }
+  ],
+  "bodyMarkers": [
+    "guideline, not a gate",
+    "skill://principle-fix-root-causes"
+  ]
+}

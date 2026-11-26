@@ -1,0 +1,19 @@
+{
+  "handler": [
+    { "label": "broad handler returning a default", "snippet": "except Exception:\n    return []" },
+    { "label": "bare handler", "snippet": "except:\n    pass" },
+    { "label": "base exception handler", "snippet": "except BaseException:\n    log()" },
+    { "label": "contextlib suppress", "snippet": "with contextlib.suppress(Exception):" }
+  ],
+  "notHandler": [
+    { "label": "specific exception re-raised", "snippet": "except ValueError:\n    raise" },
+    { "label": "exception tuple", "snippet": "except (ValueError, KeyError):\n    raise" },
+    { "label": "try without a handler", "snippet": "try:\n    work()" },
+    { "label": "exception group handler", "snippet": "except* ValueError:\n    raise" },
+    { "label": "typescript catch", "snippet": "catch (error) {\n  return null\n}" }
+  ],
+  "bodyMarkers": [
+    "guideline, not a gate",
+    "skill://principle-fix-root-causes"
+  ]
+}
