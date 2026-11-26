@@ -1,0 +1,19 @@
+{
+  "commentLine": [
+    { "label": "workaround note", "snippet": "# workaround: retry until the lock clears" },
+    { "label": "indented comment", "snippet": "    # defensive check because the caller lies" },
+    { "label": "tooling directive", "snippet": "# type: ignore[attr-defined]" },
+    { "label": "shebang", "snippet": "#!/usr/bin/env python" }
+  ],
+  "notAComment": [
+    { "label": "assignment", "snippet": "value = 1" },
+    { "label": "string holding a hash", "snippet": "x = \"# not a comment\"" },
+    { "label": "trailing comment", "snippet": "value = compute()  # note" },
+    { "label": "empty comment", "snippet": "#" },
+    { "label": "typescript comment marker", "snippet": "// temporary until the API adds pagination" }
+  ],
+  "bodyMarkers": [
+    "guideline, not a gate",
+    "skill://principle-fix-root-causes"
+  ]
+}

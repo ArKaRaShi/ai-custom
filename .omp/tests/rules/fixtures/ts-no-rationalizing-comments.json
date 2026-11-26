@@ -1,0 +1,20 @@
+{
+  "commentLine": [
+    { "label": "line comment", "snippet": "// temporary until the API adds pagination" },
+    { "label": "block comment", "snippet": "/* fallback when config is missing */" },
+    { "label": "block continuation", "snippet": " * clamped to avoid overflow" },
+    { "label": "indented comment", "snippet": "    // defensive check because the caller lies" },
+    { "label": "triple slash reference", "snippet": "/// <reference types=\"node\" />" }
+  ],
+  "notAComment": [
+    { "label": "declaration", "snippet": "const value = 1" },
+    { "label": "string holding a comment marker", "snippet": "const note = \"// not a comment\"" },
+    { "label": "trailing comment", "snippet": "const value = compute() // note" },
+    { "label": "empty comment", "snippet": "//" },
+    { "label": "python comment marker", "snippet": "# workaround: retry until the lock clears" }
+  ],
+  "bodyMarkers": [
+    "guideline, not a gate",
+    "skill://principle-fix-root-causes"
+  ]
+}
